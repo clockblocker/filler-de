@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	ScrollNodeSegmentId,
@@ -18,17 +11,6 @@ import {
 	TreeNodeStatus,
 } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../../src/types/schemas/node-name";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 // ─── Helpers ───
 

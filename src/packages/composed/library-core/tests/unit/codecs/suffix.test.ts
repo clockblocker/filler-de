@@ -1,10 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
 import type { CodecRules } from "../../../src/codecs/rules";
 import type { NodeName } from "../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // Default rules with "-" delimiter, no padding
 function makeDefaultRules(): CodecRules {
@@ -13,7 +12,10 @@ function makeDefaultRules(): CodecRules {
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
+		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
+		showScrollsInCodexesForDepth:
+			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
 		suffixDelimiterConfig:
 			defaultSettingsForUnitTests.suffixDelimiterConfig,
@@ -23,18 +25,12 @@ function makeDefaultRules(): CodecRules {
 }
 
 describe("suffix codecs", () => {
-	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
 	let codecs: SuffixCodecs;
 	let rules: CodecRules;
 
 	beforeEach(() => {
-		spy = setupGetParsedUserSettingsSpy();
 		rules = makeDefaultRules();
 		codecs = makeSuffixCodecs(rules);
-	});
-
-	afterEach(() => {
-		spy.mockRestore();
 	});
 
 	describe("parseSeparatedSuffix", () => {

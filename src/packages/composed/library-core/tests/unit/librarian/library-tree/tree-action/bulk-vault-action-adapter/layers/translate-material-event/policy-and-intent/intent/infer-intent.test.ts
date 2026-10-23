@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
@@ -18,22 +11,16 @@ import { inferRenameIntent } from "../../../../../../../../../../src/healer/libr
 import { RenameIntent } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { TreeNodeKind } from "../../../../../../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: Codecs;
 let rules: CodecRules;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
+	rules = makeCodecRulesFromSettings({
+		...defaultSettingsForUnitTests,
 		showScrollsInCodexesForDepth: 0,
 	});
-	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 describe("inferRenameIntent", () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
@@ -20,7 +20,6 @@ import type {
 import { TreeNodeKind } from "../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58)
 const SEP = "﹘";
@@ -33,7 +32,10 @@ function makeDefaultRules(): CodecRules {
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
+		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
+		showScrollsInCodexesForDepth:
+			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
 		suffixDelimiterConfig:
 			defaultSettingsForUnitTests.suffixDelimiterConfig,
@@ -43,21 +45,15 @@ function makeDefaultRules(): CodecRules {
 }
 
 describe("locator codecs", () => {
-	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
 	let suffixCodecs: SuffixCodecs;
 	let segmentIdCodecs: SegmentIdCodecs;
 	let codecs: LocatorCodecs;
 
 	beforeEach(() => {
-		spy = setupGetParsedUserSettingsSpy();
 		const rules = makeDefaultRules();
 		suffixCodecs = makeSuffixCodecs(rules);
 		segmentIdCodecs = makeSegmentIdCodecs(rules);
 		codecs = makeLocatorCodecs(segmentIdCodecs, suffixCodecs);
-	});
-
-	afterEach(() => {
-		spy.mockRestore();
 	});
 
 	describe("canonicalSplitPathInsideLibraryToLocator", () => {

@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
@@ -24,19 +17,12 @@ import type {
 } from "../../../../../src/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 // ─── Helpers ───
@@ -283,10 +269,12 @@ describe("generateCodexContent", () => {
 		});
 
 		it("respects maxDepth setting", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettingsForUnitTests,
-				maxSectionDepth: 0, // Don't show nested sections
-			});
+			const depthCodecs = makeCodecs(
+				makeCodecRulesFromSettings({
+					...defaultSettingsForUnitTests,
+					maxSectionDepth: 0, // Don't show nested sections
+				}),
+			);
 
 			const librarySection = section("Library", {
 				"A﹘Section﹘": section("A", {
@@ -295,7 +283,11 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain, codecs);
+			const result = generateCodexContent(
+				librarySection,
+				chain,
+				depthCodecs,
+			);
 
 			// Section A shown
 			expect(result).toContain("[[__-A|A]]");
@@ -306,10 +298,12 @@ describe("generateCodexContent", () => {
 
 	describe("showScrollsInCodexesForDepth", () => {
 		it("hides scrolls beyond showScrollsForDepth", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettingsForUnitTests,
-				showScrollsInCodexesForDepth: 0, // Only show scrolls at depth 0
-			});
+			const depthCodecs = makeCodecs(
+				makeCodecRulesFromSettings({
+					...defaultSettingsForUnitTests,
+					showScrollsInCodexesForDepth: 0, // Only show scrolls at depth 0
+				}),
+			);
 
 			const librarySection = section("Library", {
 				"A﹘Section﹘": section("A", {
@@ -319,7 +313,11 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain, codecs);
+			const result = generateCodexContent(
+				librarySection,
+				chain,
+				depthCodecs,
+			);
 
 			// Root scroll shown
 			expect(result).toContain("[[RootNote|RootNote]]");
@@ -328,10 +326,12 @@ describe("generateCodexContent", () => {
 		});
 
 		it("shows scrolls at allowed depth", () => {
-			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettingsForUnitTests,
-				showScrollsInCodexesForDepth: 1, // Show scrolls at depth 0 and 1
-			});
+			const depthCodecs = makeCodecs(
+				makeCodecRulesFromSettings({
+					...defaultSettingsForUnitTests,
+					showScrollsInCodexesForDepth: 1, // Show scrolls at depth 0 and 1
+				}),
+			);
 
 			const librarySection = section("Library", {
 				"A﹘Section﹘": section("A", {
@@ -340,7 +340,11 @@ describe("generateCodexContent", () => {
 			});
 			const chain = [sec("Library")];
 
-			const result = generateCodexContent(librarySection, chain, codecs);
+			const result = generateCodexContent(
+				librarySection,
+				chain,
+				depthCodecs,
+			);
 
 			// Nested scroll shown (depth 1 <= showScrollsInCodexesForDepth 1)
 			expect(result).toContain("[[NestedNote-A|NestedNote]]");

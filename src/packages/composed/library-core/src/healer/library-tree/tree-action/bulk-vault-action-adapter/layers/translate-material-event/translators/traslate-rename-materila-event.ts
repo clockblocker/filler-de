@@ -46,7 +46,7 @@ export function traslateRenameMaterializedEvent(
 	}
 	const destinationLocator = destinationRes.value;
 
-	const newNodeName = getNodeName(destinationLocator);
+	const newNodeName = getNodeName(destinationLocator, codecs);
 	const newParentLocator = getParentLocator(destinationLocator);
 
 	if (intent === RenameIntent.Rename) {

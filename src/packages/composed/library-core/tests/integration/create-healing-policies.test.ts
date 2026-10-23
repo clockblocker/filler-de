@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	Healer,
 	type LibraryBulk,
@@ -21,17 +14,6 @@ import {
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../unit/common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 describe("Library create Healing policies", () => {
 	it("heals a nested unsuffixed Scroll and a root-suffixed File to canonical paths", () => {

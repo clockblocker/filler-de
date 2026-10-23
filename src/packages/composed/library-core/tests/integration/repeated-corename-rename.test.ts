@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	generateCodexContent,
 	Healer,
@@ -21,17 +14,6 @@ import {
 } from "@textfresser/library-core";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../unit/common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 function sectionId(name: string): SectionNodeSegmentId {
 	return makeNodeSegmentId({

@@ -312,7 +312,7 @@ export class Librarian {
 			// Startup accepted a partial scan, so its recovery does too.
 			return yield* this.prepareStartupReconciliation(
 				scan,
-				getParsedUserSettings().splitPathToLibraryRoot.basename,
+				this.codecs.rules.libraryRootName,
 				this.starting,
 			);
 		},
@@ -851,7 +851,10 @@ export class Librarian {
 		}
 
 		// 1. Parse line content to get click target
-		const parseResult = parseCodexClickLineContent(payload.lineContent);
+		const parseResult = parseCodexClickLineContent(
+			payload.lineContent,
+			this.codecs,
+		);
 		if (parseResult.isErr()) {
 			logger.warn(
 				"[Librarian.handleCodexCheckboxClick] Parse failed:",

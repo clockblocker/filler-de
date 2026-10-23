@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
@@ -13,23 +6,23 @@ import type {
 } from "@textfresser/vault-action-manager";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
+	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../../../../../src/codecs";
+import {
 	makeRegularSplitPathInsideLibrary,
 	tryParseCanonicalSplitPathInsideLibrary,
 } from "../../../../../../../src/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
 import { defaultSettingsForUnitTests } from "../../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
+const codecs: Codecs = makeCodecs(
+	makeCodecRulesFromSettings({
+		...defaultSettingsForUnitTests,
 
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
 		showScrollsInCodexesForDepth: 0,
-	});
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
+	}),
+);
 
 describe("tryParseCanonicalSplitPath", () => {
 	describe("SplitPathKind.Folder", () => {
@@ -40,7 +33,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: [],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -62,7 +55,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -88,7 +81,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: [],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -100,7 +93,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: [],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -112,7 +105,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section-2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -127,7 +120,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.kind === SplitPathKind.File) {
@@ -151,7 +144,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -178,7 +171,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -196,7 +189,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -209,7 +202,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -222,7 +215,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section-1"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 		});
@@ -237,7 +230,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.kind === SplitPathKind.MdFile) {
@@ -261,7 +254,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -288,7 +281,7 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(sp, codecs);
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -303,12 +296,14 @@ describe("tryParseCanonicalSplitPath", () => {
 				padded: false,
 				symbol: "_",
 			};
-			getParsedUserSettingsSpy.mockReturnValue({
-				...defaultSettingsForUnitTests,
-				suffixDelimiter: "_",
-				suffixDelimiterConfig: customDelimiterConfig,
-				suffixDelimiterPattern: /\s*_\s*/,
-			});
+			const customCodecs = makeCodecs(
+				makeCodecRulesFromSettings({
+					...defaultSettingsForUnitTests,
+					suffixDelimiter: "_",
+					suffixDelimiterConfig: customDelimiterConfig,
+					suffixDelimiterPattern: /\s*_\s*/,
+				}),
+			);
 
 			const sp: SplitPathToMdFile = {
 				basename: "MyNote_Section2_Section1",
@@ -317,7 +312,10 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
+			const result = tryParseCanonicalSplitPathInsideLibrary(
+				sp,
+				customCodecs,
+			);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -344,15 +342,22 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular,
+				codecs,
+			);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
-			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const regular2 = makeRegularSplitPathInsideLibrary(
+				canonical1,
+				codecs,
+			);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular2,
+				codecs,
+			);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;
@@ -372,15 +377,22 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular,
+				codecs,
+			);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
-			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const regular2 = makeRegularSplitPathInsideLibrary(
+				canonical1,
+				codecs,
+			);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular2,
+				codecs,
+			);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;
@@ -403,15 +415,22 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular,
+				codecs,
+			);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
-			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res =
-				tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const regular2 = makeRegularSplitPathInsideLibrary(
+				canonical1,
+				codecs,
+			);
+			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(
+				regular2,
+				codecs,
+			);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;

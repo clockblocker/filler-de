@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, type spyOn } from "bun:test";
-import { makeCodexBasename } from "@textfresser/library-core";
+import {
+	makeCodecRulesFromSettings,
+	makeCodecs,
+	makeCodexBasename,
+} from "@textfresser/library-core";
 import {
 	MD,
 	SplitPathKind,
@@ -15,6 +19,7 @@ import {
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { getContextMenuFile } from "../../../src/managers/overlay-manager/context-menu/context-menu";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
 let settingsSpy: ReturnType<typeof spyOn> | null = null;
@@ -166,7 +171,10 @@ describe("Librarian library membership", () => {
 		const { librarian } = await startLibrarian(folder([], "Library"));
 		const codexPath = md(
 			["Library", "A"],
-			makeCodexBasename(["Library", "A"]),
+			makeCodexBasename(
+				["Library", "A"],
+				makeCodecs(makeCodecRulesFromSettings(defaultSettingsForUnitTests)),
+			),
 		);
 		expect(librarian.isCodex(codexPath)).toBe(true);
 		expect(librarian.isCodex(md(["Library", "A"], "Scroll-A"))).toBe(false);

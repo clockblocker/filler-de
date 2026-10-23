@@ -1,28 +1,19 @@
+import { describe, expect, it } from "bun:test";
 import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+	makeCodecRulesFromSettings,
+	makeCodecs,
+} from "../../../../../src/codecs";
 import {
 	formatChildSectionLine,
 	formatFileLine,
 	formatScrollLine,
 } from "../../../../../src/healer/library-tree/codex/format-codex-line";
 import { TreeNodeStatus } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
+import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
+const codecs = makeCodecs(
+	makeCodecRulesFromSettings(defaultSettingsForUnitTests),
+);
 
 describe("format-codex-line", () => {
 	describe("formatScrollLine", () => {
@@ -33,6 +24,7 @@ describe("format-codex-line", () => {
 				"Note",
 				["Library"],
 				TreeNodeStatus.NotStarted,
+				codecs,
 			);
 			expect(result).toBe("- [ ] [[Note|Note]]");
 		});
@@ -42,6 +34,7 @@ describe("format-codex-line", () => {
 				"Note",
 				["Library"],
 				TreeNodeStatus.Done,
+				codecs,
 			);
 			expect(result).toBe("- [x] [[Note|Note]]");
 		});
@@ -53,6 +46,7 @@ describe("format-codex-line", () => {
 				"Note",
 				["Library", "A"],
 				TreeNodeStatus.NotStarted,
+				codecs,
 			);
 			expect(result).toBe("- [ ] [[Note-A|Note]]");
 		});
@@ -64,6 +58,7 @@ describe("format-codex-line", () => {
 				"Note",
 				["Library", "A", "B"],
 				TreeNodeStatus.NotStarted,
+				codecs,
 			);
 			expect(result).toBe("- [ ] [[Note-B-A|Note]]");
 		});
@@ -71,17 +66,21 @@ describe("format-codex-line", () => {
 
 	describe("formatFileLine", () => {
 		it("formats file at root", () => {
-			const result = formatFileLine("image", ["Library"]);
+			const result = formatFileLine("image", ["Library"], codecs);
 			expect(result).toBe("- [[image|image]]");
 		});
 
 		it("formats file in section", () => {
-			const result = formatFileLine("image", ["Library", "A"]);
+			const result = formatFileLine("image", ["Library", "A"], codecs);
 			expect(result).toBe("- [[image-A|image]]");
 		});
 
 		it("formats file in nested section", () => {
-			const result = formatFileLine("image", ["Library", "A", "B"]);
+			const result = formatFileLine(
+				"image",
+				["Library", "A", "B"],
+				codecs,
+			);
 			expect(result).toBe("- [[image-B-A|image]]");
 		});
 	});
@@ -94,6 +93,7 @@ describe("format-codex-line", () => {
 				"A",
 				["Library"],
 				TreeNodeStatus.NotStarted,
+				codecs,
 			);
 			expect(result).toBe("- [ ] [[__-A|A]]");
 		});
@@ -103,6 +103,7 @@ describe("format-codex-line", () => {
 				"A",
 				["Library"],
 				TreeNodeStatus.Done,
+				codecs,
 			);
 			expect(result).toBe("- [x] [[__-A|A]]");
 		});
@@ -114,6 +115,7 @@ describe("format-codex-line", () => {
 				"B",
 				["Library", "A"],
 				TreeNodeStatus.NotStarted,
+				codecs,
 			);
 			expect(result).toBe("- [ ] [[__-B-A|B]]");
 		});

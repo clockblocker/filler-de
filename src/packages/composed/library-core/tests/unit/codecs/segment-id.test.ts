@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { CodecRules } from "../../../src/codecs/rules";
 import type { SegmentIdCodecs } from "../../../src/codecs/segment-id/make";
 import { makeSegmentIdCodecs } from "../../../src/codecs/segment-id/make";
@@ -11,7 +11,6 @@ import type {
 import { TreeNodeKind } from "../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58) - the NodeSegmentIdSeparator
 const SEP = "﹘";
@@ -22,7 +21,10 @@ function makeDefaultRules(): CodecRules {
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
+		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
+		showScrollsInCodexesForDepth:
+			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
 		suffixDelimiterConfig:
 			defaultSettingsForUnitTests.suffixDelimiterConfig,
@@ -32,16 +34,10 @@ function makeDefaultRules(): CodecRules {
 }
 
 describe("segment-id codecs", () => {
-	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
 	let codecs: SegmentIdCodecs;
 
 	beforeEach(() => {
-		spy = setupGetParsedUserSettingsSpy();
 		codecs = makeSegmentIdCodecs(makeDefaultRules());
-	});
-
-	afterEach(() => {
-		spy.mockRestore();
 	});
 
 	describe("parseSegmentId", () => {

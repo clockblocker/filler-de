@@ -61,7 +61,7 @@ export function makeBacklinkTransform(
 			return content;
 		}
 
-		const targetBasename = makeCodexBasename(parentPathParts);
+		const targetBasename = makeCodexBasename(parentPathParts, codecs);
 		return noteMetadataHelper.mapBody((body) =>
 			goBackLinkHelper.upsert({
 				content: body.trimStart(),

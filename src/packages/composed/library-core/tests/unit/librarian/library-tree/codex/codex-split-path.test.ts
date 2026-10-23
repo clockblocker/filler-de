@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
@@ -14,19 +7,12 @@ import {
 import type { SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "../../../../../src/healer/library-tree/codex/codex-split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 // Helper to create segment IDs for tests

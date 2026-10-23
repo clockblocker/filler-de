@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { VaultEvent } from "@textfresser/vault-action-manager";
 import {
 	MD,
@@ -34,18 +27,8 @@ import {
 	type ScopedFolderRenamedVaultEventOutsideToInside,
 } from "../../../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 describe("makeEventLibraryScoped", () => {
 	describe("FileCreated", () => {
@@ -99,7 +82,6 @@ describe("makeEventLibraryScoped", () => {
 					pathParts: ["Root"],
 				},
 			};
-			getParsedUserSettingsSpy.mockReturnValue(mockedSettings);
 			const testRules = makeCodecRulesFromSettings(mockedSettings);
 
 			const event: VaultEvent = {
@@ -484,7 +466,6 @@ describe("makeEventLibraryScoped", () => {
 					pathParts: [],
 				},
 			};
-			getParsedUserSettingsSpy.mockReturnValue(mockedSettings);
 			const testRules = makeCodecRulesFromSettings(mockedSettings);
 
 			const event: VaultEvent = {

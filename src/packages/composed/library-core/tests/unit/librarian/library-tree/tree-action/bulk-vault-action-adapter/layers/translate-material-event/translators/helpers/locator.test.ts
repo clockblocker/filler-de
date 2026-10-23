@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -21,22 +14,16 @@ import { RenameIntent } from "../../../../../../../../../../src/healer/library-t
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import { ChangePolicy } from "../../../../../../../../../../src/tree/change-policy";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: Codecs;
 let rules: CodecRules;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
+	rules = makeCodecRulesFromSettings({
+		...defaultSettingsForUnitTests,
 		showScrollsInCodexesForDepth: 0,
 	});
-	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 // Helper: create library-scoped split paths

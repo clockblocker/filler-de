@@ -46,14 +46,17 @@ export type SegmentIdCodecs = {
 	}) => Result<TreeNodeSegmentId, CodecError>;
 };
 
-export function makeSegmentIdCodecs(_rules: CodecRules): SegmentIdCodecs {
-	// Note: NodeSegmentIdSeparator is a constant, not from rules
+export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {
+	// NodeSegmentIdSeparator is a constant; node names are validated
+	// against the rules' suffix delimiter.
 	return {
-		parseFileSegmentId,
-		parseScrollSegmentId,
-		parseSectionSegmentId,
-		parseSegmentId,
+		parseFileSegmentId: (id) => parseFileSegmentId(rules, id),
+		parseScrollSegmentId: (id) => parseScrollSegmentId(rules, id),
+		parseSectionSegmentId: (id) => parseSectionSegmentId(rules, id),
+		parseSegmentId: <NK extends TreeNodeKind>(id: TreeNodeSegmentId) =>
+			parseSegmentId<NK>(rules, id),
 		serializeSegmentId,
-		serializeSegmentIdUnchecked,
+		serializeSegmentIdUnchecked: (components) =>
+			serializeSegmentIdUnchecked(rules, components),
 	};
 }

@@ -40,8 +40,10 @@ export function makeCodecs(rules: CodecRules): Codecs {
 	const suffix = makeSuffixCodecs(rules); // Internal - only used for injection
 	const segmentId = makeSegmentIdCodecs(rules);
 	const splitPathInsideLibrary = makeSplitPathInsideLibraryCodecs(rules);
-	const splitPathWithSeparatedSuffix =
-		makeSplitPathWithSeparatedSuffixCodecs(suffix);
+	const splitPathWithSeparatedSuffix = makeSplitPathWithSeparatedSuffixCodecs(
+		rules,
+		suffix,
+	);
 	const libraryPath = makeLibraryPathCodecs(segmentId);
 	const locator = makeLocatorCodecs(segmentId, suffix);
 
@@ -67,7 +69,7 @@ export type {
 	SectionNodeLocator,
 	TreeNodeLocator,
 } from "./locator";
-export type { CodecRules } from "./rules";
+export type { CodecRules, LibrarySettings } from "./rules";
 export { makeCodecRulesFromSettings } from "./rules";
 // Re-export public types from modules
 export type { SegmentIdComponents } from "./segment-id";

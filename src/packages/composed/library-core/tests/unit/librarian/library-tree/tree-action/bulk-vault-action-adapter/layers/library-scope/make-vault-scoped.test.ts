@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { VaultEvent } from "@textfresser/vault-action-manager";
 import {
 	MD,
@@ -19,18 +12,11 @@ import {
 	Scope,
 } from "../../../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let rules: ReturnType<typeof makeCodecRulesFromSettings>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 describe("makeEventVaultScoped", () => {
@@ -315,7 +301,6 @@ describe("makeEventVaultScoped", () => {
 					pathParts: ["Root"],
 				},
 			};
-			getParsedUserSettingsSpy.mockReturnValue(nestedSettings);
 			const nestedRules = makeCodecRulesFromSettings(nestedSettings);
 
 			const scopedEvent: LibraryScopedVaultEvent = {

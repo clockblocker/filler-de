@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type LibraryPath,
@@ -13,7 +13,6 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "../../../src/codecs/split-path-inside-library";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58)
 const SEP = "﹘";
@@ -26,7 +25,10 @@ function makeDefaultRules(): CodecRules {
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
+		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
+		showScrollsInCodexesForDepth:
+			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
 		suffixDelimiterConfig:
 			defaultSettingsForUnitTests.suffixDelimiterConfig,
@@ -47,16 +49,6 @@ const {
 } = makeLibraryPathCodecs(makeSegmentIdCodecs(makeDefaultRules()));
 
 describe("library-path codecs", () => {
-	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
-
-	beforeEach(() => {
-		spy = setupGetParsedUserSettingsSpy();
-	});
-
-	afterEach(() => {
-		spy.mockRestore();
-	});
-
 	describe("fromSplitPath", () => {
 		it("creates LibraryPath from Folder split path", () => {
 			const sp: SplitPathToFolderInsideLibrary = {

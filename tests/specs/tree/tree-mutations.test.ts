@@ -9,7 +9,7 @@
  * - State consistency after mutations
  */
 
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { NodeName } from "@textfresser/library-core";
 import {
 	makeCodecRulesFromSettings,
@@ -21,22 +21,11 @@ import {
 } from "@textfresser/library-core";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {
 	makeFileLocator,
 	makeScrollLocator,
 	makeSectionLocator,
 } from "../../unit/librarian/library-tree/tree-test-helpers";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 function createTree(libraryRoot: string = "Library"): Tree {
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);

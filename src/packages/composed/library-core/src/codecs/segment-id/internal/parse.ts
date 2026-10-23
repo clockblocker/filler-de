@@ -6,9 +6,10 @@ import {
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+import { nodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
+import type { CodecRules } from "../../rules";
 import type { SegmentIdComponents } from "../../types/type-mappings";
 import type { SegmentIdOf } from "../types";
 import {
@@ -21,6 +22,7 @@ import {
  * Generic parser that narrows based on TreeNodeKind.
  */
 export function parseSegmentId<NK extends TreeNodeKind>(
+	rules: CodecRules,
 	id: TreeNodeSegmentId,
 ): Result<SegmentIdComponents<NK>, CodecError> {
 	const parts = id.split(NodeSegmentIdSeparator);
@@ -39,7 +41,9 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 	const [rawCoreName, rawTargetKind, rawExtension] = parts;
 
 	// Validate nodeName
-	const nodeNameResult = NodeNameSchema.safeParse(rawCoreName);
+	const nodeNameResult = nodeNameSchema(
+		rules.suffixDelimiterPattern,
+	).safeParse(rawCoreName);
 	if (!nodeNameResult.success) {
 		return err(
 			makeSegmentIdError(
@@ -171,19 +175,22 @@ export function parseSegmentId<NK extends TreeNodeKind>(
  * Type-specific convenience parsers for better type inference.
  */
 export function parseSectionSegmentId(
+	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.Section>,
 ): Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError> {
-	return parseSegmentId<typeof TreeNodeKind.Section>(id);
+	return parseSegmentId<typeof TreeNodeKind.Section>(rules, id);
 }
 
 export function parseScrollSegmentId(
+	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.Scroll>,
 ): Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError> {
-	return parseSegmentId<typeof TreeNodeKind.Scroll>(id);
+	return parseSegmentId<typeof TreeNodeKind.Scroll>(rules, id);
 }
 
 export function parseFileSegmentId(
+	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.File>,
 ): Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError> {
-	return parseSegmentId<typeof TreeNodeKind.File>(id);
+	return parseSegmentId<typeof TreeNodeKind.File>(rules, id);
 }

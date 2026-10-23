@@ -8,7 +8,6 @@ import type {
 	SplitPathInsideLibraryOf,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
 } from "../../../../../codecs";
-import { getParsedUserSettings } from "../../../../../internal/root/global-state";
 import { ChangePolicy } from "../../../../../tree/change-policy";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
@@ -90,8 +89,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		}
 
 		// Build expected canonical separated suffix from pathParts (policy)
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryRootName = splitPathToLibraryRoot.basename;
+		const { libraryRootName } = codecs.rules;
 		const expected = buildCanonicalSeparatedSuffixedBasename(
 			codecs.suffix,
 			libraryRootName,
@@ -197,8 +195,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	}
 
 	// Build expected canonical separated suffix from new pathParts (policy)
-	const { splitPathToLibraryRoot } = getParsedUserSettings();
-	const libraryRootName = splitPathToLibraryRoot.basename;
+	const { libraryRootName } = codecs.rules;
 	const expected = buildCanonicalSeparatedSuffixedBasename(
 		codecs.suffix,
 		libraryRootName,

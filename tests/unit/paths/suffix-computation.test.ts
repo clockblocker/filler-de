@@ -9,7 +9,7 @@
  * - descendant-suffix-healing.ts
  */
 
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { NodeName } from "@textfresser/library-core";
 import {buildObservedLeafSplitPath, 
 	makeCodecRulesFromSettings,
@@ -25,17 +25,6 @@ import {buildObservedLeafSplitPath,
 } from "@textfresser/library-core";
 import { MD } from "@textfresser/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 describe("Suffix Computation", () => {
 	describe("pathPartsToSuffixParts (without Library root)", () => {

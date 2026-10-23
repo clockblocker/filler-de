@@ -3,8 +3,7 @@
  * Pure functions that produce markdown strings for codex entries.
  */
 
-import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
-import { getParsedUserSettings } from "../../../internal/root/global-state";
+import type { Codecs } from "../../../codecs";
 import {
 	DASH,
 	DONE_CHECKBOX,
@@ -33,10 +32,11 @@ function checkbox(status: TreeNodeStatus): string {
  * Build canonical basename for a leaf (scroll/file).
  * coreName + suffix from path.
  */
-function makeLeafBasename(nodeName: string, pathParts: string[]): string {
-	const settings = getParsedUserSettings();
-	const rules = makeCodecRulesFromSettings(settings);
-	const codecs = makeCodecs(rules);
+function makeLeafBasename(
+	nodeName: string,
+	pathParts: string[],
+	codecs: Codecs,
+): string {
 	const suffixParts = codecs.suffix.pathPartsWithRootToSuffixParts(pathParts);
 	return codecs.suffix.serializeSeparatedSuffix({
 		coreName: nodeName,
@@ -53,10 +53,10 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
  * - ["Library", "A"] → "__-A"
  * - ["Library", "A", "B"] → "__-B-A"
  */
-export function makeCodexBasename(sectionPathParts: string[]): string {
-	const settings = getParsedUserSettings();
-	const rules = makeCodecRulesFromSettings(settings);
-	const codecs = makeCodecs(rules);
+export function makeCodexBasename(
+	sectionPathParts: string[],
+	codecs: Codecs,
+): string {
 	const suffixParts = computeCodexSuffix(sectionPathParts);
 
 	return codecs.suffix.serializeSeparatedSuffix({
@@ -73,14 +73,16 @@ export function makeCodexBasename(sectionPathParts: string[]): string {
  * @param nodeName - display name of the scroll
  * @param pathParts - full path including Library root, e.g. ["Library", "A"]
  * @param status - scroll status
+ * @param codecs - Codec API, for the suffix delimiter
  * @returns e.g. "- [ ] [[Note-A|Note]]"
  */
 export function formatScrollLine(
 	nodeName: string,
 	pathParts: string[],
 	status: TreeNodeStatus,
+	codecs: Codecs,
 ): string {
-	const basename = makeLeafBasename(nodeName, pathParts);
+	const basename = makeLeafBasename(nodeName, pathParts, codecs);
 	const backlink = formatBacklink(basename, nodeName);
 	return `${checkbox(status)}${SPACE_F}${backlink}`;
 }
@@ -90,10 +92,15 @@ export function formatScrollLine(
  *
  * @param nodeName - display name of the file
  * @param pathParts - full path including Library root
+ * @param codecs - Codec API, for the suffix delimiter
  * @returns e.g. "- [[image-A|image]]"
  */
-export function formatFileLine(nodeName: string, pathParts: string[]): string {
-	const basename = makeLeafBasename(nodeName, pathParts);
+export function formatFileLine(
+	nodeName: string,
+	pathParts: string[],
+	codecs: Codecs,
+): string {
+	const basename = makeLeafBasename(nodeName, pathParts, codecs);
 	const backlink = formatBacklink(basename, nodeName);
 	return `${DASH}${SPACE_F}${backlink}`;
 }
@@ -105,16 +112,18 @@ export function formatFileLine(nodeName: string, pathParts: string[]): string {
  * @param sectionName - display name of the section
  * @param parentPathParts - path to parent section (including Library root)
  * @param status - aggregated status of the section
+ * @param codecs - Codec API, for the suffix delimiter
  * @returns e.g. "- [ ] [[__-A|A]]"
  */
 export function formatChildSectionLine(
 	sectionName: string,
 	parentPathParts: string[],
 	status: TreeNodeStatus,
+	codecs: Codecs,
 ): string {
 	// Section's full path = parent path + section name
 	const sectionPathParts = [...parentPathParts, sectionName];
-	const codexBasename = makeCodexBasename(sectionPathParts);
+	const codexBasename = makeCodexBasename(sectionPathParts, codecs);
 	const backlink = formatBacklink(codexBasename, sectionName);
 	return `${checkbox(status)}${SPACE_F}${backlink}`;
 }

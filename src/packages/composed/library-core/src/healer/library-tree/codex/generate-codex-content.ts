@@ -6,7 +6,6 @@
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { sortTreeNodesForDisplay } from "../../../display-name-sort";
-import { getParsedUserSettings } from "../../../internal/root/global-state";
 import { LINE_BREAK, SPACE_F, TAB } from "../../../internal/root/ui";
 import { sectionChainToPathParts } from "../../../path-finder";
 import { TreeNodeKind } from "../tree-node/types/atoms";
@@ -44,7 +43,7 @@ function parseChainOrThrow(
  *
  * @param section - The section node to generate content for
  * @param sectionChain - Full chain including this section
- * @param codecs - Codec API for parsing segment IDs
+ * @param codecs - Codec API for parsing segment IDs; its rules set the depths
  * @returns Markdown content for children list
  */
 export function generateChildrenList(
@@ -52,20 +51,10 @@ export function generateChildrenList(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): string {
-	const settings = getParsedUserSettings();
-	const maxDepth = settings.maxSectionDepth;
-	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
-
 	const pathParts = parseChainOrThrow(sectionChain, codecs);
 
 	// Generate items for children
-	const lines = generateItems(
-		section,
-		pathParts,
-		0,
-		maxDepth,
-		showScrollsForDepth,
-	);
+	const lines = generateItems(section, pathParts, 0, codecs);
 
 	if (lines.length === 0) {
 		return LINE_BREAK;
@@ -86,7 +75,7 @@ export function generateChildrenList(
  *
  * @param section - The section node to generate codex for
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
- * @param codecs - Codec API for parsing segment IDs
+ * @param codecs - Codec API for parsing segment IDs; its rules set the depths
  * @returns Markdown content for codex file
  */
 export function generateCodexContent(
@@ -94,18 +83,8 @@ export function generateCodexContent(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): string {
-	const settings = getParsedUserSettings();
-	const maxDepth = settings.maxSectionDepth;
-	const showScrollsForDepth = settings.showScrollsInCodexesForDepth;
-
 	const pathParts = parseChainOrThrow(sectionChain, codecs);
-	const lines = generateItems(
-		section,
-		pathParts,
-		0,
-		maxDepth,
-		showScrollsForDepth,
-	);
+	const lines = generateItems(section, pathParts, 0, codecs);
 
 	if (lines.length === 0) {
 		return LINE_BREAK;
@@ -123,9 +102,10 @@ function generateItems(
 	section: SectionNode,
 	parentPathParts: string[],
 	depth: number,
-	maxDepth: number,
-	showScrollsForDepth: number,
+	codecs: Codecs,
 ): string[] {
+	const { maxSectionDepth: maxDepth, showScrollsInCodexesForDepth } =
+		codecs.rules;
 	const lines: string[] = [];
 	const indent = TAB.repeat(depth);
 
@@ -134,11 +114,12 @@ function generateItems(
 	for (const child of children) {
 		switch (child.kind) {
 			case TreeNodeKind.Scroll: {
-				if (depth <= showScrollsForDepth) {
+				if (depth <= showScrollsInCodexesForDepth) {
 					const line = formatScrollLine(
 						child.nodeName,
 						parentPathParts,
 						child.status,
+						codecs,
 					);
 					lines.push(`${indent}${line}`);
 				}
@@ -146,7 +127,11 @@ function generateItems(
 			}
 
 			case TreeNodeKind.File: {
-				const line = formatFileLine(child.nodeName, parentPathParts);
+				const line = formatFileLine(
+					child.nodeName,
+					parentPathParts,
+					codecs,
+				);
 				lines.push(`${indent}${line}`);
 				break;
 			}
@@ -157,6 +142,7 @@ function generateItems(
 					child.nodeName,
 					parentPathParts,
 					sectionStatus,
+					codecs,
 				);
 				lines.push(`${indent}${line}`);
 
@@ -168,8 +154,7 @@ function generateItems(
 							child,
 							childPathParts,
 							depth + 1,
-							maxDepth,
-							showScrollsForDepth,
+							codecs,
 						),
 					);
 				}

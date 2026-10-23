@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -42,24 +35,18 @@ import { ChangePolicy } from "../../../../../../src/tree/canonical";
 import { translateCreateObservation } from "../../../../../../src/tree/create-observation";
 import type { LibraryBulk } from "../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: Codecs;
 let interpretBulk: BulkInterpreter;
 let rules: CodecRules;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy({
+	rules = makeCodecRulesFromSettings({
+		...defaultSettingsForUnitTests,
 		showScrollsInCodexesForDepth: 0,
 	});
-	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
 	interpretBulk = makeBulkInterpreter(codecs);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 const spFile = (
@@ -193,7 +180,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
-			expect(getNodeName(action.targetLocator)).toBe("Note");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("Note");
 			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 
@@ -215,7 +202,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
-			expect(getNodeName(action.targetLocator)).toBe("Note");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("Note");
 			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 
@@ -235,7 +222,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Create);
-			expect(getNodeName(action.targetLocator)).toBe("a");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("a");
 			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
 		});
 
@@ -286,7 +273,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Delete);
-			expect(getNodeName(action.targetLocator)).toBe("Section");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("Section");
 			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Section);
 		});
 
@@ -324,7 +311,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Rename);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Rename) {
 				expect(action.newNodeName).toBe("pies");
 			}
@@ -348,10 +335,12 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
 				expect(action.newNodeName).toBe("sweet");
-				expect(getNodeName(action.newParentLocator)).toBe("pie");
+				expect(getNodeName(action.newParentLocator, codecs)).toBe(
+					"pie",
+				);
 			}
 		});
 
@@ -371,9 +360,11 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				expect(getNodeName(action.newParentLocator)).toBe("recipe");
+				expect(getNodeName(action.newParentLocator, codecs)).toBe(
+					"recipe",
+				);
 				expect(action.newNodeName).toBe("pie");
 			}
 		});
@@ -394,7 +385,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Rename);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Rename) {
 				expect(action.newNodeName).toBe("pies");
 			}
@@ -418,10 +409,12 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
 				expect(action.newNodeName).toBe("sweet");
-				expect(getNodeName(action.newParentLocator)).toBe("pie");
+				expect(getNodeName(action.newParentLocator, codecs)).toBe(
+					"pie",
+				);
 			}
 		});
 
@@ -441,9 +434,11 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
-			expect(getNodeName(action.targetLocator)).toBe("pie");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("pie");
 			if (action.actionType === TreeActionType.Move) {
-				expect(getNodeName(action.newParentLocator)).toBe("recipe");
+				expect(getNodeName(action.newParentLocator, codecs)).toBe(
+					"recipe",
+				);
 				expect(action.newNodeName).toBe("pie");
 			}
 		});
@@ -486,7 +481,7 @@ describe("makeBulkInterpreter", () => {
 			const action = actions[0];
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
-			expect(getNodeName(action.targetLocator)).toBe("parent");
+			expect(getNodeName(action.targetLocator, codecs)).toBe("parent");
 		});
 	});
 });
@@ -530,7 +525,7 @@ describe("translateCreateObservation", () => {
 			expect(translation.action.targetLocator.targetKind).toBe(
 				testCase.expectedKind,
 			);
-			expect(getNodeName(translation.action.targetLocator)).toBe(
+			expect(getNodeName(translation.action.targetLocator, codecs)).toBe(
 				testCase.expectedName,
 			);
 			expect("initialStatus" in translation.action).toBe(false);

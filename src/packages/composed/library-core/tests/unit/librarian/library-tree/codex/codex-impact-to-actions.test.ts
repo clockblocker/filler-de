@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
@@ -29,19 +22,12 @@ import type {
 } from "../../../../../src/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: ReturnType<typeof makeCodecs>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 // ─── Helpers ───

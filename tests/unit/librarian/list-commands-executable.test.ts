@@ -2,19 +2,17 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import type { NodeName } from "@textfresser/library-core";
 import {
 	makeCodecRulesFromSettings,
-	makeCodecs,makeCodexBasename 
+	makeCodecs,
+	makeCodexBasename,
 } from "@textfresser/library-core";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { listCommandsExecutableIn } from "../../../src/commanders/librarian/navigation/list-commands-executable";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";
 
 let codecs: ReturnType<typeof makeCodecs>;
-
-setupGetParsedUserSettingsSpyWithHooks();
 
 beforeEach(() => {
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
@@ -95,7 +93,7 @@ function makeScrollPath(
 
 function makeCodexPath(pathParts: string[]): SplitPathToMdFile {
 	return {
-		basename: makeCodexBasename(pathParts),
+		basename: makeCodexBasename(pathParts, codecs),
 		extension: "md",
 		kind: SplitPathKind.MdFile,
 		pathParts,
