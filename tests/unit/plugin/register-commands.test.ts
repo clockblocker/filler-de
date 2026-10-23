@@ -6,9 +6,10 @@ import {
 import { Effect, Exit, Layer, Scope } from "effect";
 import { Notices } from "../../../src/managers/obsidian/host";
 import {
+	launchCommands,
 	type PluginCommandDeps,
-	pluginCommands,
 	registerCommands,
+	serviceCommands,
 } from "../../../src/plugin/register-commands";
 import { ObservabilityLive } from "../../../src/runtime/observability";
 import { makePluginRuntime } from "../../../src/runtime/plugin-runtime";
@@ -98,10 +99,17 @@ describe("the palette commands", () => {
 		const scope = Scope.makeUnsafe();
 		await runtime.e2e(
 			"register-commands",
-			Scope.provide(scope)(registerCommands(deps)),
+			Scope.provide(scope)(
+				Effect.all([
+					registerCommands(launchCommands(deps)),
+					registerCommands(serviceCommands(deps)),
+				]),
+			),
 		);
 
-		const ids = pluginCommands(deps).map(({ id }) => id);
+		const ids = [...launchCommands(deps), ...serviceCommands(deps)].map(
+			({ id }) => id,
+		);
 		expect([...obsidian.commands.keys()]).toEqual(ids);
 		// Every one but "Copy recent trace", which needs the clipboard.
 		const runnable = ids.filter((id) => id !== "copy-recent-trace");
@@ -137,7 +145,7 @@ describe("the palette commands", () => {
 
 	it("offer the editor's commands only with a Markdown editor", () => {
 		const { deps } = fakeDeps(Notices.over(recordingNotices().sink));
-		const editor = pluginCommands(deps)
+		const editor = [...launchCommands(deps), ...serviceCommands(deps)]
 			.filter((command) => command.editor)
 			.map(({ id }) => id);
 		expect(editor).toEqual([

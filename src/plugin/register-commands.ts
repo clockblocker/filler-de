@@ -1,8 +1,10 @@
 /**
  * The plugin's palette commands: one table of `PluginHost` commands over
- * Effects. The launch registers them once it has built the services, in
- * the scope it builds them in, so unloading removes them with the
- * services. Each runs under `command.<id>`.
+ * Effects, each run under `command.<id>`. The launch registers them in the
+ * scope it builds the services in, so unloading removes them with the
+ * services: the launch commands before it builds the services, so a build
+ * that fails still leaves "Copy recent trace", the others once it built
+ * them.
  */
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
@@ -66,12 +68,18 @@ export const commandKindProgram =
 			);
 		});
 
-/** The palette commands, in the order the palette lists them. */
-export function pluginCommands(
+/** What the launch commands reach: nothing the launch builds. */
+export type LaunchCommandDeps = Pick<
+	PluginCommandDeps,
+	"lifecycle" | "notices"
+>;
+
+/** The commands over the launch's services. */
+export function serviceCommands(
 	deps: PluginCommandDeps,
 ): readonly HostCommand<never, never>[] {
 	const program = commandKindProgram(deps);
-	const { dictionaryReset, lifecycle, notices, vam } = deps;
+	const { dictionaryReset, notices, vam } = deps;
 	return [
 		{
 			editor: true,
@@ -135,11 +143,21 @@ export function pluginCommands(
 			name: "Split file into pages",
 			run: program(CommandKind.SplitToPages),
 		},
+	];
+}
+
+/** The commands that need only the runtime's services. */
+export function launchCommands({
+	lifecycle,
+	notices,
+}: LaunchCommandDeps): readonly HostCommand<never, never>[] {
+	return [
 		{
 			id: "restart-librarian",
 			name: RESTART_LIBRARIAN_COMMAND_NAME,
 			run: lifecycle.restart,
 		},
+
 		{
 			id: "copy-recent-trace",
 			name: "Copy recent trace",
@@ -162,10 +180,10 @@ export function pluginCommands(
 	];
 }
 
-/** Registers the palette commands in the caller's scope. */
+/** Registers `commands` in the caller's scope. */
 export const registerCommands = Effect.fn("registerCommands")(function* (
-	deps: PluginCommandDeps,
+	commands: readonly HostCommand<never, never>[],
 ) {
 	const host = yield* PluginHost;
-	for (const command of pluginCommands(deps)) yield* host.command(command);
+	for (const command of commands) yield* host.command(command);
 });

@@ -147,10 +147,13 @@ function guarded<A extends readonly unknown[]>(
 export const makePluginHost = Effect.fnUntraced(function* (plugin: HostPlugin) {
 	const edges = yield* PluginEdges;
 	const { workspace } = plugin.app;
+	// Obsidian runs what a plugin registered only as it unloads, newest
+	// first, all at once: by the time a scope's release runs, every one ran.
 	let unloaded = false;
-	plugin.register(() => {
+	const unloading = () => {
 		unloaded = true;
-	});
+	};
+	plugin.register(unloading);
 
 	/**
 	 * Holds what `acquire` registered in the scope, released once. Once the
@@ -162,7 +165,11 @@ export const makePluginHost = Effect.fnUntraced(function* (plugin: HostPlugin) {
 				Effect.sync(() => {
 					if (unloaded) return () => {};
 					const release = once(acquire());
-					plugin.register(release);
+					// Newer than the flag's own callback, so it runs before it.
+					plugin.register(() => {
+						unloading();
+						release();
+					});
 					return release;
 				}),
 				(release) => Effect.sync(release),

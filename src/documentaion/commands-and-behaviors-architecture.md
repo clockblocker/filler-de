@@ -13,7 +13,7 @@ The two paths do not call each other.
 
 ## Commands
 
-The palette commands are one table, `pluginCommands` in `src/plugin/register-commands.ts`: each entry is an id, a name, whether it needs a Markdown editor, and its Effect. The launch registers them through `PluginHost.command` (`src/managers/obsidian/host/`) once it has built the services, in the scope it built them in, so unloading removes them. Each invocation runs on the plugin runtime under a `command.<id>` root span, such as `command.classify-selection`. An editor command reads the editor through VAM, not from Obsidian's callback.
+The palette commands are one table in `src/plugin/register-commands.ts`: each entry is an id, a name, whether it needs a Markdown editor, and its Effect. The launch registers them through `PluginHost.command` (`src/managers/obsidian/host/`), in the scope it builds the services in, so unloading removes them: `launchCommands` (Restart Librarian, Copy recent trace) before it builds the services, so a build that fails still leaves them, and `serviceCommands` once it built them. Each invocation runs on the plugin runtime under a `command.<id>` root span, such as `command.classify-selection`. An editor command reads the editor through VAM, not from Obsidian's callback.
 
 `createCommandExecutor({ classify, librarian, notices, textfresser, vam })` returns `commandProgram(kind)`, the Effect of a `CommandKind`. The table's editor commands run it, and so do the toolbars and the editor menu, under `command.<kind>` (`src/runtime/plugin-runtime.ts`).
 

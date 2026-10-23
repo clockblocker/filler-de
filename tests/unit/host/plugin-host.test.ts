@@ -268,4 +268,18 @@ describe("PluginHost.editorExtension", () => {
 		expect(host.obsidian.optionUpdates()).toBe(4);
 		await host.runtime.dispose();
 	});
+
+	it("leaves the list to Obsidian as the plugin unloads, without updating the editors", async () => {
+		const host = makeHost();
+		await host.inScope(
+			Effect.flatMap(PluginHost, (plugin) =>
+				plugin.editorExtension({ extension: "only" } as never),
+			),
+		);
+		expect(host.obsidian.optionUpdates()).toBe(1);
+		host.obsidian.unload();
+		await host.close();
+		expect(host.obsidian.optionUpdates()).toBe(1);
+		await host.runtime.dispose();
+	});
 });

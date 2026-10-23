@@ -77,11 +77,14 @@ export function fakeHostPlugin() {
 			for (const callback of listeners.get(name) ?? [])
 				(callback as (...a: unknown[]) => void)(...args);
 		},
-		/** Unloads the plugin, as Obsidian does: every callback it registered, once. */
+		/**
+		 * Unloads the plugin, as Obsidian's `Component.unload` does: every
+		 * callback it registered, once, newest first.
+		 */
 		unload: () => {
 			if (unloaded) return;
 			unloaded = true;
-			for (const callback of onUnload.splice(0)) callback();
+			for (const callback of onUnload.splice(0).reverse()) callback();
 		},
 	};
 }

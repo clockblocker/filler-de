@@ -52,7 +52,9 @@ import {
 } from "./plugin/plugin-services-live";
 import {
 	commandKindProgram,
+	launchCommands,
 	registerCommands,
+	serviceCommands,
 } from "./plugin/register-commands";
 import { whenObsidianIsReady } from "./plugin/when-obsidian-is-ready";
 import { logAtEdge } from "./runtime/edge-log";
@@ -228,6 +230,9 @@ export default class TextEaterPlugin extends Plugin {
 			const invalid = settings.invalid();
 			if (invalid) return yield* invalid;
 			const vam = yield* VaultActionManager;
+			const notices = yield* Notices;
+			// In the services' scope: unloading removes them with the services.
+			yield* registerCommands(launchCommands({ lifecycle, notices }));
 			const deps: PluginServicesDeps = {
 				notices: this.notices,
 				plugin: this,
@@ -246,12 +251,11 @@ export default class TextEaterPlugin extends Plugin {
 				dictionaryReset,
 				idle: yield* IdleTracker,
 				lifecycle,
-				notices: yield* Notices,
+				notices,
 				textfresser: Context.get(built, TextfresserCommands),
 				vam,
 			};
-			// In the services' scope: unloading removes them with the services.
-			yield* registerCommands(commands);
+			yield* registerCommands(serviceCommands(commands));
 			const commandProgram = commandKindProgram(commands);
 			this.services = {
 				classify,
