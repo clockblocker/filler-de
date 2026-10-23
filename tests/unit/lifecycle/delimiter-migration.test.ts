@@ -15,6 +15,7 @@ import {
 } from "../../../src/lifecycle/lifecycle-supervisor";
 import { changeDelimiter } from "../../../src/plugin/delimiter-migration";
 import type { SuffixDelimiterConfig } from "../../../src/types";
+import { inItsScope, type ScopedFake } from "../../support/supervised-librarian";
 
 const oldConfig = { padded: false, symbol: "-" } satisfies SuffixDelimiterConfig;
 const newConfig = { padded: true, symbol: "~" } satisfies SuffixDelimiterConfig;
@@ -42,7 +43,7 @@ const settle = async () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
-type Fake = SupervisedLibrarian & {
+type Fake = ScopedFake & {
 	readonly id: number;
 	subscribed: boolean;
 	delimiter: string;
@@ -91,7 +92,7 @@ function makeHarness() {
 				loadStore: Effect.void,
 				makeLibrarian: (onStopped) => {
 					const id = librarians.length;
-					const fake: Fake = {
+					const fake: Omit<Fake, "unsubscribed"> = {
 						delimiter,
 						id,
 						init: () =>
@@ -126,8 +127,11 @@ function makeHarness() {
 								fake.subscribed = false;
 							}),
 					};
-					librarians.push(fake);
-					return fake;
+					return inItsScope<Fake>(fake).pipe(
+						Effect.tap((made) =>
+							Effect.sync(() => librarians.push(made)),
+						),
+					);
 				},
 				onLaunched: () => Effect.void,
 				resetRunning: () => false,

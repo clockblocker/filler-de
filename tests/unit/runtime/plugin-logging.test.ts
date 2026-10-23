@@ -93,7 +93,7 @@ describe("Plugin logging", () => {
 								attachLibrarian: () => () => {},
 								loadStore: Effect.void,
 								makeLibrarian: (onStopped) =>
-									new Librarian(vam, { onStopped, settings: fixedSettings() }),
+									Librarian.make(vam, { onStopped, settings: fixedSettings() }),
 								onLaunched: () => Effect.void,
 								resetRunning: () => false,
 								sweep: Effect.void,

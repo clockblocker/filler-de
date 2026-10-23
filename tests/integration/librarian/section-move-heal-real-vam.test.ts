@@ -21,6 +21,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function folderAt(path: string): SplitPathToFolder {
@@ -63,7 +64,7 @@ async function startLibrarian(vault: ReturnType<typeof makeObsidianVault>) {
 				options,
 			),
 	};
-	const librarian = new Librarian(vam, {
+	const librarian = makeLibrarian(vam, {
 		onStopped: (stop) => void stops.push(stop),
 		settings: fixedSettings(),
 	});
@@ -83,7 +84,7 @@ async function startLibrarian(vault: ReturnType<typeof makeObsidianVault>) {
 		},
 		settle,
 		stop: async () => {
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 			await Effect.runPromise(dispose);
 		},
 		stops,

@@ -24,6 +24,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { fixedSettings } from "../common-utils/test-settings";
 
@@ -51,7 +52,7 @@ describe("Librarian Effect helpers", () => {
 			path: "Library/Unavailable",
 		});
 		let subscriptions = 0;
-		const librarian = new Librarian(
+		const librarian = makeLibrarian(
 			makeLibrarianVam(
 				Effect.succeed({
 					counts: {
@@ -75,7 +76,7 @@ describe("Librarian Effect helpers", () => {
 		expect(librarian.getHealer()).not.toBeNull();
 		expect(librarian._debugLastScanDiagnostics).toEqual([diagnostic]);
 		expect(subscriptions).toBe(1);
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("fails startup without creating an empty model when the root scan fails", async () => {
@@ -85,7 +86,7 @@ describe("Librarian Effect helpers", () => {
 			path: "Library",
 		});
 		let subscriptions = 0;
-		const librarian = new Librarian(
+		const librarian = makeLibrarian(
 			makeLibrarianVam(Effect.fail(scanFailure), () => {
 				subscriptions += 1;
 			}),

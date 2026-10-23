@@ -11,12 +11,12 @@ import {
 	createLifecycleSupervisor,
 	type LaunchedPlugin,
 	LibrarianStartFailed,
-	type SupervisedLibrarian,
 	type TaggedFailure,
 } from "../../../src/lifecycle/lifecycle-supervisor";
+import { inItsScope, type ScopedFake } from "../../support/supervised-librarian";
 
 /** A Librarian whose start the test ends, with `start` or `fail`. */
-type FakeLibrarian = SupervisedLibrarian & {
+type FakeLibrarian = ScopedFake & {
 	readonly id: number;
 	subscribed: boolean;
 	interrupted: boolean;
@@ -64,10 +64,10 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 
 	const makeLibrarian = (
 		onStopped: (stop: LibrarianStop) => void,
-	): FakeLibrarian => {
+	): Effect.Effect<FakeLibrarian, never, Scope.Scope> => {
 		const id = librarians.length;
 		const gate = Deferred.makeUnsafe<void, LibrarianStop>();
-		const librarian: FakeLibrarian = {
+		const librarian: Omit<FakeLibrarian, "unsubscribed"> = {
 			fail: (stop) => {
 				onStopped(stop);
 				Deferred.doneUnsafe(gate, Effect.fail(stop));
@@ -101,8 +101,9 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 					librarian.subscribed = false;
 				}),
 		};
-		librarians.push(librarian);
-		return librarian;
+		return inItsScope<FakeLibrarian>(librarian).pipe(
+			Effect.tap((made) => Effect.sync(() => librarians.push(made))),
+		);
 	};
 
 	const plugin: LaunchedPlugin<FakeLibrarian> = {
@@ -629,13 +630,16 @@ describe("lifecycle supervisor: thrown errors", () => {
 		method: "init" | "unsubscribe",
 	): LaunchedPlugin<FakeLibrarian> => ({
 		...h.plugin,
-		makeLibrarian: (onStopped) => {
-			const librarian = h.plugin.makeLibrarian(onStopped);
-			if (librarian.id !== 0) return librarian;
-			return Object.assign(librarian, {
-				[method]: () => Effect.die(new Error("boom")),
-			});
-		},
+		makeLibrarian: (onStopped) =>
+			h.plugin.makeLibrarian(onStopped).pipe(
+				Effect.map((librarian) =>
+					librarian.id !== 0
+						? librarian
+						: Object.assign(librarian, {
+								[method]: () => Effect.die(new Error("boom")),
+							}),
+				),
+			),
 	});
 
 	it("takes a Librarian start that throws for a failed start: the launch goes on, and so do later commands", async () => {

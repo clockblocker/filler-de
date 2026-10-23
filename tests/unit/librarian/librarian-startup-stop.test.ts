@@ -13,6 +13,7 @@ import {
 	LibrarianStartFailed,
 } from "../../../src/lifecycle/lifecycle-supervisor";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { fixedSettings } from "../common-utils/test-settings";
 
 /**
@@ -44,7 +45,7 @@ describe("a Librarian startup that fails for two reasons", () => {
 	it("stops with both, in its typed stop, the stop notice and the recent trace", async () => {
 		const trace = makeRecentTrace();
 		const stops: LibrarianStop[] = [];
-		const librarian = new Librarian(twoReasonVam(), {
+		const librarian = makeLibrarian(twoReasonVam(), {
 			onStopped: (stop) => stops.push(stop),
 			settings: fixedSettings(),
 		});
@@ -99,7 +100,7 @@ describe("a Librarian startup that fails for two reasons", () => {
 						attachLibrarian: () => () => undefined,
 						loadStore: Effect.void,
 						makeLibrarian: (onStopped) =>
-							new Librarian(vam, {
+							Librarian.make(vam, {
 								onStopped,
 								settings: fixedSettings(),
 							}),

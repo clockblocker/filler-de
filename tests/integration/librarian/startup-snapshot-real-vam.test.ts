@@ -21,6 +21,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
@@ -71,18 +72,27 @@ function makeHarness(
 				options,
 			),
 	};
-	const librarian = new Librarian(vam, {
-		onStopped: (stop) => void stops.push(stop),
-		settings: fixedSettings(),
-	});
+	const next = () =>
+		makeLibrarian(vam, {
+			onStopped: (stop) => void stops.push(stop),
+			settings: fixedSettings(),
+		});
+	let librarian = next();
 	return {
 		batches,
 		bulks,
-		librarian,
+		/** The Librarian started last. */
+		get librarian() {
+			return librarian;
+		},
 		manager,
+		/** A new Librarian over the same VAM, as a restart makes one. */
+		renew: () => {
+			librarian = next();
+		},
 		settle: () => Effect.runPromise(testing.whenSettled()),
 		stop: async () => {
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 			await Effect.runPromise(dispose);
 		},
 		stops,
@@ -203,12 +213,13 @@ describe("Librarian startup over real VAM", () => {
 			await Effect.runPromise(harness.manager.startListening());
 			await Effect.runPromise(harness.librarian.init());
 			await harness.settle();
-			await Effect.runPromise(harness.librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(harness.librarian));
 
 			// While it is off nothing listens, so VAM hears nothing.
 			await harness.vault.createByHand(`${RAMEN}/Offline.md`);
 			harness.batches.length = 0;
 			harness.bulks.length = 0;
+			harness.renew();
 
 			await Effect.runPromise(harness.librarian.init());
 			await harness.settle();

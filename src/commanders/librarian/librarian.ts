@@ -36,7 +36,17 @@ import {
 	MD,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import { Cause, Data, Effect, Result } from "effect";
+import {
+	Cause,
+	Data,
+	Deferred,
+	Effect,
+	Exit,
+	Option,
+	Ref,
+	Result,
+	type Scope,
+} from "effect";
 import type {
 	CommandContext,
 	CommandKind,
@@ -93,13 +103,6 @@ type LibraryCommandIntention = Pick<
 type ReconciliationQueueItem = {
 	readonly kind: "Reconciliation";
 	readonly request: ReconciliationRequest;
-	readonly observe?: (outcome: LibrarianReconciliationOutcome) => void;
-};
-
-type CommandIntentionQueueItem = {
-	readonly intention: LibraryCommandIntention;
-	readonly kind: "CommandIntention";
-	readonly observe: (result: LibraryCommandIntentionResult) => void;
 };
 
 /** A bulk VAM delivered, interpreted only when its turn comes. */
@@ -107,11 +110,6 @@ type ObservedBulkQueueItem = {
 	readonly bulk: BulkVaultEvent;
 	readonly kind: "ObservedBulk";
 };
-
-type LibrarianQueueItem =
-	| ReconciliationQueueItem
-	| CommandIntentionQueueItem
-	| ObservedBulkQueueItem;
 
 export type LibrarianVam = Pick<
 	VaultActionManager,
@@ -245,48 +243,143 @@ const logEach = (
 		{ discard: true },
 	);
 
+// ─── State ───
+
+type LibrarianReconciler = LibraryReconciler<
+	LibrarianDispatchFailure,
+	LibrarianRecoveryFailure
+>;
+
+/**
+ * Where a Librarian is in its one life:
+ * - `Idle`: made, its start not yet begun;
+ * - `Starting`: its start runs, and VAM holds the vault changes after its
+ *   snapshot;
+ * - `Running`: started; vault changes, clicks and commands reach its queue;
+ * - `Closed`: its scope closed, or its start failed. It takes no new work;
+ *   the work already queued still runs.
+ */
+type LibrarianStatus = "Idle" | "Starting" | "Running" | "Closed";
+
+/** What a start builds from its snapshot, together: its Tree and its queue. */
+type LibrarianHealing = {
+	readonly reconciler: LibrarianReconciler;
+	/** Every reconciliation runs in it, alone and in turn. */
+	readonly queue: VaultActionQueue;
+};
+
+/**
+ * Everything one Librarian holds, as one value in a `Ref`. Its start
+ * writes it, its scope's close ends it, and every reader takes a snapshot.
+ */
+type LibrarianState = {
+	readonly status: LibrarianStatus;
+	/** Built from the settings its start read; null before. */
+	readonly codecs: Codecs | null;
+	readonly interpretBulk: BulkInterpreter | null;
+	/**
+	 * The Library's snapshot and the vault changes after it. Kept after the
+	 * scope closes it, so a reconciliation still running can rescan.
+	 */
+	readonly subscription: VaultSnapshotSubscription | null;
+	readonly healing: LibrarianHealing | null;
+	/** The last split's number: each command names its operation by it. */
+	readonly commandCount: number;
+	/** What the start's scan could not read. */
+	readonly lastScanDiagnostics: readonly VamScanError[];
+	/** How closing its scope unsubscribed it, once it closed. */
+	readonly unsubscribed: Exit.Exit<void, LibrarianUnsubscribeFailure> | null;
+};
+
+const NOT_STARTED: LibrarianState = {
+	codecs: null,
+	commandCount: 0,
+	healing: null,
+	interpretBulk: null,
+	lastScanDiagnostics: [],
+	status: "Idle",
+	subscription: null,
+	unsubscribed: null,
+};
+
+/** Its reconciler and queue while it runs: what new work needs; none otherwise. */
+const runningHealing = (state: LibrarianState): LibrarianHealing | null =>
+	state.status === "Running" ? state.healing : null;
+
 // ─── Librarian ───
 
+/**
+ * Keeps one Library healed, from one start to the close of the scope it was
+ * made in (`Librarian.make`). Closing that scope unsubscribes it: it takes
+ * no new work, its VAM subscription closes, and the work queued before
+ * runs to its end. A new start is a new Librarian.
+ */
 export class Librarian {
-	private reconciler: LibraryReconciler<
-		LibrarianDispatchFailure,
-		LibrarianRecoveryFailure
-	> | null = null;
-	private reconciliationAudit = new ReconciliationAuditLog<
+	private readonly reconciliationAudit = new ReconciliationAuditLog<
 		LibrarianDispatchFailure,
 		LibrarianRecoveryFailure
 	>();
+
+	private constructor(
+		private readonly vam: LibrarianVam,
+		private readonly options: LibrarianOptions,
+		private readonly state: Ref.Ref<LibrarianState>,
+		/** Done once its start ended, started or not, or its scope closed. */
+		private readonly startEnded: Deferred.Deferred<void>,
+	) {}
+
 	/**
-	 * The Library's snapshot and the vault changes after it. Kept after
-	 * `unsubscribe` closes it, so a reconciliation still running can rescan.
+	 * A Librarian in the current scope, not yet started: `init` starts it,
+	 * and closing the scope unsubscribes it.
 	 */
-	private subscription: VaultSnapshotSubscription | null = null;
-	private actionQueue: VaultActionQueue<LibrarianQueueItem, never> | null =
-		null;
-	/** Until startup reconciliation ends; VAM holds vault changes meanwhile. */
-	private starting = false;
-	private nextCommandOperationId = 0;
-	private codecs!: Codecs;
-	private interpretBulk!: BulkInterpreter;
+	static readonly make = Effect.fnUntraced(function* (
+		vam: LibrarianVam,
+		options: LibrarianOptions,
+	): Effect.fn.Return<Librarian, never, Scope.Scope> {
+		const librarian = new Librarian(
+			vam,
+			options,
+			yield* Ref.make(NOT_STARTED),
+			yield* Deferred.make<void>(),
+		);
+		yield* Effect.addFinalizer(() => librarian.release());
+		return librarian;
+	});
 
-	// Debug: store last events and actions for testing
-	public _debugLastBulkEvent: BulkVaultEvent | null = null;
-	public _debugLastScanDiagnostics: readonly VamScanError[] = [];
-
+	/** The last reconciliation's outcome (for testing). */
 	get _debugLastReconciliationOutcome(): LibrarianReconciliationOutcome | null {
 		return this.reconciliationAudit.getRecent(1)[0] ?? null;
 	}
 
-	constructor(
-		private readonly vam: LibrarianVam,
-		private readonly options: LibrarianOptions,
-	) {}
-
-	/** The codec rules this Librarian's start runs under; null before its first start. */
-	get codecRules(): CodecRules | null {
-		if (!this.codecs) return null;
-		return this.codecs.rules;
+	/** What the start's scan could not read (for testing). */
+	get _debugLastScanDiagnostics(): readonly VamScanError[] {
+		return this.snapshot().lastScanDiagnostics;
 	}
+
+	/** The codec rules this Librarian's start runs under; null before its start read them. */
+	get codecRules(): CodecRules | null {
+		return this.snapshot().codecs?.rules ?? null;
+	}
+
+	/** The state as it is now, for the plain code that reads it synchronously. */
+	private snapshot(): LibrarianState {
+		return Ref.getUnsafe(this.state);
+	}
+
+	/**
+	 * The state once this Librarian's start ended: a click or a command
+	 * that comes while it starts waits for it, so a half-started Librarian
+	 * never takes work.
+	 */
+	private readonly afterStart: Effect.Effect<LibrarianState> = Effect.gen(
+		{ self: this },
+		function* () {
+			const now = yield* Ref.get(this.state);
+			if (now.status !== "Starting") return now;
+			yield* Deferred.await(this.startEnded);
+			return yield* Ref.get(this.state);
+		},
+	);
 
 	/**
 	 * Tells `onStopped` why the Librarian stopped, and logs it with every
@@ -331,7 +424,7 @@ export class Librarian {
 
 	private prepareStartupReconciliation(
 		scan: VaultScanResult,
-		libraryRoot: NodeName,
+		codecs: Codecs,
 		allowPartial: boolean,
 	): Effect.Effect<ReconciliationRecoveryInput, LibrarianRecoveryFailure> {
 		if (!allowPartial && scan.kind === "Partial") {
@@ -341,7 +434,7 @@ export class Librarian {
 			});
 		}
 
-		return buildInitialCreateActions(scan.entries, this.codecs).pipe(
+		return buildInitialCreateActions(scan.entries, codecs).pipe(
 			Effect.tap(({ createDiagnostics }) =>
 				logEach(
 					createDiagnostics,
@@ -350,8 +443,8 @@ export class Librarian {
 			),
 			Effect.map(({ createActions }) => ({
 				healer: new Healer(
-					new Tree(libraryRoot, this.codecs),
-					this.codecs,
+					new Tree(codecs.rules.libraryRootName, codecs),
+					codecs,
 				),
 				request: {
 					observedVaultPaths: scan.entries,
@@ -365,8 +458,8 @@ export class Librarian {
 
 	private readonly prepareRecovery = Effect.fn("Librarian.prepareRecovery")(
 		function* (this: Librarian) {
-			const subscription = this.subscription;
-			if (!subscription) {
+			const { codecs, status, subscription } = yield* Ref.get(this.state);
+			if (!subscription || !codecs) {
 				return yield* new LibrarianUnexpectedRecoveryError({
 					cause: Cause.die(
 						new Error("The Librarian has no Library snapshot"),
@@ -381,16 +474,17 @@ export class Librarian {
 			// Startup accepted a partial scan, so its recovery does too.
 			return yield* this.prepareStartupReconciliation(
 				scan,
-				this.codecs.rules.libraryRootName,
-				this.starting,
+				codecs,
+				status === "Starting",
 			);
 		},
 	);
 
 	private makeReconciler(
 		healer: Healer,
-	): LibraryReconciler<LibrarianDispatchFailure, LibrarianRecoveryFailure> {
-		return new LibraryReconciler(healer, this.codecs, {
+		codecs: Codecs,
+	): LibrarianReconciler {
+		return new LibraryReconciler(healer, codecs, {
 			audit: this.reconciliationAudit,
 			classifyDispatchFailure: classifyLibrarianDispatchFailure,
 			dispatch: (actions) =>
@@ -410,134 +504,212 @@ export class Librarian {
 	}
 
 	/**
-	 * Initialize librarian: read tree and heal mismatches. A start that
-	 * fails fails with the Librarian's typed stop, holding every reason,
-	 * and tells `onStopped` it too.
+	 * Initialize librarian: read tree and heal mismatches. A Librarian
+	 * starts once. A start that fails fails with the Librarian's typed
+	 * stop, holding every reason, and tells `onStopped` it too; the
+	 * Librarian is then closed.
 	 */
-	readonly init = Effect.fn("Librarian.init")(function* (this: Librarian) {
-		const self = this;
+	readonly init = Effect.fn("Librarian.init")(function* (
+		this: Librarian,
+	): Effect.fn.Return<void, LibrarianStop> {
+		const begun = yield* Ref.modify(
+			this.state,
+			(state): [boolean, LibrarianState] =>
+				state.status === "Idle"
+					? [true, { ...state, status: "Starting" }]
+					: [false, state],
+		);
+		if (!begun) {
+			// Not a stop: the Librarian that runs, or closed, stays as it is.
+			return yield* Effect.die(
+				new Error(
+					"A Librarian starts once, and never after its scope closed",
+				),
+			);
+		}
 		const idle = yield* IdleTracker;
-		return yield* idle
-			.track(
-				Effect.gen(function* () {
-					const settings = yield* self.options.settings.get;
-					self.reconciler = null;
-					self.actionQueue = null;
-					self.subscription = null;
-					self.starting = true;
-					self.reconciliationAudit = new ReconciliationAuditLog();
-					self._debugLastScanDiagnostics = [];
-					self.codecs = makeCodecs(
-						makeCodecRulesFromSettings(settings, {
-							metadataFormat: () =>
-								metadataFormatOf(self.options.settings.now()),
-						}),
-					);
-					self.interpretBulk = makeBulkInterpreter(self.codecs);
-					const rootSplitPath = settings.splitPathToLibraryRoot;
-					const libraryRoot = rootSplitPath.basename;
+		return yield* idle.track(this.start()).pipe(
+			// What stopped the start, every reason of it, as the typed stop.
+			catchWhole((cause) =>
+				this.reportStopped("Startup", cause).pipe(
+					Effect.flatMap(Effect.fail),
+				),
+			),
+			Effect.onError(() => this.close().pipe(Effect.ignore)),
+			Effect.ensuring(Deferred.done(this.startEnded, Exit.void)),
+		);
+	});
 
-					// The snapshot and the subscription share one cursor: every
-					// vault change after the snapshot reaches handleBulkEvent
-					// once, and none it holds does. VAM holds them until
-					// `start`, below.
-					// External events only: the Librarian's own renames, and
-					// every other caller's, are never healed again.
-					const subscription = yield* self.vam
-						.scanAndSubscribe(
-							rootSplitPath,
-							{ onBulk: (bulk) => self.handleBulkEvent(bulk) },
-							{ from: "external" },
-						)
-						.pipe(
-							Effect.tapError((failure) =>
-								Effect.logError(
-									"[Librarian] Vault scan failed:",
-									Cause.fail(failure),
-								),
-							),
-						);
-					self.subscription = subscription;
-					const scan = subscription.snapshot;
-					self._debugLastScanDiagnostics = scan.diagnostics;
-					if (scan.kind === "Partial")
-						yield* Effect.forEach(
-							scan.diagnostics,
-							(diagnostic) =>
-								Effect.logWarning(
-									`[Librarian] Partial vault scan at ${diagnostic.path}`,
-								).pipe(Effect.annotateLogs({ diagnostic })),
-							{ discard: true },
-						);
+	private readonly start = Effect.fnUntraced(function* (
+		this: Librarian,
+	): Effect.fn.Return<void, LibrarianStopFailure> {
+		const settings = yield* this.options.settings.get;
+		const codecs = makeCodecs(
+			makeCodecRulesFromSettings(settings, {
+				metadataFormat: () =>
+					metadataFormatOf(this.options.settings.now()),
+			}),
+		);
+		yield* Ref.update(this.state, (state) => ({
+			...state,
+			codecs,
+			interpretBulk: makeBulkInterpreter(codecs),
+		}));
 
-					const startup = yield* self.prepareStartupReconciliation(
-						scan,
-						libraryRoot,
-						true,
-					);
-					self.reconciler = self.makeReconciler(startup.healer);
-					self.actionQueue = yield* VaultActionQueue.make<
-						LibrarianQueueItem,
-						never
-					>((item) => self.processQueueItem(item));
-
-					const startupResult: {
-						outcome?: LibrarianReconciliationOutcome;
-					} = {};
-					yield* self.actionQueue.enqueue({
-						kind: "Reconciliation",
-						observe: (outcome) => {
-							startupResult.outcome = outcome;
-						},
-						request: startup.request,
-					});
-					const startupOutcome = startupResult.outcome;
-					if (
-						startupOutcome?.status === "Failed" ||
-						startupOutcome?.status === "PartialFailure"
-					) {
-						if (startupOutcome.recovery.kind !== "Resynchronized") {
-							return yield* Effect.fail(startupOutcome);
-						}
-						yield* Effect.logWarning(
-							"[Librarian] Startup healing partly failed; a rescan of the library recovered it",
-						).pipe(
-							Effect.annotateLogs({ outcome: startupOutcome }),
-						);
-					}
-
-					self.starting = false;
-					// The changes after the latest snapshot, the first or a
-					// recovery's rescan, now reach handleBulkEvent.
-					yield* subscription.start;
-				}),
+		// The snapshot and the subscription share one cursor: every vault
+		// change after the snapshot reaches handleBulkEvent once, and none
+		// it holds does. VAM holds them until `start`, below.
+		// External events only: the Librarian's own renames, and every
+		// other caller's, are never healed again.
+		const subscription = yield* this.vam
+			.scanAndSubscribe(
+				settings.splitPathToLibraryRoot,
+				{ onBulk: (bulk) => this.handleBulkEvent(bulk) },
+				{ from: "external" },
 			)
 			.pipe(
-				// What stopped the start, every reason of it, as the typed stop.
-				catchWhole((cause) =>
-					self
-						.reportStopped("Startup", cause)
-						.pipe(Effect.flatMap(Effect.fail)),
+				Effect.tapError((failure) =>
+					Effect.logError(
+						"[Librarian] Vault scan failed:",
+						Cause.fail(failure),
+					),
 				),
-				Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
 			);
+		const scan = subscription.snapshot;
+		const kept = yield* Ref.modify(
+			this.state,
+			(state): [boolean, LibrarianState] =>
+				state.status === "Starting"
+					? [
+							true,
+							{
+								...state,
+								lastScanDiagnostics: scan.diagnostics,
+								subscription,
+							},
+						]
+					: [false, state],
+		);
+		if (!kept) {
+			// Its scope closed while it subscribed: nothing else closes this.
+			yield* subscription.close.pipe(Effect.ignore);
+			return yield* Effect.interrupt;
+		}
+		if (scan.kind === "Partial")
+			yield* Effect.forEach(
+				scan.diagnostics,
+				(diagnostic) =>
+					Effect.logWarning(
+						`[Librarian] Partial vault scan at ${diagnostic.path}`,
+					).pipe(Effect.annotateLogs({ diagnostic })),
+				{ discard: true },
+			);
+
+		const startup = yield* this.prepareStartupReconciliation(
+			scan,
+			codecs,
+			true,
+		);
+		const healing: LibrarianHealing = {
+			queue: yield* VaultActionQueue.make,
+			reconciler: this.makeReconciler(startup.healer, codecs),
+		};
+		yield* Ref.update(this.state, (state) => ({ ...state, healing }));
+
+		const startupOutcome = yield* healing.queue.run(
+			this.processQueueItem(healing, {
+				kind: "Reconciliation",
+				request: startup.request,
+			}),
+		);
+		if (
+			startupOutcome?.status === "Failed" ||
+			startupOutcome?.status === "PartialFailure"
+		) {
+			if (startupOutcome.recovery.kind !== "Resynchronized") {
+				return yield* Effect.fail(startupOutcome);
+			}
+			yield* Effect.logWarning(
+				"[Librarian] Startup healing partly failed; a rescan of the library recovered it",
+			).pipe(Effect.annotateLogs({ outcome: startupOutcome }));
+		}
+
+		const running = yield* Ref.modify(
+			this.state,
+			(state): [boolean, LibrarianState] =>
+				state.status === "Starting"
+					? [true, { ...state, status: "Running" }]
+					: [false, state],
+		);
+		if (!running) return yield* Effect.interrupt;
+		// The changes after the latest snapshot, the first or a recovery's
+		// rescan, now reach handleBulkEvent.
+		yield* subscription.start;
+	});
+
+	/**
+	 * Its scope's finalizer: closes the Librarian, and keeps how that ended
+	 * for `unsubscribed`.
+	 */
+	private readonly release = Effect.fn("Librarian.unsubscribe")(function* (
+		this: Librarian,
+	) {
+		const exit = yield* Effect.exit(this.close());
+		yield* Ref.update(this.state, (state) => ({
+			...state,
+			unsubscribed: exit,
+		}));
+	});
+
+	/**
+	 * How closing its scope unsubscribed it: none before the scope closed.
+	 * The supervisor reads it to tell a release that failed.
+	 */
+	readonly unsubscribed: Effect.Effect<
+		Option.Option<Exit.Exit<void, LibrarianUnsubscribeFailure>>
+	> = Effect.sync(() => Option.fromNullishOr(this.snapshot().unsubscribed));
+
+	/**
+	 * Takes no new work, closes the subscription, and waits for the work
+	 * already queued. Closing twice closes nothing more.
+	 */
+	private readonly close = Effect.fnUntraced(function* (this: Librarian) {
+		const { healing, subscription } = yield* Ref.updateAndGet(
+			this.state,
+			(state) => ({ ...state, status: "Closed" as const }),
+		);
+		yield* Deferred.done(this.startEnded, Exit.void);
+		const drain = healing ? healing.queue.waitForDrain() : Effect.void;
+		if (subscription) {
+			yield* subscription.close.pipe(Effect.ensuring(drain));
+			return;
+		}
+		yield* drain;
 	});
 
 	/**
 	 * Handle a bulk event: queue it, to be turned into tree actions and
-	 * healed in its turn.
+	 * healed in its turn. VAM delivers only once the start ended; a bulk
+	 * that comes when the Librarian is not running is dropped, since the
+	 * next start's scan holds it.
 	 */
 	private readonly handleBulkEvent = Effect.fn("Librarian.handleBulkEvent")(
 		function* (this: Librarian, bulk: BulkVaultEvent) {
-			// Store for debugging
-			this._debugLastBulkEvent = bulk;
-			if (!this.reconciler || !this.actionQueue) {
+			yield* Effect.annotateCurrentSpan({
+				"librarian.bulk.events": bulk.events.length,
+				"librarian.bulk.roots": bulk.roots.length,
+			});
+			const state = yield* Ref.get(this.state);
+			const healing = runningHealing(state);
+			if (!healing) {
 				yield* Effect.logWarning(
-					"[Librarian.handleBulkEvent] No healer, returning early",
+					`[Librarian.handleBulkEvent] The Librarian is ${state.status}; the next start's scan holds this change`,
 				);
 				return;
 			}
-			yield* this.actionQueue.enqueue({ bulk, kind: "ObservedBulk" });
+			yield* healing.queue.run(
+				this.processQueueItem(healing, { bulk, kind: "ObservedBulk" }),
+			);
 		},
 	);
 
@@ -551,12 +723,12 @@ export class Librarian {
 		this: Librarian,
 		bulk: BulkVaultEvent,
 	): Effect.fn.Return<ReconciliationRequest | null> {
-		const current = this.subscription
-			? this.subscription.afterSnapshot(bulk)
-			: bulk;
+		const { interpretBulk, subscription } = yield* Ref.get(this.state);
+		if (!interpretBulk) return null;
+		const current = subscription ? subscription.afterSnapshot(bulk) : bulk;
 		if (!current) return null;
 		const { createDiagnostics, invalidCodexActions, issues, treeActions } =
-			this.interpretBulk(current);
+			interpretBulk(current);
 		yield* logEach(
 			createDiagnostics,
 			"[Librarian] Invalid live Create observation",
@@ -572,27 +744,24 @@ export class Librarian {
 		};
 	});
 
+	/**
+	 * Reconciles a queued item in its turn; answers its outcome, or null
+	 * when a bulk asked for nothing.
+	 */
 	private readonly processQueueItem = Effect.fn("Librarian.processQueueItem")(
-		function* (this: Librarian, queued: LibrarianQueueItem) {
-			if (!this.reconciler) return;
-			if (queued.kind === "CommandIntention") {
-				yield* this.processCommandIntention(queued).pipe(
-					Effect.uninterruptible,
-				);
-				return;
-			}
-			let item: ReconciliationQueueItem;
-			if (queued.kind === "ObservedBulk") {
-				const request = yield* this.observedBulkRequest(queued.bulk);
-				if (!request) return;
-				item = { kind: "Reconciliation", request };
-			} else {
-				item = queued;
-			}
+		function* (
+			this: Librarian,
+			{ reconciler }: LibrarianHealing,
+			queued: ReconciliationQueueItem | ObservedBulkQueueItem,
+		): Effect.fn.Return<LibrarianReconciliationOutcome | null> {
+			const request =
+				queued.kind === "ObservedBulk"
+					? yield* this.observedBulkRequest(queued.bulk)
+					: queued.request;
+			if (!request) return null;
 
-			const wasUnavailable = this.reconciler.isUnavailable();
-			const outcome = yield* this.reconciler.reconcile(item.request);
-			item.observe?.(outcome);
+			const wasUnavailable = reconciler.isUnavailable();
+			const outcome = yield* reconciler.reconcile(request);
 			if (
 				outcome.status === "Failed" ||
 				outcome.status === "PartialFailure"
@@ -602,18 +771,24 @@ export class Librarian {
 				).pipe(Effect.annotateLogs({ outcome }));
 			}
 			// A failed startup is reported once, by init.
-			if (item.request.source !== "Startup") {
-				yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
+			if (request.source !== "Startup") {
+				yield* this.reportIfNewlyStopped(
+					reconciler,
+					wasUnavailable,
+					outcome,
+				);
 			}
+			return outcome;
 		},
 	);
 
 	private reportIfNewlyStopped(
+		reconciler: LibrarianReconciler,
 		wasUnavailable: boolean,
 		outcome: LibrarianReconciliationOutcome,
 	): Effect.Effect<void> {
 		return Effect.suspend(() =>
-			!wasUnavailable && this.reconciler?.isUnavailable()
+			!wasUnavailable && reconciler.isUnavailable()
 				? this.reportStopped("Runtime", Cause.fail(outcome)).pipe(
 						Effect.asVoid,
 					)
@@ -623,10 +798,12 @@ export class Librarian {
 
 	private readonly processCommandIntention = Effect.fn(
 		"Librarian.processCommandIntention",
-	)(function* (this: Librarian, item: CommandIntentionQueueItem) {
-		if (!this.reconciler) return;
-		const { intention } = item;
-		const wasUnavailable = this.reconciler.isUnavailable();
+	)(function* (
+		this: Librarian,
+		{ reconciler }: LibrarianHealing,
+		intention: LibraryCommandIntention,
+	): Effect.fn.Return<LibraryCommandIntentionResult> {
+		const wasUnavailable = reconciler.isUnavailable();
 		const dispatchResult = yield* this.vam
 			// The command's operation id names its batch too, so the split's
 			// record, its VAM report and its spans share one id.
@@ -651,85 +828,70 @@ export class Librarian {
 				),
 			);
 		if (Result.isFailure(dispatchResult)) {
-			const outcome =
-				yield* this.reconciler.reconcileExternalDispatchFailure({
-					failure: dispatchResult.failure,
-					operationId: intention.operationId,
-					source: "CommandIntention",
-					submittedCount: intention.vaultActions.length,
-				});
-			item.observe({
+			const outcome = yield* reconciler.reconcileExternalDispatchFailure({
 				failure: dispatchResult.failure,
-				kind: "VaultDispatchFailed",
 				operationId: intention.operationId,
-				outcome,
+				source: "CommandIntention",
+				submittedCount: intention.vaultActions.length,
 			});
 			yield* Effect.logError(
 				"[Librarian] Command intention vault dispatch failed",
 			).pipe(Effect.annotateLogs({ outcome }));
-			yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
-			return;
+			yield* this.reportIfNewlyStopped(
+				reconciler,
+				wasUnavailable,
+				outcome,
+			);
+			return {
+				failure: dispatchResult.failure,
+				kind: "VaultDispatchFailed",
+				operationId: intention.operationId,
+				outcome,
+			};
 		}
 
-		const outcome = yield* this.reconciler.reconcile({
+		const outcome = yield* reconciler.reconcile({
 			operationId: intention.operationId,
 			source: "CommandIntention",
 			supplemental: { invalidCodexDeletions: [] },
 			treeActions: intention.treeActions,
 		});
+		const initialDispatch = {
+			kind: "Completed",
+			submittedCount: intention.vaultActions.length,
+		} as const;
 		if (
 			outcome.status === "Failed" ||
 			outcome.status === "PartialFailure"
 		) {
-			item.observe({
-				initialDispatch: {
-					kind: "Completed",
-					submittedCount: intention.vaultActions.length,
-				},
-				kind: "ReconciliationFailed",
-				operationId: intention.operationId,
-				outcome,
-			});
 			yield* Effect.logError(
 				"[Librarian] Command intention reconciliation failed",
 			).pipe(Effect.annotateLogs({ outcome }));
-			yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
-			return;
+			yield* this.reportIfNewlyStopped(
+				reconciler,
+				wasUnavailable,
+				outcome,
+			);
+			return {
+				initialDispatch,
+				kind: "ReconciliationFailed",
+				operationId: intention.operationId,
+				outcome,
+			};
 		}
-		item.observe({
-			initialDispatch: {
-				kind: "Completed",
-				submittedCount: intention.vaultActions.length,
-			},
+		return {
+			initialDispatch,
 			kind: "Completed",
 			operationId: intention.operationId,
 			outcome,
-		});
-	});
-
-	/**
-	 * Cleanup: unsubscribe from vault events.
-	 */
-	readonly unsubscribe = Effect.fn("Librarian.unsubscribe")(function* (
-		this: Librarian,
-	) {
-		this.starting = false;
-		const drain = this.actionQueue
-			? this.actionQueue.waitForDrain()
-			: Effect.void;
-		if (this.subscription) {
-			// Closing twice is a no-op; the subscription stays for rescans.
-			yield* this.subscription.close.pipe(Effect.ensuring(drain));
-			return;
-		}
-		yield* drain;
+		};
 	});
 
 	/**
 	 * Get current healer (for testing).
 	 */
 	getHealer(): Healer | null {
-		return this.reconciler?.getCommittedHealer() ?? null;
+		return this.snapshot().healing?.reconciler.getCommittedHealer() ?? null;
 	}
 
 	getRecentReconciliationOutcomes(
@@ -738,7 +900,11 @@ export class Librarian {
 		return this.reconciliationAudit.getRecent(count);
 	}
 
-	/** Execute a validated page-split batch and its Tree intention under one permit. */
+	/**
+	 * Execute a validated page-split batch and its Tree intention under one
+	 * permit, and answer how it went. One that comes while the Librarian
+	 * starts waits for its start; a Librarian that is not running refuses it.
+	 */
 	readonly executeSplitIntention = Effect.fn(
 		"Librarian.executeSplitIntention",
 	)(function* (
@@ -748,54 +914,54 @@ export class Librarian {
 		LibraryCommandIntentionResult,
 		LibraryCommandIntentionError
 	> {
-		if (!this.reconciler || !this.actionQueue) {
-			return yield* Effect.fail(
-				new LibraryCommandIntentionError({
-					kind: "LibrarianUnavailable",
-				}),
-			);
+		const healing = runningHealing(yield* this.afterStart);
+		if (!healing) {
+			return yield* new LibraryCommandIntentionError({
+				kind: "LibrarianUnavailable",
+			});
 		}
-
-		const observed: { result?: LibraryCommandIntentionResult } = {};
-		this.nextCommandOperationId += 1;
-		const intention: LibraryCommandIntention = {
-			operationId: `split-${this.nextCommandOperationId}`,
-			treeActions: plan.treeActions,
-			vaultActions: plan.vaultActions,
-		};
-		yield* this.actionQueue.enqueue({
-			intention,
-			kind: "CommandIntention",
-			observe: (result) => {
-				observed.result = result;
-			},
-		});
-		if (!observed.result) {
-			return yield* Effect.fail(
-				new LibraryCommandIntentionError({
-					kind: "LibrarianUnavailable",
-				}),
-			);
-		}
-		return observed.result;
+		const operationId = yield* Ref.modify(
+			this.state,
+			(state): [string, LibrarianState] => [
+				`split-${state.commandCount + 1}`,
+				{ ...state, commandCount: state.commandCount + 1 },
+			],
+		);
+		return yield* healing.queue.run(
+			this.processCommandIntention(healing, {
+				operationId,
+				treeActions: plan.treeActions,
+				vaultActions: plan.vaultActions,
+			}).pipe(Effect.uninterruptible),
+		);
 	});
+
+	/** The Library scope and Tree of this Librarian's start, once it built them. */
+	private libraryView() {
+		const { codecs, healing } = this.snapshot();
+		if (!codecs || !healing) return null;
+		return {
+			codecs,
+			healer: healing.reconciler.getCommittedHealer(),
+			libraryScope: makeLibraryScope(codecs.rules),
+		};
+	}
 
 	/**
 	 * Get previous page by looking up siblings in tree.
 	 * Returns null if current is first page or not a page file.
 	 */
 	getPrevPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
-		const healer = this.getHealer();
-		if (!healer) return null;
-		const libraryScope = makeLibraryScope(this.codecs.rules);
-		const libraryPath = libraryScope.toLibraryPath(currentFilePath);
+		const view = this.libraryView();
+		if (!view) return null;
+		const libraryPath = view.libraryScope.toLibraryPath(currentFilePath);
 		if (libraryPath.isErr()) return null;
 		const previous = getPrevPageImpl(
-			healer,
-			this.codecs,
+			view.healer,
+			view.codecs,
 			libraryPath.value,
 		);
-		return previous ? libraryScope.toVaultPath(previous) : null;
+		return previous ? view.libraryScope.toVaultPath(previous) : null;
 	}
 
 	/**
@@ -803,27 +969,33 @@ export class Librarian {
 	 * Returns null if current is last page or not a page file.
 	 */
 	getNextPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
-		const healer = this.getHealer();
-		if (!healer) return null;
-		const libraryScope = makeLibraryScope(this.codecs.rules);
-		const libraryPath = libraryScope.toLibraryPath(currentFilePath);
+		const view = this.libraryView();
+		if (!view) return null;
+		const libraryPath = view.libraryScope.toLibraryPath(currentFilePath);
 		if (libraryPath.isErr()) return null;
-		const next = getNextPageImpl(healer, this.codecs, libraryPath.value);
-		return next ? libraryScope.toVaultPath(next) : null;
+		const next = getNextPageImpl(
+			view.healer,
+			view.codecs,
+			libraryPath.value,
+		);
+		return next ? view.libraryScope.toVaultPath(next) : null;
 	}
 
 	/**
 	 * List all commands that could be executable for a given file path.
 	 * Returns all possible commands for the file type; caller filters by selection state.
+	 * None before the start read its settings.
 	 */
 	listCommandsExecutableIn(splitPath: SplitPathToMdFile): CommandKind[] {
-		const libraryPath = makeLibraryScope(this.codecs.rules).toLibraryPath(
+		const { codecs, healing } = this.snapshot();
+		if (!codecs) return [];
+		const libraryPath = makeLibraryScope(codecs.rules).toLibraryPath(
 			splitPath,
 		);
 		if (libraryPath.isErr()) return [];
 		return listCommandsExecutableInImpl(
-			this.codecs,
-			this.getHealer(),
+			codecs,
+			healing?.reconciler.getCommittedHealer() ?? null,
 			libraryPath.value,
 		);
 	}
@@ -864,8 +1036,12 @@ export class Librarian {
 		);
 	}
 
+	/** Whether a path is a Codex inside the Library; false before the start read the root. */
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
-		return isCodexInsideLibraryHelper(splitPath, this.codecs.rules);
+		const { codecs } = this.snapshot();
+		return codecs
+			? isCodexInsideLibraryHelper(splitPath, codecs.rules)
+			: false;
 	}
 
 	/**
@@ -873,10 +1049,10 @@ export class Librarian {
 	 * False until init has read the configured root.
 	 */
 	isInsideLibrary(splitPath: AnySplitPath): boolean {
-		if (!this.codecs) return false;
-		return this.codecs.splitPathInsideLibrary.checkIfInsideLibrary(
-			splitPath,
-		);
+		const { codecs } = this.snapshot();
+		return codecs
+			? codecs.splitPathInsideLibrary.checkIfInsideLibrary(splitPath)
+			: false;
 	}
 
 	/** Whether a path names a codex file (basename carries the codex prefix). */
@@ -885,9 +1061,11 @@ export class Librarian {
 	}
 
 	resolveWikilinkAlias(linkContent: string): string | null {
+		const { codecs } = this.snapshot();
+		if (!codecs) return null;
 		const result = resolveAliasFromSuffix(
 			linkContent,
-			this.codecs.suffix,
+			codecs.suffix,
 			(name) => name.startsWith(PREFIX_OF_CODEX),
 		);
 		return result?.alias ?? null;
@@ -906,7 +1084,9 @@ export class Librarian {
 	parseLibraryBasename(
 		basename: string,
 	): { coreName: string; suffixParts: string[] } | null {
-		const parsed = this.codecs.suffix.parseSeparatedSuffix(basename);
+		const { codecs } = this.snapshot();
+		if (!codecs) return null;
+		const parsed = codecs.suffix.parseSeparatedSuffix(basename);
 		if (Result.isFailure(parsed)) {
 			return null;
 		}
@@ -919,14 +1099,18 @@ export class Librarian {
 	/**
 	 * Handle checkbox click in a codex file.
 	 * Parses the line content to determine the target (scroll or section),
-	 * builds a ChangeNodeStatusAction, and enqueues it for processing.
+	 * builds a ChangeNodeStatusAction, and reconciles it in its turn. A
+	 * click while the Librarian starts waits for its start.
 	 */
 	readonly handleCodexCheckboxClick = Effect.fn(
 		"Librarian.handleCodexCheckboxClick",
 	)(function* (this: Librarian, payload: PayloadFor<"CheckboxClicked">) {
-		if (!this.reconciler) {
+		const state = yield* this.afterStart;
+		const healing = runningHealing(state);
+		const { codecs } = state;
+		if (!healing || !codecs) {
 			yield* Effect.logWarning(
-				"[Librarian.handleCodexCheckboxClick] No healer",
+				`[Librarian.handleCodexCheckboxClick] The Librarian is ${state.status}`,
 			);
 			return;
 		}
@@ -934,7 +1118,7 @@ export class Librarian {
 		// 1. Parse line content to get click target
 		const parseResult = parseCodexClickLineContent(
 			payload.lineContent,
-			this.codecs,
+			codecs,
 		);
 		if (parseResult.isErr()) {
 			yield* Effect.logWarning(
@@ -953,7 +1137,7 @@ export class Librarian {
 			: TreeNodeStatus.Done; // Was unchecked → user wants to check
 
 		// 3. Build ChangeNodeStatusAction based on target type
-		const action = this.buildChangeStatusAction(target, newStatus);
+		const action = buildChangeStatusAction(target, newStatus, codecs);
 		if (!action) {
 			yield* Effect.logWarning(
 				"[Librarian.handleCodexCheckboxClick] Failed to build action",
@@ -961,48 +1145,32 @@ export class Librarian {
 			return;
 		}
 
-		// 4. Enqueue for processing
-		if (!this.actionQueue) return;
-		yield* this.actionQueue.enqueue({
-			kind: "Reconciliation",
-			request: {
-				source: "CodexClick",
-				supplemental: { invalidCodexDeletions: [] },
-				treeActions: [action],
-			},
-		});
+		// 4. Reconcile it in its turn
+		yield* healing.queue.run(
+			this.processQueueItem(healing, {
+				kind: "Reconciliation",
+				request: {
+					source: "CodexClick",
+					supplemental: { invalidCodexDeletions: [] },
+					treeActions: [action],
+				},
+			}),
+		);
 	});
+}
 
-	private buildChangeStatusAction(
-		target: CodexClickTarget,
-		newStatus: TreeNodeStatus,
-	): ChangeNodeStatusAction | null {
-		if (target.kind === "Section") {
-			// Section click: propagate status to all descendants
-			const { sectionChain } = target;
-			if (sectionChain.length === 0) return null;
+function buildChangeStatusAction(
+	target: CodexClickTarget,
+	newStatus: TreeNodeStatus,
+	codecs: Codecs,
+): ChangeNodeStatusAction | null {
+	if (target.kind === "Section") {
+		// Section click: propagate status to all descendants
+		const { sectionChain } = target;
+		if (sectionChain.length === 0) return null;
 
-			const segmentId = sectionChain[sectionChain.length - 1];
-			const parentChain = sectionChain.slice(0, -1);
-
-			return {
-				actionType: "ChangeStatus" as const,
-				newStatus,
-				targetLocator: {
-					segmentId,
-					segmentIdChainToParent: parentChain,
-					targetKind: TreeNodeKind.Section,
-				} as SectionNodeLocator,
-			};
-		}
-
-		// Scroll click: update single scroll status
-		const { parentChain, nodeName } = target;
-		const segmentId = this.codecs.segmentId.serializeSegmentId({
-			coreName: nodeName as NodeName,
-			extension: MD,
-			targetKind: TreeNodeKind.Scroll,
-		});
+		const segmentId = sectionChain[sectionChain.length - 1];
+		const parentChain = sectionChain.slice(0, -1);
 
 		return {
 			actionType: "ChangeStatus" as const,
@@ -1010,10 +1178,28 @@ export class Librarian {
 			targetLocator: {
 				segmentId,
 				segmentIdChainToParent: parentChain,
-				targetKind: TreeNodeKind.Scroll,
-			} as ScrollNodeLocator,
+				targetKind: TreeNodeKind.Section,
+			} as SectionNodeLocator,
 		};
 	}
+
+	// Scroll click: update single scroll status
+	const { parentChain, nodeName } = target;
+	const segmentId = codecs.segmentId.serializeSegmentId({
+		coreName: nodeName as NodeName,
+		extension: MD,
+		targetKind: TreeNodeKind.Scroll,
+	});
+
+	return {
+		actionType: "ChangeStatus" as const,
+		newStatus,
+		targetLocator: {
+			segmentId,
+			segmentIdChainToParent: parentChain,
+			targetKind: TreeNodeKind.Scroll,
+		} as ScrollNodeLocator,
+	};
 }
 
 /**

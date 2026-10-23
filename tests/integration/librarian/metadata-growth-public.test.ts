@@ -21,6 +21,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
@@ -132,7 +133,7 @@ function makeVault(
 			);
 		},
 		/** One plugin load: a fresh Librarian runs its startup. */
-		load: () => Effect.runPromise(new Librarian(vam, { settings }).init()),
+		load: () => Effect.runPromise(makeLibrarian(vam, { settings }).init()),
 		read: (basename: string) => files.get(keyOf(scrollPath(basename))),
 	};
 }

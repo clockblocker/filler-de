@@ -10,20 +10,20 @@ describe("VaultActionQueue", () => {
 				const firstStarted = yield* Deferred.make<void>();
 				const releaseFirst = yield* Deferred.make<void>();
 				const events: string[] = [];
-				const queue = yield* VaultActionQueue.make<number, never>(
-					Effect.fn("testProcessor")(function* (item) {
+				const process = Effect.fn("testProcessor")(function* (item: number) {
 						events.push(`start:${item}`);
 						if (item === 1) {
 							yield* Deferred.succeed(firstStarted, undefined);
 							yield* Deferred.await(releaseFirst);
 						}
 						events.push(`end:${item}`);
-					}),
-				);
+					});
+				const queue = yield* VaultActionQueue.make;
+				const enqueue = (item: number) => queue.run(process(item));
 
-				const first = yield* queue.enqueue(1).pipe(Effect.forkChild);
+				const first = yield* enqueue(1).pipe(Effect.forkChild);
 				yield* Deferred.await(firstStarted);
-				const second = yield* queue.enqueue(2).pipe(Effect.forkChild);
+				const second = yield* enqueue(2).pipe(Effect.forkChild);
 				yield* Effect.yieldNow;
 
 				expect(events).toEqual(["start:1"]);
@@ -43,19 +43,19 @@ describe("VaultActionQueue", () => {
 				const started = yield* Deferred.make<void>();
 				const release = yield* Deferred.make<void>();
 				const processed: number[] = [];
-				const queue = yield* VaultActionQueue.make<number, never>(
-					Effect.fn("testProcessor")(function* (item) {
+				const process = Effect.fn("testProcessor")(function* (item: number) {
 						if (item === 1) {
 							yield* Deferred.succeed(started, undefined);
 							yield* Deferred.await(release);
 						}
 						processed.push(item);
-					}),
-				);
+					});
+				const queue = yield* VaultActionQueue.make;
+				const enqueue = (item: number) => queue.run(process(item));
 
-				const first = yield* queue.enqueue(1).pipe(Effect.forkChild);
+				const first = yield* enqueue(1).pipe(Effect.forkChild);
 				yield* Deferred.await(started);
-				const second = yield* queue.enqueue(2).pipe(Effect.forkChild);
+				const second = yield* enqueue(2).pipe(Effect.forkChild);
 				yield* Effect.yieldNow;
 				const drain = yield* queue.waitForDrain().pipe(Effect.forkChild);
 				yield* Effect.yieldNow;
@@ -70,28 +70,38 @@ describe("VaultActionQueue", () => {
 		);
 	});
 
+	test("answers what the work answered", async () => {
+		const answer = await Effect.runPromise(
+			Effect.gen(function* () {
+				const queue = yield* VaultActionQueue.make;
+				return yield* queue.run(Effect.succeed(42));
+			}),
+		);
+
+		expect(answer).toBe(42);
+	});
+
 	test("propagates an item failure and continues with later work", async () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const failingStarted = yield* Deferred.make<void>();
 				const releaseFailure = yield* Deferred.make<void>();
 				const processed: string[] = [];
-				const queue = yield* VaultActionQueue.make<string, "failed">(
-					Effect.fn("testProcessor")(function* (item) {
+				const process = Effect.fn("testProcessor")(function* (item: string) {
 						if (item === "fail") {
 							yield* Deferred.succeed(failingStarted, undefined);
 							yield* Deferred.await(releaseFailure);
 							return yield* Effect.fail("failed" as const);
 						}
 						processed.push(item);
-					}),
-				);
+					});
+				const queue = yield* VaultActionQueue.make;
+				const enqueue = (item: string) => queue.run(process(item));
 
-				const failure = yield* queue
-					.enqueue("fail")
+				const failure = yield* enqueue("fail")
 					.pipe(Effect.flip, Effect.forkChild);
 				yield* Deferred.await(failingStarted);
-				const next = yield* queue.enqueue("next").pipe(Effect.forkChild);
+				const next = yield* enqueue("next").pipe(Effect.forkChild);
 				yield* Deferred.succeed(releaseFailure, undefined);
 
 				expect(yield* Fiber.join(failure)).toBe("failed");
