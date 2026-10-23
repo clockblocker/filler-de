@@ -8,11 +8,8 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
+import type { PendingWork } from "../../../contracts";
 import { DomSelectors } from "../../../internal/dom-selectors";
-import {
-	decrementPending,
-	incrementPending,
-} from "../../../internal/idle-tracker";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";
@@ -28,6 +25,7 @@ export class CheckboxClickedDetector {
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxPayload>,
+		private readonly pending: PendingWork,
 	) {
 		this.invoker = createInvoker(PayloadKind.CheckboxClicked);
 	}
@@ -36,8 +34,8 @@ export class CheckboxClickedDetector {
 		if (this.unsubscribe) return;
 
 		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
-			incrementPending();
-			this.handleClick(target, evt).finally(() => decrementPending());
+			this.pending.start();
+			this.handleClick(target, evt).finally(() => this.pending.end());
 		});
 	}
 

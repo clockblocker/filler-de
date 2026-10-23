@@ -1,9 +1,6 @@
 import { Effect, Semaphore } from "effect";
 
-import {
-	decrementPending,
-	incrementPending,
-} from "../../../utils/idle-tracker";
+import { IdleTracker } from "../../../utils/idle-tracker";
 
 /**
  * Serializes effectful vault work that must not interleave.
@@ -29,13 +26,8 @@ export class VaultActionQueue<T, E> {
 		this: VaultActionQueue<T, E>,
 		item: T,
 	): Effect.fn.Return<void, E> {
-		yield* this.semaphore.withPermit(
-			Effect.acquireUseRelease(
-				Effect.sync(incrementPending),
-				() => this.processor(item),
-				() => Effect.sync(decrementPending),
-			),
-		);
+		const idle = yield* IdleTracker;
+		yield* this.semaphore.withPermit(idle.track(this.processor(item)));
 	});
 
 	/** Waits for all enqueues registered before this effect to finish. */

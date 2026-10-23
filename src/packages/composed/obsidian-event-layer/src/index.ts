@@ -2,6 +2,7 @@ export {
 	type ObsidianEventLayer,
 	type ObsidianEventLayerDeps,
 	type PayloadFor,
+	type PendingWork,
 	type SelectionTextSource,
 	type Teardown,
 	type UserEffectFor,

@@ -1,6 +1,7 @@
 import type {
 	ObsidianEventLayer,
 	ObsidianEventLayerDeps,
+	PendingWork,
 	Teardown,
 	UserEventHandler,
 	UserEventKind,
@@ -16,6 +17,8 @@ import { SelectAllDetector } from "./events/select-all/detector";
 import { SelectionChangedDetector } from "./events/selection-changed/detector";
 import { WikilinkDetector } from "./events/wikilink/detector";
 import type { AnyPayload, PayloadKind } from "./types/payload-base";
+
+const NO_PENDING_WORK: PendingWork = { end: () => {}, start: () => {} };
 
 /**
  * Detector interface for lifecycle management.
@@ -43,7 +46,12 @@ class ObsidianEventLayerImpl implements ObsidianEventLayer {
 	>();
 	private listening = false;
 
-	constructor({ app, plugin, selectionTextSource }: ObsidianEventLayerDeps) {
+	constructor({
+		app,
+		plugin,
+		selectionTextSource,
+		pendingWork = NO_PENDING_WORK,
+	}: ObsidianEventLayerDeps) {
 		// Create shared generic click detector
 		this.genericClickDetector = new GenericClickDetector();
 
@@ -58,11 +66,13 @@ class ObsidianEventLayerImpl implements ObsidianEventLayer {
 				this.genericClickDetector,
 				app,
 				this.createInvoker.bind(this),
+				pendingWork,
 			),
 			new CheckboxFrontmatterDetector(
 				this.genericClickDetector,
 				app,
 				this.createInvoker.bind(this),
+				pendingWork,
 			),
 			new ActionElementDetector(
 				this.genericClickDetector,
@@ -72,6 +82,7 @@ class ObsidianEventLayerImpl implements ObsidianEventLayer {
 				this.genericClickDetector,
 				app,
 				this.createInvoker.bind(this),
+				pendingWork,
 			),
 			new SelectAllDetector(app, this.createInvoker.bind(this)),
 			new SelectionChangedDetector(app, this.createInvoker.bind(this)),

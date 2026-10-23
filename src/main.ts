@@ -85,11 +85,7 @@ import {
 import { dictionaryProjections } from "./stateless-helpers/dictionary-projections";
 import type { TextEaterSettings } from "./types";
 import { getErrorMessage } from "./utils/get-error-message";
-import {
-	decrementPending,
-	incrementPending,
-	whenIdle as whenIdleTracker,
-} from "./utils/idle-tracker";
+import { IdleTracker, isE2EMode } from "./utils/idle-tracker";
 import { recentTrace } from "./utils/recent-trace";
 import { sleep } from "./utils/sleep";
 
@@ -248,6 +244,12 @@ export default class TextEaterPlugin extends Plugin {
 				vam: () => this.services?.vam ?? null,
 			});
 			this.rebuildTextfresser(vam, dumgen);
+			const idle = yield* IdleTracker;
+			// Plain callbacks count their work on the runtime's idle tracker.
+			const pending = {
+				end: () => void runtime.readSync(idle.end),
+				start: () => void runtime.readSync(idle.start),
+			};
 
 			const store = createDictionaryStoreService({
 				build: () => this.buildDictionaryStore(vam),
@@ -296,8 +298,8 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			const knowledgeQueue = createKnowledgeQueue({
 				notify: (message) => new Notice(message),
-				onEnd: decrementPending,
-				onStart: incrementPending,
+				onEnd: pending.end,
+				onStart: pending.start,
 				run: runKnowledge,
 				runtime: runtime.hops,
 			});
@@ -356,8 +358,8 @@ export default class TextEaterPlugin extends Plugin {
 				blockedBy: lifecycle.classifyRefusal,
 				cache: segmentationCache,
 				notify: (message) => new Notice(message),
-				onEnd: decrementPending,
-				onStart: incrementPending,
+				onEnd: pending.end,
+				onStart: pending.start,
 				runtime: runtime.hops,
 				scrolls: vamUnlinkScrolls(vam),
 				segmenterVersion,
@@ -393,6 +395,7 @@ export default class TextEaterPlugin extends Plugin {
 			// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 			const userEvents = createObsidianEventLayer({
 				app: this.app,
+				pendingWork: pending,
 				plugin: this,
 				selectionTextSource: {
 					getSelectionText: () => {
@@ -545,25 +548,22 @@ export default class TextEaterPlugin extends Plugin {
 	private executeCommand(kind: CommandKind): Promise<void> {
 		const runtime = this.runtime;
 		if (!runtime || !this.initialized) return Promise.resolve();
-		incrementPending();
-		return runtime
-			.command(
-				kind,
-				Effect.suspend(() => {
-					const services = this.services;
-					const librarian = this.lifecycle.librarian();
-					const textfresser = this.textfresser;
-					if (!services || !librarian || !textfresser)
-						return Effect.void;
-					return createCommandExecutor({
-						classify: services.classify,
-						librarian,
-						textfresser,
-						vam: services.vam,
-					})(kind);
-				}),
-			)
-			.finally(decrementPending);
+		const program = Effect.suspend(() => {
+			const services = this.services;
+			const librarian = this.lifecycle.librarian();
+			const textfresser = this.textfresser;
+			if (!services || !librarian || !textfresser) return Effect.void;
+			return createCommandExecutor({
+				classify: services.classify,
+				librarian,
+				textfresser,
+				vam: services.vam,
+			})(kind);
+		});
+		return runtime.command(
+			kind,
+			Effect.flatMap(IdleTracker, (idle) => idle.track(program)),
+		);
 	}
 
 	/** A clicked Reading link reopens its note once its Knowledge lands. */
@@ -849,14 +849,20 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * E2E test hook: wait until all plugin async work is complete.
-	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
+	 * Resolves once no work has been pending for a second, and VAM has
+	 * delivered every vault event Obsidian sent it.
 	 */
-	async whenIdle(): Promise<void> {
-		return whenIdleTracker(async () => {
-			const vamTesting = this.services?.vamTesting;
-			if (vamTesting && this.runtime)
-				await this.e2e("when-settled", vamTesting.whenSettled());
-		});
+	whenIdle(): Promise<void> {
+		if (!this.runtime || !isE2EMode()) return Promise.resolve();
+		return this.e2e(
+			"when-idle",
+			Effect.gen({ self: this }, function* () {
+				const idle = yield* IdleTracker;
+				yield* idle.whenIdle();
+				const vamTesting = this.services?.vamTesting;
+				if (vamTesting) yield* vamTesting.whenSettled();
+			}),
+		);
 	}
 
 	/**

@@ -1,100 +1,93 @@
 /**
- * Idle tracker for E2E tests.
- * Tracks pending async work and provides whenIdle() hook.
- * Only active in E2E/test mode.
+ * The plugin's pending work, which the E2E driver waits out before it reads
+ * the vault (`whenIdle`). Work that outlives the step that started it
+ * counts itself while it runs: a lifecycle command, a command, a Librarian
+ * queue item, a Knowledge run, an unlink check, a click the event layer
+ * handles.
+ *
+ * The count is a `SubscriptionRef`, so `whenIdle` waits on its changes
+ * instead of polling it. The plugin runtime provides one tracker
+ * (`IdleTrackerLive`); code run without it, such as most unit tests,
+ * counts nothing.
  */
+import {
+	Context,
+	type Duration,
+	Effect,
+	Layer,
+	Stream,
+	SubscriptionRef,
+} from "effect";
 
-let pendingCount = 0;
+export type IdleTrackerService = {
+	/** Work began; `end` once it is done. */
+	readonly start: Effect.Effect<void>;
+	readonly end: Effect.Effect<void>;
+	/** Counts `effect` while it runs, however it ends. */
+	readonly track: <A, E, R>(
+		effect: Effect.Effect<A, E, R>,
+	) => Effect.Effect<A, E, R>;
+	readonly pending: Effect.Effect<number>;
+	/**
+	 * Ends once no work is pending and none began for `grace` (one second
+	 * by default): work that starts another as it ends is waited out too.
+	 */
+	readonly whenIdle: (grace?: Duration.Input) => Effect.Effect<void>;
+};
 
-/**
- * Check if E2E mode is enabled.
- * Enabled via E2E=1 env var or build flag.
- */
-function isE2E(): boolean {
-	// Check env var (set by test runner)
-	if (typeof process !== "undefined" && process.env.E2E === "1") {
-		return true;
-	}
-	// Check window global (set by test harness)
-	if (typeof window !== "undefined") {
-		const win = window as unknown as { __E2E_MODE?: boolean };
-		return win.__E2E_MODE === true;
-	}
+const GRACE: Duration.Input = "1 second";
+
+const untracked: IdleTrackerService = {
+	end: Effect.void,
+	pending: Effect.succeed(0),
+	start: Effect.void,
+	track: (effect) => effect,
+	whenIdle: () => Effect.void,
+};
+
+/** A tracker of its own, as the plugin runtime holds one. */
+export const makeIdleTracker: Effect.Effect<IdleTrackerService> = Effect.map(
+	SubscriptionRef.make(0),
+	(count) => {
+		const start = SubscriptionRef.update(count, (n) => n + 1);
+		const end = SubscriptionRef.update(count, (n) => Math.max(0, n - 1));
+		return {
+			end,
+			pending: SubscriptionRef.get(count),
+			start,
+			track: (effect) =>
+				Effect.acquireUseRelease(
+					start,
+					() => effect,
+					() => end,
+				),
+			// The count's changes, the current one first: idle once a
+			// zero is followed by no change for `grace`.
+			whenIdle: (grace = GRACE) =>
+				SubscriptionRef.changes(count).pipe(
+					Stream.debounce(grace),
+					Stream.filter((n) => n === 0),
+					Stream.runHead,
+					Effect.asVoid,
+				),
+		};
+	},
+);
+
+/** The plugin's idle tracker; by default, none that counts. */
+export const IdleTracker = Context.Reference<IdleTrackerService>(
+	"textfresser/utils/IdleTracker",
+	{ defaultValue: () => untracked },
+);
+
+export const IdleTrackerLive = Layer.effect(IdleTracker, makeIdleTracker);
+
+/** Whether the E2E driver runs the plugin: only then does `whenIdle` wait. */
+export function isE2EMode(): boolean {
+	if (typeof process !== "undefined" && process.env.E2E === "1") return true;
+	if (typeof window !== "undefined")
+		return (
+			(window as unknown as { __E2E_MODE?: boolean }).__E2E_MODE === true
+		);
 	return false;
-}
-
-/**
- * Increment pending task count.
- * Call when starting async work.
- */
-export function incrementPending(): void {
-	if (!isE2E()) return;
-	pendingCount++;
-}
-
-/**
- * Decrement pending task count.
- * Call when async work completes.
- */
-export function decrementPending(): void {
-	if (!isE2E()) return;
-	if (pendingCount > 0) {
-		pendingCount--;
-	}
-}
-
-/**
- * Wait until all pending tasks complete (pendingCount === 0).
- * Uses heuristic: 1000ms grace period after count reaches 0, polling every 100ms.
- * Resets grace period if new work arrives.
- * Optionally also waits for Obsidian events to confirm actions are registered.
- * Only works in E2E mode.
- */
-export async function whenIdle(
-	waitForObsidian?: () => Promise<void>,
-): Promise<void> {
-	if (!isE2E()) {
-		return Promise.resolve();
-	}
-
-	const POLL_INTERVAL_MS = 100;
-	const GRACE_PERIOD_MS = 1000;
-
-	// Wait for pendingCount to reach 0
-	while (pendingCount > 0) {
-		await new Promise<void>((resolve) =>
-			setTimeout(resolve, POLL_INTERVAL_MS),
-		);
-	}
-
-	// Start grace period: wait 1000ms with count staying at 0
-	// Poll every 100ms and reset if new work arrives
-	let gracePeriodStart = Date.now();
-	while (true) {
-		await new Promise<void>((resolve) =>
-			setTimeout(resolve, POLL_INTERVAL_MS),
-		);
-
-		if (pendingCount > 0) {
-			// New work arrived, wait for it to complete and reset grace period
-			while (pendingCount > 0) {
-				await new Promise<void>((resolve) =>
-					setTimeout(resolve, POLL_INTERVAL_MS),
-				);
-			}
-			gracePeriodStart = Date.now();
-			continue;
-		}
-
-		// Check if grace period has elapsed
-		const elapsed = Date.now() - gracePeriodStart;
-		if (elapsed >= GRACE_PERIOD_MS) {
-			break;
-		}
-	}
-
-	// Optionally wait for Obsidian events
-	if (waitForObsidian) {
-		await waitForObsidian();
-	}
 }

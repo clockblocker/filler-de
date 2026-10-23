@@ -9,11 +9,8 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
+import type { PendingWork } from "../../../contracts";
 import { DomSelectors } from "../../../internal/dom-selectors";
-import {
-	decrementPending,
-	incrementPending,
-} from "../../../internal/idle-tracker";
 import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
@@ -32,6 +29,7 @@ export class WikilinkClickDetector {
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<WikilinkClickPayload>,
+		private readonly pending: PendingWork,
 	) {
 		this.invoker = createInvoker(PayloadKind.WikilinkClicked);
 	}
@@ -40,8 +38,8 @@ export class WikilinkClickDetector {
 		if (this.unsubscribe) return;
 
 		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
-			incrementPending();
-			this.handleClick(target, evt).finally(() => decrementPending());
+			this.pending.start();
+			this.handleClick(target, evt).finally(() => this.pending.end());
 		});
 	}
 

@@ -42,7 +42,7 @@ import type {
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
 import { catchWhole, causeMessages } from "../../utils/causes";
-import { decrementPending, incrementPending } from "../../utils/idle-tracker";
+import { IdleTracker } from "../../utils/idle-tracker";
 import { commandFnForCommandKind } from "./commands";
 import type {
 	CommandError,
@@ -401,9 +401,9 @@ export class Librarian {
 	 */
 	readonly init = Effect.fn("Librarian.init")(function* (this: Librarian) {
 		const self = this;
-		return yield* Effect.acquireUseRelease(
-			Effect.sync(incrementPending),
-			() =>
+		const idle = yield* IdleTracker;
+		return yield* idle
+			.track(
 				Effect.gen(function* () {
 					const settings = getParsedUserSettings();
 					self.reconciler = null;
@@ -493,16 +493,16 @@ export class Librarian {
 					// recovery's rescan, now reach handleBulkEvent.
 					yield* subscription.start;
 				}),
-			() => Effect.sync(decrementPending),
-		).pipe(
-			// What stopped the start, every reason of it, as the typed stop.
-			catchWhole((cause) =>
-				self
-					.reportStopped("Startup", cause)
-					.pipe(Effect.flatMap(Effect.fail)),
-			),
-			Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
-		);
+			)
+			.pipe(
+				// What stopped the start, every reason of it, as the typed stop.
+				catchWhole((cause) =>
+					self
+						.reportStopped("Startup", cause)
+						.pipe(Effect.flatMap(Effect.fail)),
+				),
+				Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
+			);
 	});
 
 	/**
