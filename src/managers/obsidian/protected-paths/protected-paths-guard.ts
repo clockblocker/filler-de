@@ -114,12 +114,13 @@ export type ProtectedPathWarning = {
 };
 
 /**
- * Warns whenever a protected file changes other than by the user's own
- * editing, and tells when VAM put one back after Obsidian's link updating
- * rewrote it. VAM refuses to change these paths itself, but cannot stop
- * every writer. While a warning shows, later changes
- * update it to name every file changed since it opened, so a rename that
- * rewrites files over several windows raises one warning, not one each.
+ * Warns, in a Notice `open` shows and in the log, whenever a protected
+ * file changes other than by the user's own editing, and tells when VAM
+ * put one back after Obsidian's link updating rewrote it. VAM refuses to
+ * change these paths itself, but cannot stop every writer. While a warning
+ * shows, later changes update it to name every file changed since it
+ * opened, so a rename that rewrites files over several windows raises one
+ * warning, not one each. Each warning and update is logged.
  */
 export function watchProtectedPaths(
 	vam: Pick<VaultActionManager, "subscribeToProtectedPathModifications">,
@@ -128,7 +129,7 @@ export function watchProtectedPaths(
 	let current: ProtectedPathWarning | undefined;
 	const changed = new Map<string, ProtectedPathModification>();
 	return vam.subscribeToProtectedPathModifications((event) =>
-		Effect.sync(() => {
+		Effect.gen(function* () {
 			const suspicious = event.modifications.filter(
 				({ writer }) => writer !== "OpenInEditor",
 			);
@@ -144,6 +145,7 @@ export function watchProtectedPaths(
 				...changed.values(),
 			]);
 			if (!message) return;
+			yield* Effect.logWarning(`[TextEaterPlugin] ${message}`);
 			if (showing && current) current.update(message);
 			else current = open(message);
 		}),

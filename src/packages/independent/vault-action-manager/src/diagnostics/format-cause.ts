@@ -48,6 +48,16 @@ export function formatValue(value: unknown): string {
 	return guarded(() => valueText(value, 0));
 }
 
+/**
+ * A named value, such as a log annotation, as `formatValue` shows it, except
+ * that a note's text under a content field shows as its length.
+ */
+export function formatField(key: string, value: unknown): string {
+	return CONTENT_FIELDS.has(key) && Predicate.isString(value)
+		? contentLength(value)
+		: formatValue(value);
+}
+
 function guarded(render: () => string): string {
 	try {
 		return render();
@@ -79,6 +89,7 @@ function causeText(
 				prettyError(Cause.fromReasons([reason]), raw),
 				options,
 				depth,
+				raw,
 			)}`,
 		);
 	}
@@ -93,7 +104,12 @@ function errorText(
 	depth: number,
 ): string {
 	if (Cause.isCause(error)) return causeText(error, options, depth);
-	return renderError(prettyError(Cause.fail(error), error), options, depth);
+	return renderError(
+		prettyError(Cause.fail(error), error),
+		options,
+		depth,
+		error,
+	);
 }
 
 /**
@@ -177,18 +193,31 @@ function read(value: object, key: PropertyKey): unknown {
 
 const HIDDEN_FIELDS = new Set(["_tag", "cause", "message", "name", "stack"]);
 
-/** `Name [_tag]: message (field=value …)`, its frames, then its cause. */
+/**
+ * `Name [_tag]: message (field=value …)`, its frames, then its cause.
+ * `raw` is the value that failed, when `error` is its pretty form.
+ */
 function renderError(
 	error: unknown,
 	options: FormatOptions,
 	depth: number,
+	raw?: unknown,
 ): string {
 	if (!Predicate.isObject(error) && !Predicate.isFunction(error))
 		return `Error: ${safeString(error)}`;
 	const rawName = read(error, "name");
 	const name = Predicate.isString(rawName) ? rawName : "Error";
 	const rawMessage = read(error, "message");
-	const message = Predicate.isString(rawMessage) ? rawMessage : "";
+	let message = Predicate.isString(rawMessage) ? rawMessage : "";
+	// A plain object failed, and `Cause.prettyErrors` made its whole JSON
+	// the message: shown as `formatValue` shows it instead, bounded, and
+	// with note content left out.
+	if (
+		message.startsWith("{") &&
+		Predicate.isObject(raw) &&
+		!(raw instanceof Error)
+	)
+		message = valueText(raw, depth + 1);
 	const tag = read(error, "_tag");
 	let header =
 		Predicate.isString(tag) && tag !== name ? `${name} [${tag}]` : name;
@@ -224,7 +253,14 @@ function renderError(
 	if (options.stack === false)
 		return nested ? `${header}; caused by ${nested}` : header;
 
-	const stack = read(error, "stack");
+	// A string or other primitive that failed has no stack: the one
+	// `Cause.prettyErrors` gives it is where it was formatted.
+	const stack =
+		raw === undefined ||
+		Predicate.isObject(raw) ||
+		Predicate.isFunction(raw)
+			? read(error, "stack")
+			: "";
 	const frames = (Predicate.isString(stack) ? stack : "")
 		.split("\n")
 		.filter((line) => /^\s+at /.test(line));

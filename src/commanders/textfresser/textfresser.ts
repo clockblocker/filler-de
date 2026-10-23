@@ -3,11 +3,10 @@
  */
 
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { LanguagesConfig } from "../../types";
-import { logger } from "../../utils/logger";
 import { translateCommand } from "./commands/translate/translate-command";
 import type { CommandError, TextfresserCommandKind } from "./commands/types";
 import { CommandErrorKind } from "./errors";
@@ -46,8 +45,14 @@ export class Textfresser {
 							? error.reason
 							: `Command failed: ${error.kind}`;
 					notify(`⚠ ${reason}`);
-					logger.warn(`[Textfresser.${commandName}] Failed:`, error);
-				}),
+				}).pipe(
+					Effect.andThen(
+						Effect.logWarning(
+							`[Textfresser.${commandName}] Failed:`,
+							Cause.fail(error),
+						),
+					),
+				),
 			),
 		);
 	}

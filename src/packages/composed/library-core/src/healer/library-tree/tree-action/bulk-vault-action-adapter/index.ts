@@ -6,6 +6,7 @@ import {
 } from "../../../../tree/library-scope";
 import { extractInvalidCodexesFromScopedBulk } from "../../codex/codex-impact-to-actions";
 import type { HealingAction } from "../../types/healing-action";
+import type { LibraryIssue } from "../../types/library-issue";
 import type { TreeAction } from "../types/tree-action";
 import { materializeScopedBulk } from "./layers/materialized-node-events/materialize-scoped-bulk";
 import { translateMaterializedEvents } from "./layers/translate-material-event/translate-material-events";
@@ -13,6 +14,8 @@ import { translateMaterializedEvents } from "./layers/translate-material-event/t
 export type BulkInterpretation = {
 	createDiagnostics: readonly CreateObservationDiagnostic[];
 	invalidCodexActions: HealingAction[];
+	/** What could not be translated; the caller logs it. */
+	issues: readonly LibraryIssue[];
 	treeActions: readonly TreeAction[];
 };
 
@@ -41,6 +44,7 @@ export function makeBulkInterpreter(codecs: Codecs): BulkInterpreter {
 				scopedBulk,
 				codecs,
 			),
+			issues: translation.issues,
 			treeActions: translation.treeActions,
 		};
 	};

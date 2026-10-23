@@ -7,7 +7,7 @@ import {
 	References,
 	Tracer,
 } from "effect";
-import { formatCause, formatValue } from "./format-cause";
+import { formatCause, formatField, formatValue } from "./format-cause";
 
 export type TraceStatus = "ok" | "failed" | "interrupted" | "running";
 
@@ -203,7 +203,7 @@ export function makeRecentTrace(
 			);
 			const annotations = fiber.getRef(References.CurrentLogAnnotations);
 			for (const [key, value] of Object.entries(annotations))
-				text += ` ${key}=${formatValue(value)}`;
+				text += ` ${key}=${formatField(key, value)}`;
 			for (const [label, start] of fiber.getRef(
 				References.CurrentLogSpans,
 			))

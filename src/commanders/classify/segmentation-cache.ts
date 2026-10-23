@@ -12,9 +12,7 @@
  * stored.
  */
 import type { Route, SegmentedSentence, Unit } from "dumgen";
-import { Context, Effect, Option, Schema } from "effect";
-import { getErrorMessage } from "../../utils/get-error-message";
-import { logger } from "../../utils/logger";
+import { Cause, Context, Effect, Option, Schema } from "effect";
 
 /** The hidden folder at the vault root that holds the cache. */
 export const SEGMENTATION_CACHE_FOLDER = ".textfresser/segmentation";
@@ -169,13 +167,10 @@ export function filesSegmentationCache(
 				),
 			),
 			Effect.catch((error) =>
-				Effect.sync(() => {
-					logger.warn(
-						"[SegmentationCache] Could not read an entry; segmenting again:",
-						getErrorMessage(error),
-					);
-					return Option.none<SegmentedSentence>();
-				}),
+				Effect.logWarning(
+					"[SegmentationCache] Could not read an entry; segmenting again:",
+					Cause.fail(error),
+				).pipe(Effect.as(Option.none<SegmentedSentence>())),
 			),
 		);
 	const put = (key: string, sentence: SegmentedSentence) =>
@@ -194,12 +189,10 @@ export function filesSegmentationCache(
 			},
 		}).pipe(
 			Effect.catch((error) =>
-				Effect.sync(() => {
-					logger.warn(
-						"[SegmentationCache] Could not store an entry:",
-						getErrorMessage(error),
-					);
-				}),
+				Effect.logWarning(
+					"[SegmentationCache] Could not store an entry:",
+					Cause.fail(error),
+				),
 			),
 		);
 	return SegmentationCache.of({ get, put });

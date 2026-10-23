@@ -43,7 +43,6 @@ import type {
 } from "../../managers/obsidian/command-executor";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
-import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
 import type {
 	CommandError,
@@ -72,6 +71,7 @@ import {
 	type ReconciliationRecoveryInput,
 	type ReconciliationRequest,
 } from "./runtime/library-reconciliation";
+import { logLibraryIssues } from "./runtime/log-library-issues";
 import { VaultActionQueue } from "./runtime/vault-action-queue";
 
 // ─── Queue Item ───
@@ -209,6 +209,20 @@ export type LibrarianOptions = {
 	readonly onStopped?: (stop: LibrarianStop) => void;
 };
 
+/** Logs a warning for each of `diagnostics`, its data annotated. */
+const logEach = (
+	diagnostics: readonly unknown[],
+	message: string,
+): Effect.Effect<void> =>
+	Effect.forEach(
+		diagnostics,
+		(diagnostic) =>
+			Effect.logWarning(message).pipe(
+				Effect.annotateLogs({ diagnostic }),
+			),
+		{ discard: true },
+	);
+
 // ─── Librarian ───
 
 export class Librarian {
@@ -246,16 +260,39 @@ export class Librarian {
 		private readonly options: LibrarianOptions = {},
 	) {}
 
-	private reportStopped(phase: LibrarianStopPhase, failure: unknown): void {
-		if (phase === "Startup" && isMissingLibraryRoot(failure)) {
-			const message = describeMissingLibraryRoot(failure);
-			logger.warn(`[Librarian] ${message}`, failure);
-			this.options.onStopped?.({ kind: "LibraryRootMissing", message });
-			return;
-		}
-		const message = describeLibrarianStop(phase, failure);
-		logger.error(`[Librarian] Stopped. ${message}`, failure);
-		this.options.onStopped?.({ kind: "Stopped", message });
+	private reportStopped(
+		phase: LibrarianStopPhase,
+		failure: unknown,
+	): Effect.Effect<void> {
+		return Effect.suspend(() => {
+			if (phase === "Startup" && isMissingLibraryRoot(failure)) {
+				const message = describeMissingLibraryRoot(failure);
+				return Effect.logWarning(
+					`[Librarian] ${message}`,
+					failure,
+				).pipe(
+					Effect.andThen(
+						Effect.sync(() =>
+							this.options.onStopped?.({
+								kind: "LibraryRootMissing",
+								message,
+							}),
+						),
+					),
+				);
+			}
+			const message = describeLibrarianStop(phase, failure);
+			return Effect.logError(
+				`[Librarian] Stopped. ${message}`,
+				failure,
+			).pipe(
+				Effect.andThen(
+					Effect.sync(() =>
+						this.options.onStopped?.({ kind: "Stopped", message }),
+					),
+				),
+			);
+		});
 	}
 
 	private prepareStartupReconciliation(
@@ -272,14 +309,10 @@ export class Librarian {
 
 		return buildInitialCreateActions(scan.entries, this.codecs).pipe(
 			Effect.tap(({ createDiagnostics }) =>
-				Effect.sync(() => {
-					for (const diagnostic of createDiagnostics) {
-						logger.warn(
-							"[Librarian] Invalid startup Create observation:",
-							diagnostic,
-						);
-					}
-				}),
+				logEach(
+					createDiagnostics,
+					"[Librarian] Invalid startup Create observation",
+				),
 			),
 			Effect.map(({ createActions }) => ({
 				healer: new Healer(
@@ -377,25 +410,24 @@ export class Librarian {
 						)
 						.pipe(
 							Effect.tapError((failure) =>
-								Effect.sync(() =>
-									logger.error(
-										"[Librarian] Vault scan failed:",
-										failure,
-									),
+								Effect.logError(
+									"[Librarian] Vault scan failed:",
+									Cause.fail(failure),
 								),
 							),
 						);
 					self.subscription = subscription;
 					const scan = subscription.snapshot;
 					self._debugLastScanDiagnostics = scan.diagnostics;
-					if (scan.kind === "Partial") {
-						for (const diagnostic of scan.diagnostics) {
-							logger.warn(
-								`[Librarian] Partial vault scan at ${diagnostic.path}:`,
-								diagnostic,
-							);
-						}
-					}
+					if (scan.kind === "Partial")
+						yield* Effect.forEach(
+							scan.diagnostics,
+							(diagnostic) =>
+								Effect.logWarning(
+									`[Librarian] Partial vault scan at ${diagnostic.path}`,
+								).pipe(Effect.annotateLogs({ diagnostic })),
+							{ discard: true },
+						);
 
 					const startup = yield* self.prepareStartupReconciliation(
 						scan,
@@ -426,9 +458,10 @@ export class Librarian {
 						if (startupOutcome.recovery.kind !== "Resynchronized") {
 							return yield* Effect.fail(startupOutcome);
 						}
-						logger.warn(
-							"[Librarian] Startup healing partly failed; a rescan of the library recovered it:",
-							startupOutcome,
+						yield* Effect.logWarning(
+							"[Librarian] Startup healing partly failed; a rescan of the library recovered it",
+						).pipe(
+							Effect.annotateLogs({ outcome: startupOutcome }),
 						);
 					}
 
@@ -442,9 +475,7 @@ export class Librarian {
 			Effect.tapCause((cause) =>
 				Cause.hasInterruptsOnly(cause)
 					? Effect.void
-					: Effect.sync(() =>
-							self.reportStopped("Startup", Cause.squash(cause)),
-						),
+					: self.reportStopped("Startup", Cause.squash(cause)),
 			),
 			Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
 		);
@@ -459,7 +490,7 @@ export class Librarian {
 			// Store for debugging
 			this._debugLastBulkEvent = bulk;
 			if (!this.reconciler || !this.actionQueue) {
-				logger.warn(
+				yield* Effect.logWarning(
 					"[Librarian.handleBulkEvent] No healer, returning early",
 				);
 				return;
@@ -471,23 +502,24 @@ export class Librarian {
 	/**
 	 * The reconciliation a queued bulk asks for, or null when it asks for
 	 * none. Interpreted in its turn, so a rescan that ran while it waited,
-	 * and holds part of it, leaves only the rest.
+	 * and holds part of it, leaves only the rest. What the interpretation
+	 * could not translate is logged.
 	 */
-	private observedBulkRequest(
+	private readonly observedBulkRequest = Effect.fnUntraced(function* (
+		this: Librarian,
 		bulk: BulkVaultEvent,
-	): ReconciliationRequest | null {
+	): Effect.fn.Return<ReconciliationRequest | null> {
 		const current = this.subscription
 			? this.subscription.afterSnapshot(bulk)
 			: bulk;
 		if (!current) return null;
-		const { createDiagnostics, treeActions, invalidCodexActions } =
+		const { createDiagnostics, invalidCodexActions, issues, treeActions } =
 			this.interpretBulk(current);
-		for (const diagnostic of createDiagnostics) {
-			logger.warn(
-				"[Librarian] Invalid live Create observation:",
-				diagnostic,
-			);
-		}
+		yield* logEach(
+			createDiagnostics,
+			"[Librarian] Invalid live Create observation",
+		);
+		yield* logLibraryIssues(issues);
 		if (treeActions.length === 0 && invalidCodexActions.length === 0) {
 			return null;
 		}
@@ -496,7 +528,7 @@ export class Librarian {
 			supplemental: { invalidCodexDeletions: invalidCodexActions },
 			treeActions,
 		};
-	}
+	});
 
 	private readonly processQueueItem = Effect.fn("Librarian.processQueueItem")(
 		function* (this: Librarian, queued: LibrarianQueueItem) {
@@ -509,7 +541,7 @@ export class Librarian {
 			}
 			let item: ReconciliationQueueItem;
 			if (queued.kind === "ObservedBulk") {
-				const request = this.observedBulkRequest(queued.bulk);
+				const request = yield* this.observedBulkRequest(queued.bulk);
 				if (!request) return;
 				item = { kind: "Reconciliation", request };
 			} else {
@@ -523,11 +555,13 @@ export class Librarian {
 				outcome.status === "Failed" ||
 				outcome.status === "PartialFailure"
 			) {
-				logger.error("[Librarian] Reconciliation failed:", outcome);
+				yield* Effect.logError(
+					"[Librarian] Reconciliation failed",
+				).pipe(Effect.annotateLogs({ outcome }));
 			}
 			// A failed startup is reported once, by init.
 			if (item.request.source !== "Startup") {
-				this.reportIfNewlyStopped(wasUnavailable, outcome);
+				yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
 			}
 		},
 	);
@@ -535,10 +569,12 @@ export class Librarian {
 	private reportIfNewlyStopped(
 		wasUnavailable: boolean,
 		outcome: LibrarianReconciliationOutcome,
-	): void {
-		if (!wasUnavailable && this.reconciler?.isUnavailable()) {
-			this.reportStopped("Runtime", outcome);
-		}
+	): Effect.Effect<void> {
+		return Effect.suspend(() =>
+			!wasUnavailable && this.reconciler?.isUnavailable()
+				? this.reportStopped("Runtime", outcome)
+				: Effect.void,
+		);
 	}
 
 	private readonly processCommandIntention = Effect.fn(
@@ -584,11 +620,10 @@ export class Librarian {
 				operationId: intention.operationId,
 				outcome,
 			});
-			logger.error(
-				"[Librarian] Command intention vault dispatch failed:",
-				outcome,
-			);
-			this.reportIfNewlyStopped(wasUnavailable, outcome);
+			yield* Effect.logError(
+				"[Librarian] Command intention vault dispatch failed",
+			).pipe(Effect.annotateLogs({ outcome }));
+			yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
 			return;
 		}
 
@@ -611,11 +646,10 @@ export class Librarian {
 				operationId: intention.operationId,
 				outcome,
 			});
-			logger.error(
-				"[Librarian] Command intention reconciliation failed:",
-				outcome,
-			);
-			this.reportIfNewlyStopped(wasUnavailable, outcome);
+			yield* Effect.logError(
+				"[Librarian] Command intention reconciliation failed",
+			).pipe(Effect.annotateLogs({ outcome }));
+			yield* this.reportIfNewlyStopped(wasUnavailable, outcome);
 			return;
 		}
 		item.observe({
@@ -778,9 +812,10 @@ export class Librarian {
 
 		return commandFn(input).pipe(
 			Effect.tapError((error) =>
-				Effect.sync(() => {
-					logger.warn(`[Librarian.${commandName}] Failed:`, error);
-				}),
+				Effect.logWarning(
+					`[Librarian.${commandName}] Failed:`,
+					Cause.fail(error),
+				),
 			),
 		);
 	}
@@ -846,7 +881,9 @@ export class Librarian {
 		"Librarian.handleCodexCheckboxClick",
 	)(function* (this: Librarian, payload: PayloadFor<"CheckboxClicked">) {
 		if (!this.reconciler) {
-			logger.warn("[Librarian.handleCodexCheckboxClick] No healer");
+			yield* Effect.logWarning(
+				"[Librarian.handleCodexCheckboxClick] No healer",
+			);
 			return;
 		}
 
@@ -856,9 +893,9 @@ export class Librarian {
 			this.codecs,
 		);
 		if (parseResult.isErr()) {
-			logger.warn(
+			yield* Effect.logWarning(
 				"[Librarian.handleCodexCheckboxClick] Parse failed:",
-				parseResult.error,
+				Cause.fail(parseResult.error),
 			);
 			return;
 		}
@@ -874,7 +911,7 @@ export class Librarian {
 		// 3. Build ChangeNodeStatusAction based on target type
 		const action = this.buildChangeStatusAction(target, newStatus);
 		if (!action) {
-			logger.warn(
+			yield* Effect.logWarning(
 				"[Librarian.handleCodexCheckboxClick] Failed to build action",
 			);
 			return;

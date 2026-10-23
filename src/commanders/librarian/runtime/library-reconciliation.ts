@@ -13,6 +13,7 @@ import {
 	type HealerApplyResult,
 	type HealingAction,
 	healingActionsToVaultActions,
+	type LibraryIssue,
 	mergeCodexImpacts,
 	type SplitPathToMdFileInsideLibrary,
 	scanAndGenerateOrphanActions,
@@ -25,6 +26,7 @@ import {
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { type Cause, Clock, Effect, Result } from "effect";
+import { logLibraryIssues } from "./log-library-issues";
 
 type ReconciliationSource =
 	| "Startup"
@@ -507,9 +509,12 @@ export class LibraryReconciler<E, R = unknown> {
 
 			const deriveStartedAt = yield* Clock.currentTimeMillis;
 			let derived: DerivedActions;
+			// Filled as deriving goes, so a derivation that throws keeps them.
+			const issues: LibraryIssue[] = [];
 			try {
-				derived = this.derive(staged, request, results);
+				derived = this.derive(staged, request, results, issues);
 			} catch (cause) {
+				yield* logLibraryIssues(issues);
 				const deriveEndedAt = yield* Clock.currentTimeMillis;
 				return {
 					outcome: {
@@ -533,6 +538,7 @@ export class LibraryReconciler<E, R = unknown> {
 				};
 			}
 			const deriveEndedAt = yield* Clock.currentTimeMillis;
+			yield* logLibraryIssues(issues);
 			const derivedCounts = this.derivedCounts(derived);
 
 			if (derived.vault.length === 0) {
@@ -637,10 +643,12 @@ export class LibraryReconciler<E, R = unknown> {
 		},
 	);
 
+	/** The actions `results` call for; what it skips goes into `issues`. */
 	private derive(
 		staged: Healer,
 		request: ReconciliationRequest,
 		results: readonly HealerApplyResult[],
+		issues: LibraryIssue[],
 	): DerivedActions {
 		const impacts = results.map((result) => result.codexImpact);
 		const mergedImpact = mergeCodexImpacts(impacts);
@@ -649,7 +657,7 @@ export class LibraryReconciler<E, R = unknown> {
 			staged,
 			this.codecs,
 		);
-		const codexRecreations =
+		const recreations =
 			request.source === "Startup"
 				? codexImpactToRecreations(mergedImpact, staged, this.codecs)
 				: codexImpactToIncrementalRecreations(
@@ -657,13 +665,17 @@ export class LibraryReconciler<E, R = unknown> {
 						staged,
 						this.codecs,
 					);
+		const codexRecreations = recreations.actions;
+		issues.push(...recreations.issues);
 		const changedActions = results.flatMap((result) =>
 			result.changed ? [result.appliedAction] : [],
 		);
-		const statusProjections =
+		const statuses =
 			request.source === "Startup"
-				? []
+				? { actions: [], issues: [] }
 				: extractScrollStatusActions(changedActions, this.codecs);
+		const statusProjections = statuses.actions;
+		issues.push(...statuses.issues);
 		const healing = results.flatMap((result) => result.healingActions);
 		const supplemental = [...request.supplemental.invalidCodexDeletions];
 

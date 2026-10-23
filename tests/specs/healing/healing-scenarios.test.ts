@@ -169,7 +169,7 @@ describe("Healing Scenarios", () => {
 			expect(result.codexImpact.renamed.length).toBeGreaterThan(0);
 
 			// Generate recreation actions
-			const recreations = codexImpactToIncrementalRecreations(
+			const { actions: recreations } = codexImpactToIncrementalRecreations(
 				result.codexImpact,
 				healer,
 				codecs,

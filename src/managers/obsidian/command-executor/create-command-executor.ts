@@ -3,13 +3,12 @@ import {
 	VamActiveEditorError,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 import { Notice } from "obsidian";
 import type { ClassifyCommander } from "../../../commanders/classify";
 import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
-import { logger } from "../../../utils/logger";
 import { type CommandContext, CommandKind } from "./types";
 
 /**
@@ -74,18 +73,21 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 
 	/** Tells the user why a command could not read the active note. */
 	const reportUnreadEditor = (command: string) => (error: unknown) =>
-		Effect.sync(() => {
+		Effect.sync(() =>
 			notify(
 				error instanceof VamActiveEditorError &&
 					error.reason === "WrongMode"
 					? `⚠ Switch the note to editing view to ${command}`
 					: "⚠ Could not read the active note",
-			);
-			logger.warn(
-				`[CommandExecutor] Could not read the active note to ${command}:`,
-				error,
-			);
-		});
+			),
+		).pipe(
+			Effect.andThen(
+				Effect.logWarning(
+					`[CommandExecutor] Could not read the active note to ${command}:`,
+					Cause.fail(error),
+				),
+			),
+		);
 
 	/** The program of the command `kind`; it reports its own failures. */
 	return function commandProgram(kind: CommandKind): Effect.Effect<void> {
@@ -154,10 +156,8 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 
 			default: {
 				const exhaustiveCheck: never = kind;
-				return Effect.sync(() =>
-					logger.error(
-						`[CommandExecutor] Unknown command kind: ${exhaustiveCheck}`,
-					),
+				return Effect.logError(
+					`[CommandExecutor] Unknown command kind: ${exhaustiveCheck}`,
 				);
 			}
 		}

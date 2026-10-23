@@ -1,4 +1,5 @@
 import type { PlannedChangeOp } from "dumdict";
+import { Effect } from "effect";
 import {
 	type DictionaryDiagnostics,
 	type DictionaryNoteCache,
@@ -15,7 +16,10 @@ export async function openStore(
 	const reports: DictionaryDiagnostics[] = [];
 	const store = await run(
 		makeDumdictVaultStore({
-			onDiagnostics: (diagnostics) => reports.push(diagnostics),
+			onDiagnostics: (diagnostics) =>
+				Effect.sync(() => {
+					reports.push(diagnostics);
+				}),
 			vault,
 			...(cache ? { cache } : {}),
 		}),

@@ -12,7 +12,6 @@ import {
 	type VamSetupError,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { describeError } from "@textfresser/vault-action-manager/diagnostics";
 import { Effect, Exit } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
 import {
@@ -72,6 +71,7 @@ import { changeDelimiter } from "./plugin/delimiter-migration";
 import { migrateNoteMetadata } from "./plugin/note-metadata-migration";
 import { registerCommands } from "./plugin/register-commands";
 import { diffSettings, snapshotSettings } from "./plugin/settings-changes";
+import { logAtEdge } from "./runtime/edge-log";
 import { PluginLive, type PluginServices } from "./runtime/plugin-live";
 import {
 	makePluginRuntime,
@@ -90,7 +90,6 @@ import {
 	incrementPending,
 	whenIdle as whenIdleTracker,
 } from "./utils/idle-tracker";
-import { logger } from "./utils/logger";
 import { recentTrace } from "./utils/recent-trace";
 import { sleep } from "./utils/sleep";
 
@@ -163,7 +162,10 @@ export default class TextEaterPlugin extends Plugin {
 					lifecycle: this.lifecycle,
 					trace: recentTrace,
 				}),
-				{ onBuildFailed: (cause) => this.notices.launchFailed(cause) },
+				{
+					onBuildFailed: (cause) =>
+						this.notices.launchFailedOutsideRuntime(cause),
+				},
 			);
 			this.runtime = runtime;
 			// The launch waits for Obsidian; it does not block onload.
@@ -186,7 +188,7 @@ export default class TextEaterPlugin extends Plugin {
 				name: "Testing: expose opened file service",
 			});
 		} catch (error) {
-			this.notices.launchFailed(error);
+			this.notices.launchFailedOutsideRuntime(error);
 		}
 	}
 
@@ -198,10 +200,12 @@ export default class TextEaterPlugin extends Plugin {
 		// Interrupts what runs at an edge, stops the lifecycle (its services
 		// newest first, then the Librarian), then shuts VAM down.
 		void (runtime?.dispose() ?? Promise.resolve())
+			// The runtime is gone: only the edge log is left.
 			.catch((error: unknown) =>
-				logger.error(
+				logAtEdge(
+					"Error",
 					"[TextEaterPlugin] Unloading did not finish cleanly:",
-					describeError(error),
+					error,
 				),
 			)
 			.finally(() => {
@@ -382,15 +386,12 @@ export default class TextEaterPlugin extends Plugin {
 			// and notifies subscribers such as the Librarian.
 			yield* vam.startListening();
 			// VAM closes this subscription when it is disposed.
+			// It logs each warning it shows, under its delivery's span.
 			yield* watchProtectedPaths(vam, (message) => {
-				logger.warn(`[TextEaterPlugin] ${message}`);
 				const notice = new Notice(message, 0);
 				return {
 					showing: () => notice.noticeEl.isConnected,
-					update: (next) => {
-						logger.warn(`[TextEaterPlugin] ${next}`);
-						notice.setMessage(next);
-					},
+					update: (next) => notice.setMessage(next),
 				};
 			});
 			yield* lifecycle.own(
@@ -499,20 +500,19 @@ export default class TextEaterPlugin extends Plugin {
 		return makeDumdictVaultStore({
 			metadataFormat: () =>
 				getParsedUserSettings().hideMetadata ? "Hidden" : "Frontmatter",
-			onDiagnostics: (diagnostics) => {
-				if (diagnostics.quarantined.length > 0)
-					logger.warn(
-						"[TextEaterPlugin] Dictionary notes the store cannot read:",
-						diagnostics.quarantined
-							.map(({ path }) => path)
-							.join(", "),
-					);
-			},
-			onTablesRerendered: ({ lemmas, notes, remaining }) => {
-				logger.info(
+			onDiagnostics: (diagnostics) =>
+				diagnostics.quarantined.length > 0
+					? Effect.logWarning(
+							"[TextEaterPlugin] Dictionary notes the store cannot read:",
+							diagnostics.quarantined
+								.map(({ path }) => path)
+								.join(", "),
+						)
+					: Effect.void,
+			onTablesRerendered: ({ lemmas, notes, remaining }) =>
+				Effect.logInfo(
 					`[TextEaterPlugin] Re-rendered the inflection tables of ${lemmas} Lemma notes for the current language pack (${notes} notes written${remaining > 0 ? `, ${remaining} left for the next scan` : ""})`,
-				);
-			},
+				),
 			projections: dictionaryProjections,
 			vault,
 		});

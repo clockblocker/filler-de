@@ -4,6 +4,7 @@ export * from "./codecs/segment-id";
 export * from "./codecs/suffix";
 export * from "./codex";
 export * from "./display-name-sort";
+export type { LibraryIssue } from "./healer/library-tree/types/library-issue";
 export * from "./healing";
 export * from "./path-finder";
 export * from "./tree";

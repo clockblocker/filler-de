@@ -221,10 +221,17 @@ export type DumdictVaultStoreOptions = {
 	 * Hidden when absent.
 	 */
 	readonly metadataFormat?: () => MetadataFormat;
-	/** Called after the index is built or changes, with the current diagnostics. */
-	readonly onDiagnostics?: (diagnostics: DictionaryDiagnostics) => void;
-	/** Called after a run re-rendered the tables of notes rendered at other versions (#121). */
-	readonly onTablesRerendered?: (report: TablesRerendered) => void;
+	/**
+	 * Run after the index is built or changes, with the current diagnostics,
+	 * so what it logs lands under the store's span.
+	 */
+	readonly onDiagnostics?: (
+		diagnostics: DictionaryDiagnostics,
+	) => Effect.Effect<void>;
+	/** Run after a run re-rendered the tables of notes rendered at other versions (#121). */
+	readonly onTablesRerendered?: (
+		report: TablesRerendered,
+	) => Effect.Effect<void>;
 };
 
 /**
@@ -730,13 +737,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		};
 	};
 
-	const report = Effect.sync(() => {
-		if (!options.onDiagnostics) return;
+	const report = Effect.suspend(() => {
+		if (!options.onDiagnostics) return Effect.void;
 		const diagnostics = diagnosticsOf(index);
 		const fingerprint = JSON.stringify(diagnostics);
-		if (fingerprint === lastDiagnostics) return;
+		if (fingerprint === lastDiagnostics) return Effect.void;
 		lastDiagnostics = fingerprint;
-		options.onDiagnostics(diagnostics);
+		return options.onDiagnostics(diagnostics);
 	});
 
 	/**
@@ -3099,7 +3106,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			notes,
 			remaining: gaveUp.size,
 		};
-		if (lemmas > 0 || gaveUp.size > 0) options.onTablesRerendered?.(result);
+		if ((lemmas > 0 || gaveUp.size > 0) && options.onTablesRerendered)
+			yield* options.onTablesRerendered(result);
 		if (gaveUp.size > 0)
 			yield* Effect.logWarning(
 				"Dictionary could not re-render the tables of some notes; the next full read tries again",

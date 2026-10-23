@@ -91,6 +91,21 @@ describe("formatCause", () => {
 			}),
 		).toBe('Error: {"kind":"PartialVaultScan"}');
 	});
+
+	it("leaves note content out of a plain object failure, and bounds it", () => {
+		const content = "Ein Satz aus einer Notiz. ".repeat(40);
+		const text = formatCause(
+			Cause.fail({
+				action: { content, path: "Library/A.md" },
+				kind: "DispatchFailed",
+				notes: "x".repeat(2000),
+			}),
+		);
+		expect(text).not.toContain("Ein Satz");
+		expect(text).toContain(`"content":"<${content.length} chars>"`);
+		expect(text).toContain('"path":"Library/A.md"');
+		expect(text.split("\n")[0]?.length).toBeLessThan(600);
+	});
 });
 
 describe("describeError and formatValue", () => {

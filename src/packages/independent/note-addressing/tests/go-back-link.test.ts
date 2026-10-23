@@ -51,3 +51,29 @@ describe("goBackLinkHelper.strip", () => {
 		expect(goBackLinkHelper.isMatch(result)).toBe(false);
 	});
 });
+
+describe("goBackLinkHelper.upsert", () => {
+	it("leaves exactly one go-back link, whatever format the old ones had", () => {
+		const old = [
+			"[[__;;A;;Text|← A]] \n",
+			"  [[__;;A;;Text | ←  A]]\r\n",
+			"\n[[__-B-A|← B]]\n\n",
+		];
+		for (const links of [old, [...old].reverse(), [old.join("")]]) {
+			const content = `${links.join("")}Body\r\n`;
+			const result = goBackLinkHelper.upsert({
+				content,
+				displayName: "A",
+				targetBasename: "__;;A;;Text",
+			});
+			const lines = result
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0);
+			expect(
+				lines.filter((line) => goBackLinkHelper.isMatch(line)),
+			).toEqual(["[[__;;A;;Text|← A]]"]);
+			expect(lines.at(-1)).toBe("Body");
+		}
+	});
+});

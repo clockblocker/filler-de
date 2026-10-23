@@ -3,7 +3,7 @@
  */
 
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { Notice } from "obsidian";
 import {
 	type CommandRecoveryOutcome,
@@ -159,10 +159,17 @@ const ERROR_MESSAGES: Record<SplitToPagesError["kind"], string> = {
 
 // ─── Error Handler ───
 
-export function handleSplitToPagesError(error: SplitToPagesError): void {
+/** Shows and logs the error, then tells the user what failed. */
+export const handleSplitToPagesError = (
+	error: SplitToPagesError,
+): Effect.Effect<void> =>
 	logError({
 		description: `${error.kind}: ${error.reason}`,
 		location: "splitToPagesAction",
-	});
-	new Notice(ERROR_MESSAGES[error.kind]);
-}
+	}).pipe(
+		Effect.andThen(
+			Effect.sync(() => {
+				new Notice(ERROR_MESSAGES[error.kind]);
+			}),
+		),
+	);

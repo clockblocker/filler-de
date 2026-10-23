@@ -7,11 +7,9 @@
  */
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
-import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { Cause, Effect, Layer } from "effect";
 import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import { getErrorMessage } from "../../utils/get-error-message";
-import { logger } from "../../utils/logger";
 import {
 	ClassifyError,
 	type ClassifyOutcome,
@@ -221,21 +219,24 @@ export class ClassifyCommander {
 				}),
 			),
 			Effect.catchTag("ClassifyError", (error) =>
-				Effect.sync(() => {
-					notify(`⚠ ${error.message}`);
-					logger.warn(`[Classify] ${error.reason}: ${error.message}`);
-				}),
+				Effect.sync(() => notify(`⚠ ${error.message}`)).pipe(
+					Effect.andThen(
+						Effect.logWarning(
+							`[Classify] ${error.reason}: ${error.message}`,
+						),
+					),
+				),
 			),
 			Effect.catchCause((cause) =>
 				Cause.hasInterruptsOnly(cause)
 					? Effect.failCause(cause)
-					: Effect.sync(() => {
-							notify("⚠ Classify failed unexpectedly");
-							logger.error(
-								"[Classify] Failed:",
-								formatCause(cause),
-							);
-						}),
+					: Effect.sync(() =>
+							notify("⚠ Classify failed unexpectedly"),
+						).pipe(
+							Effect.andThen(
+								Effect.logError("[Classify] Failed:", cause),
+							),
+						),
 			),
 			Effect.asVoid,
 		);

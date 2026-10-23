@@ -4,7 +4,7 @@
  * again on the next use, and once the plugin unloads it is closed and
  * answers no more.
  */
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 import type { EffectRunner } from "../runtime/plugin-runtime";
 import { ServiceState } from "./service-state";
 
@@ -22,7 +22,13 @@ export type DictionaryStoreService<Store> = {
 export function createDictionaryStoreService<Store>(deps: {
 	readonly build: () => Effect.Effect<Store, unknown>;
 	readonly close: (store: Store) => Effect.Effect<void, unknown>;
-	readonly onBuildFailed: (error: unknown) => void;
+	/**
+	 * Logs a build that failed, in the build's fiber. A build the unloading
+	 * runtime interrupted is no failure to tell.
+	 */
+	readonly onBuildFailed: (
+		cause: Cause.Cause<unknown>,
+	) => Effect.Effect<void>;
 	/** Runs the build and a late close on the plugin runtime. */
 	readonly runtime: EffectRunner<unknown>;
 }): DictionaryStoreService<Store> {
@@ -34,15 +40,16 @@ export function createDictionaryStoreService<Store>(deps: {
 			return Promise.reject(new Error("the plugin has unloaded"));
 		if (building) return building;
 		state = ServiceState.starting;
-		let interrupted = false;
 		const attempt = deps.runtime.runPromise(
-			deps.build().pipe(
-				Effect.onInterrupt(() =>
-					Effect.sync(() => {
-						interrupted = true;
-					}),
+			deps
+				.build()
+				.pipe(
+					Effect.tapCause((cause) =>
+						Cause.hasInterruptsOnly(cause)
+							? Effect.void
+							: deps.onBuildFailed(cause),
+					),
 				),
-			),
 		);
 		building = attempt;
 		attempt.then(
@@ -56,8 +63,6 @@ export function createDictionaryStoreService<Store>(deps: {
 					if (state.kind === "Starting")
 						state = ServiceState.failed(error);
 				}
-				// Unloading interrupted it; that is no failure to tell.
-				if (!interrupted) deps.onBuildFailed(error);
 			},
 		);
 		return attempt;

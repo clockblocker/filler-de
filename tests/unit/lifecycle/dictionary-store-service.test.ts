@@ -23,7 +23,10 @@ function makeHarness(failBuilds = 0) {
 			Effect.sync(() => {
 				events.push(`close ${store.id}`);
 			}),
-		onBuildFailed: (error) => failures.push(error),
+		onBuildFailed: (cause) =>
+			Effect.sync(() => {
+				failures.push(cause);
+			}),
 		runtime: defaultRunner,
 	});
 	return { events, failures, service };
@@ -35,7 +38,10 @@ describe("dictionary store service", () => {
 		const service = createDictionaryStoreService({
 			build: () => Effect.never,
 			close: () => Effect.void,
-			onBuildFailed: (error) => failures.push(error),
+			onBuildFailed: (cause) =>
+				Effect.sync(() => {
+					failures.push(cause);
+				}),
 			// Interrupts the build at once, as disposing the runtime does.
 			runtime: {
 				...defaultRunner,

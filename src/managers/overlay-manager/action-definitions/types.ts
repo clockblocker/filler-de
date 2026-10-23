@@ -20,6 +20,10 @@ const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KINDS);
 export type OverlayActionKind = z.infer<typeof OverlayActionKindSchema>;
 export const OverlayActionKind = OverlayActionKindSchema.enum;
 
+/** Whether `id`, such as a clicked element's action id, names an overlay action. */
+export const isOverlayActionKind = (id: string): id is OverlayActionKind =>
+	OverlayActionKindSchema.safeParse(id).success;
+
 const OVERLAY_PLACEMENT_LITERALS = [
 	"AboveSelection",
 	"Bottom",

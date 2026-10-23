@@ -72,9 +72,7 @@ export function changeDelimiter(
 				),
 			),
 		),
-		Effect.tap((report) =>
-			Effect.sync(() => deps.notices.delimiterMigrationReported(report)),
-		),
+		Effect.tap(deps.notices.delimiterMigrationReported),
 	);
 }
 

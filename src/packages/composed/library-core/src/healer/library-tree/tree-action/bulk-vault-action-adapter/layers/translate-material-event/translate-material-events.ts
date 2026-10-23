@@ -5,6 +5,7 @@ import {
 	translateCreateObservation,
 } from "../../../../../../tree/create-observation";
 import { PREFIX_OF_CODEX } from "../../../../codex/literals";
+import type { LibraryIssue } from "../../../../types/library-issue";
 import type { TreeAction } from "../../../types/tree-action";
 import {
 	MaterializedEventKind as MaterializedEventType,
@@ -15,6 +16,8 @@ import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-m
 
 export type MaterializedEventTranslation = {
 	readonly createDiagnostics: readonly CreateObservationDiagnostic[];
+	/** Why some renames were not translated. */
+	readonly issues: readonly LibraryIssue[];
 	readonly treeActions: readonly TreeAction[];
 };
 
@@ -46,6 +49,7 @@ export const translateMaterializedEvents = (
 	codecs: Codecs,
 ): MaterializedEventTranslation => {
 	const createDiagnostics: CreateObservationDiagnostic[] = [];
+	const issues: LibraryIssue[] = [];
 	const out: TreeAction[] = [];
 
 	for (const ev of events) {
@@ -70,7 +74,9 @@ export const translateMaterializedEvents = (
 
 			case MaterializedEventType.Rename: {
 				if (isCodexEvent(ev, codecs)) break;
-				out.push(...traslateRenameMaterializedEvent(ev, codecs));
+				const translation = traslateRenameMaterializedEvent(ev, codecs);
+				out.push(...translation.actions);
+				issues.push(...translation.issues);
 				break;
 			}
 
@@ -80,7 +86,7 @@ export const translateMaterializedEvents = (
 		}
 	}
 
-	return { createDiagnostics, treeActions: out };
+	return { createDiagnostics, issues, treeActions: out };
 };
 
 /**

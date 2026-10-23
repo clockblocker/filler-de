@@ -1,6 +1,9 @@
 import type { Codecs } from "../../../../../../../codecs";
-import { logger } from "../../../../../../../internal/root/logger";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
+import {
+	type LibraryIssue,
+	libraryWarning,
+} from "../../../../../types/library-issue";
 import {
 	type MoveNodeAction,
 	type RenameNodeAction,
@@ -16,10 +19,16 @@ import { RenameIntent } from "../policy-and-intent/intent/types";
 import { tryMakeDestinationLocatorFromEvent } from "./helpers/event-to-locator";
 import { tryMakeTargetLocatorFromLibraryScopedSplitPath } from "./helpers/split-path-to-locator";
 
+export type RenameTranslation = {
+	readonly actions: Array<RenameNodeAction | MoveNodeAction>;
+	/** Why the rename was not translated, when it was not. */
+	readonly issues: readonly LibraryIssue[];
+};
+
 export function traslateRenameMaterializedEvent(
 	ev: RenameTreeNodeNodeMaterializedEvent,
 	codecs: Codecs,
-): Array<RenameNodeAction | MoveNodeAction> {
+): RenameTranslation {
 	const out: Array<RenameNodeAction | MoveNodeAction> = [];
 
 	const { intent } = inferPolicyAndIntent(ev, codecs);
@@ -30,19 +39,30 @@ export function traslateRenameMaterializedEvent(
 		codecs,
 	);
 	if (targetRes.isErr()) {
-		logger.warn("[translateRename] targetRes error:", targetRes.error);
-		return out;
+		return {
+			actions: out,
+			issues: [
+				libraryWarning(
+					"[translateRename] targetRes error:",
+					targetRes.error,
+				),
+			],
+		};
 	}
 	const targetLocator = targetRes.value;
 
 	// 2) destination canonical (TO + policy/intent)
 	const destinationRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
 	if (destinationRes.isErr()) {
-		logger.warn(
-			"[translateRename] destinationRes error:",
-			destinationRes.error,
-		);
-		return out;
+		return {
+			actions: out,
+			issues: [
+				libraryWarning(
+					"[translateRename] destinationRes error:",
+					destinationRes.error,
+				),
+			],
+		};
 	}
 	const destinationLocator = destinationRes.value;
 
@@ -58,7 +78,7 @@ export function traslateRenameMaterializedEvent(
 				: { observedSplitPath: ev.to }),
 			targetLocator,
 		} as RenameNodeAction);
-		return out;
+		return { actions: out, issues: [] };
 	}
 
 	out.push({
@@ -69,5 +89,5 @@ export function traslateRenameMaterializedEvent(
 		targetLocator,
 	} as MoveNodeAction);
 
-	return out;
+	return { actions: out, issues: [] };
 }

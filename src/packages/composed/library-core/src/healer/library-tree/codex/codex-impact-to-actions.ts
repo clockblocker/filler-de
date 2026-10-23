@@ -13,7 +13,6 @@ import { err, ok } from "neverthrow";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import { logger } from "../../../internal/root/logger";
 import {
 	computeCodexSuffix,
 	parseSectionChainToNodeNames,
@@ -23,6 +22,7 @@ import type { TreeReader } from "../tree-interfaces";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import type { HealingAction } from "../types/healing-action";
+import { type LibraryIssue, libraryWarning } from "../types/library-issue";
 import { computeScrollSplitPath } from "../utils/compute-scroll-split-path";
 import { computeCodexSplitPath } from "./codex-split-path";
 import type { CodexImpact } from "./compute-codex-impact";
@@ -40,6 +40,12 @@ import type {
 	ProcessCodexAction,
 	WriteScrollStatusAction,
 } from "./types/codex-action";
+
+/** Codex actions, and the scrolls they skipped, for the caller to log. */
+export type CodexActionsResult = {
+	readonly actions: CodexAction[];
+	readonly issues: readonly LibraryIssue[];
+};
 
 // ─── Main ───
 
@@ -157,8 +163,9 @@ export function codexImpactToRecreations(
 	impact: CodexImpact,
 	tree: TreeReader,
 	codecs: Codecs,
-): CodexAction[] {
+): CodexActionsResult {
 	const actions: CodexAction[] = [];
+	const issues: LibraryIssue[] = [];
 
 	// 1. Single traversal to collect all section chains
 	const { sectionChains } = collectTreeData(tree, codecs);
@@ -202,9 +209,11 @@ export function codexImpactToRecreations(
 				codecs,
 			);
 			if (splitPathResult.isErr()) {
-				logger.warn(
-					"[Codex] Failed to compute scroll split path:",
-					splitPathResult.error,
+				issues.push(
+					libraryWarning(
+						"[Codex] Failed to compute scroll split path:",
+						splitPathResult.error,
+					),
 				);
 				continue; // Maintain current behavior: skip on error
 			}
@@ -218,7 +227,7 @@ export function codexImpactToRecreations(
 		}
 	}
 
-	return actions;
+	return { actions, issues };
 }
 
 /**
@@ -234,8 +243,9 @@ export function codexImpactToIncrementalRecreations(
 	impact: CodexImpact,
 	tree: TreeReader,
 	codecs: Codecs,
-): CodexAction[] {
+): CodexActionsResult {
 	const actions: CodexAction[] = [];
+	const issues: LibraryIssue[] = [];
 
 	// 1. Convert impactedChains Set to actual chains and process only those
 	for (const chainKey of impact.impactedChains) {
@@ -316,9 +326,11 @@ export function codexImpactToIncrementalRecreations(
 				codecs,
 			);
 			if (splitPathResult.isErr()) {
-				logger.warn(
-					"[Codex] Failed to compute scroll split path:",
-					splitPathResult.error,
+				issues.push(
+					libraryWarning(
+						"[Codex] Failed to compute scroll split path:",
+						splitPathResult.error,
+					),
 				);
 				continue;
 			}
@@ -369,7 +381,7 @@ export function codexImpactToIncrementalRecreations(
 		}
 	}
 
-	return actions;
+	return { actions, issues };
 }
 
 /**
