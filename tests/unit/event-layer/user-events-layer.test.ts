@@ -183,6 +183,8 @@ describe("the plugin's user events", () => {
 			{ capture: true, type: "mousedown" },
 			{ capture: true, type: "mouseup" },
 			{ capture: true, type: "click" },
+			{ capture: true, type: "copy" },
+			{ capture: true, type: "cut" },
 			{ capture: false, type: "copy" },
 			{ capture: false, type: "cut" },
 			{ capture: true, type: "keydown" },

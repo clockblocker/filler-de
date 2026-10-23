@@ -131,9 +131,14 @@ export function fakeDocument() {
 			if (at !== -1) listeners.splice(at, 1);
 		},
 	};
-	/** Dispatches `event` at the document: capture listeners, then bubble ones. */
-	const fire = (event: FakeEvent): FakeEvent => {
+	/**
+	 * Dispatches `event` at the document: capture listeners, then
+	 * `atTarget`, as an element below the document handles it (such as
+	 * CodeMirror's content), then bubble listeners.
+	 */
+	const fire = (event: FakeEvent, atTarget?: () => void): FakeEvent => {
 		for (const capture of [true, false]) {
+			if (!capture) atTarget?.();
 			for (const entry of listeners.filter(
 				(l) => l.type === event.type && l.capture === capture,
 			)) {
@@ -276,7 +281,7 @@ export function eventLayerOn(
 	app: App,
 	options: {
 		/** What VAM reads as the editor's selection; null for none. */
-		readonly selection?: string | null;
+		readonly selection?: string | null | (() => string | null);
 		readonly resolveLinkpath?: (link: string) => string | null;
 		/** Opening a link fails, as Obsidian's `openLinkText` can. */
 		readonly openLinkFails?: boolean;
@@ -325,7 +330,12 @@ export function eventLayerOn(
 					}),
 		readSync: Effect.runSyncExit,
 		vam: {
-			getSelectionText: () => Effect.succeed(options.selection ?? null),
+			getSelectionText: () =>
+				Effect.sync(() =>
+					typeof options.selection === "function"
+						? options.selection()
+						: (options.selection ?? null),
+				),
 			resolveLinkpath: (link) =>
 				Effect.succeed(options.resolveLinkpath?.(link) ?? null),
 		} as UserEventsHost["vam"],

@@ -20,6 +20,8 @@ DOM / editor event → Detector → Codec.encode() → Payload → handler.doesA
                        └────────────────────────────────────────────────────────┘
 ```
 
+A copy or cut reads its selection in the capture phase, before CodeMirror's own handler deletes a cut's, and writes the clipboard as the event bubbles to the document, after CodeMirror wrote its raw text.
+
 The fork starts at once, inside the event, so a program that never waits is applied before the event's dispatch ends. A copy needs that: the clipboard is writable only during the event. A copy handler that waits finds the selection already copied as it is, and its answer is logged and dropped.
 
 ## Key Concepts

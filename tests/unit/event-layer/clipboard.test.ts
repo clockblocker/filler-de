@@ -44,13 +44,9 @@ describe("copy and cut", () => {
 		]);
 	});
 
-	// Only as handed a selection: in a real editor, CodeMirror's own cut
-	// deletes the selection before this listener reads it, so a cut is not
-	// stripped there (on master too); see the follow-up issue.
-	it("a cut handed its selection strips it the same way (not yet in a real editor)", () => {
-		const events = eventLayerOn(fakeApp(NOTE), {
-			selection: `${GO_BACK}\nEs war einmal.`,
-		});
+	it("cut strips the selection CodeMirror cuts, though its own handler deletes it before the event bubbles", () => {
+		let selection: string | null = `${GO_BACK}\nEs war einmal.`;
+		const events = eventLayerOn(fakeApp(NOTE), { selection: () => selection });
 		const seen: boolean[] = [];
 		const handler = createClipboardHandler();
 		events.layer.setHandler(UserEventKind.ClipboardCopy, {
@@ -60,10 +56,28 @@ describe("copy and cut", () => {
 				return handler.handle(payload);
 			},
 		});
-		const { clipboard, event } = copy(events, "cut");
+		const clipboard = fakeClipboard();
+
+		// CodeMirror's cut, on its content: the raw text on the clipboard,
+		// the selection deleted, the default prevented.
+		const event = fakeEvent("cut", { clipboardData: clipboard });
+		events.fire(event, () => {
+			clipboard.setData("text/plain", selection ?? "");
+			selection = null;
+			event.preventDefault();
+		});
 
 		expect(seen).toEqual([true]);
-		expect(event.defaultPrevented).toBe(true);
+		expect(selection).toBeNull();
+		expect(clipboard.text).toBe("Es war einmal.");
+	});
+
+	it("copy strips the selection CodeMirror copied first", () => {
+		const events = withClipboardHandler(`${GO_BACK}\nEs war einmal.`);
+		const clipboard = fakeClipboard();
+		events.fire(fakeEvent("copy", { clipboardData: clipboard }), () =>
+			clipboard.setData("text/plain", `${GO_BACK}\nEs war einmal.`),
+		);
 		expect(clipboard.text).toBe("Es war einmal.");
 	});
 
