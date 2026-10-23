@@ -1,8 +1,6 @@
 import { Effect } from "effect";
-import type {
-	VamOperation,
-	VaultEventOrigin,
-} from "../../../src/types/event-origin";
+import type { Attribution } from "../../../src/impl/event-processing/callback-sequence";
+import type { VamOperation } from "../../../src/types/event-origin";
 
 /** The batch tests register Self Events under. */
 export const TEST_OPERATION: VamOperation = {
@@ -12,6 +10,6 @@ export const TEST_OPERATION: VamOperation = {
 
 /** Whether the tracker attributed the callback to a Dispatch Batch. */
 export const selfOf = <E, R>(
-	origin: Effect.Effect<VaultEventOrigin, E, R>,
+	attribution: Effect.Effect<Attribution, E, R>,
 ): Effect.Effect<boolean, E, R> =>
-	Effect.map(origin, ({ kind }) => kind === "Vam");
+	Effect.map(attribution, ({ origin }) => origin.kind === "Vam");

@@ -558,9 +558,9 @@ class VaultActionManagerFacade {
 	});
 
 	/** A subscription that delivers nothing until started, on a channel that is listening. */
-	private subscribeGated<Ev, M extends object>(
+	private subscribeGated<Ev, M extends object, E>(
 		observation: VaultObservation<Ev, M>,
-		handler: (message: M) => Effect.Effect<void, unknown>,
+		handler: (message: M) => Effect.Effect<void, E>,
 		filter: OriginFilter,
 	): Effect.Effect<VaultObservationSubscription<M>, VamSubscriptionError> {
 		return observation

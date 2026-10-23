@@ -23,9 +23,11 @@ import {
 	VamDispatchReport,
 } from "./dispatch-report";
 import {
+	causeValue,
 	type VamActionFailureKind,
 	VamDispatchError,
 	type VamDispatchFailureReason,
+	type VamEffectError,
 } from "./errors";
 import {
 	type VamNotUndoable,
@@ -42,10 +44,10 @@ export type VamUndoPort = {
 	) => Effect.Effect<VamDispatchReport, VamDispatchFailure>;
 	readonly exists: (
 		splitPath: AnySplitPath,
-	) => Effect.Effect<boolean, unknown>;
+	) => Effect.Effect<boolean, VamEffectError>;
 	readonly readContent: (
 		splitPath: SplitPathToMdFile,
-	) => Effect.Effect<string, unknown>;
+	) => Effect.Effect<string, VamEffectError>;
 };
 
 /**
@@ -193,13 +195,12 @@ function stoppedBatch(
 ): VamDispatchFailure | undefined {
 	const failed = cause.reasons.find(Cause.isFailReason);
 	if (failed) return failed.error;
-	const died = cause.reasons.find(Cause.isDieReason);
-	if (!died) return undefined;
+	if (!cause.reasons.some(Cause.isDieReason)) return undefined;
 	const errors = actions.map(
 		(action) =>
 			new VamDispatchError({
 				action,
-				cause: died.defect,
+				cause: causeValue(cause),
 				kind: "defect",
 				operation: "dispatch",
 			}),
@@ -671,14 +672,14 @@ const runInverse = Effect.fnUntraced(function* (
 	}
 	const failed = exit.cause.reasons.find(Cause.isFailReason);
 	if (!failed) {
-		const died = exit.cause.reasons.find(Cause.isDieReason);
-		if (!died) return yield* Effect.interrupt;
+		if (!exit.cause.reasons.some(Cause.isDieReason))
+			return yield* Effect.interrupt;
 		return {
 			_tag: "Blocked",
 			block: "Failed",
 			error: new VamDispatchError({
 				action: plan.inverse,
-				cause: died.defect,
+				cause: causeValue(exit.cause),
 				kind: "defect",
 				operation: "undo",
 			}),
@@ -718,6 +719,7 @@ function blockOf(kind: VamActionFailureKind): VamUndoBlock {
 			return "Missing";
 		case "io":
 		case "defect":
+		case "interrupted":
 			return "Failed";
 	}
 }
@@ -822,8 +824,8 @@ function describe(action: VaultAction): string {
 }
 
 /** The effect's value, or undefined when it fails or dies. */
-function settle<A>(
-	effect: Effect.Effect<A, unknown>,
+function settle<A, E>(
+	effect: Effect.Effect<A, E>,
 ): Effect.Effect<A | undefined> {
 	return Effect.exit(effect).pipe(
 		Effect.map((exit) => (Exit.isSuccess(exit) ? exit.value : undefined)),

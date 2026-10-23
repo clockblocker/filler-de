@@ -18,12 +18,7 @@ import { formatCause } from "../../diagnostics/format-cause";
 import type { VamSubscriptionError } from "../../effect/errors";
 import type { VaultListen } from "../../effect/ports";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
-import { logger } from "../../internal/logger";
-import {
-	type OriginFilter,
-	originFilter,
-	type VaultEventOrigin,
-} from "../../types/event-origin";
+import { type OriginFilter, originFilter } from "../../types/event-origin";
 import { decodeFileStatOption } from "../../types/file-stat";
 import {
 	type ObservedVaultEvent,
@@ -41,6 +36,7 @@ import type { BulkVaultEvent } from "./bulk-event-emmiter/types/bulk/bulk-vault-
 import type { BulkWindow } from "./bulk-event-emmiter/types/bulk/bulk-window";
 import { isDelete, isRename } from "./bulk-event-emmiter/types/bulk/helpers";
 import {
+	type Attribution,
 	type ObservedCallback,
 	VaultCallbackSequence,
 } from "./callback-sequence";
@@ -58,10 +54,34 @@ import {
 } from "./vault-events-for-events";
 
 /**
- * Runs in VAM's runtime, so a handler's span and its failure's cause stay
- * attached to the vault callbacks that led to it.
+ * A subscriber's handler. Each call runs as its own root span,
+ * `vam.observation.deliver`, linked to the subscription and to the Dispatch
+ * Batches that caused what it delivers. A failure is logged there with its
+ * whole `Cause`.
  */
-type ObservationHandler<M> = (message: M) => Effect.Effect<void, unknown>;
+type ObservationHandler<M, E> = (message: M) => Effect.Effect<void, E>;
+
+/**
+ * Runs one delivery to a subscriber under `span` and waits for it to end,
+ * however it ends: a failure is logged in the delivery's span and goes no
+ * further, so the next delivery still comes.
+ */
+type Deliver<M> = (
+	message: M,
+	span: Tracer.SpanOptionsNoTrace,
+) => Effect.Effect<void>;
+
+/** One subscriber's part of a window: its message and the callbacks it holds. */
+type Delivery<Ev, M> = {
+	readonly callbacks: readonly ObservedCallback<Ev>[];
+	readonly message: M;
+};
+
+/** Runs `effect` with no parent span, so the spans it opens are roots. */
+const detached = <A, E>(effect: Effect.Effect<A, E>): Effect.Effect<A, E> =>
+	Effect.updateContext(effect, (context: Context.Context<never>) =>
+		Context.omit(Tracer.ParentSpan)(context),
+	);
 
 type SubscriberBarrier = {
 	readonly completed: Deferred.Deferred<void>;
@@ -92,12 +112,14 @@ type SubscriberState<M> = {
 	readonly cursor: { value: number };
 	/** Completes when delivery may begin; complete from the start unless gated. */
 	readonly delivering: Deferred.Deferred<void>;
+	readonly deliver: Deliver<M>;
 	/** The origins this subscriber receives. */
 	readonly filter: OriginFilter;
-	readonly handler: ObservationHandler<M>;
 	readonly id: number;
 	readonly pendingBarriers: Ref.Ref<ReadonlySet<SubscriberBarrier>>;
 	readonly scope: Scope.Closeable;
+	/** The span the subscription was made under; each delivery links to it. */
+	readonly subscriptionSpan: Tracer.AnySpan | undefined;
 };
 
 type ObservationSession<Ev> = {
@@ -139,6 +161,8 @@ type ObservationSource<Ev, M> = {
 	) => Effect.Effect<void, VamSubscriptionError, Scope.Scope>;
 	/** Builds the message of the window's callbacks, each with its origin. */
 	readonly publish: (window: BulkWindow<ObservedCallback<Ev>>) => M;
+	/** What a delivery's span says of the message it delivers. */
+	readonly describe: (message: M) => Readonly<Record<string, number>>;
 };
 
 type VaultObservationOptions = Partial<EventAccumulatorOptions> & {
@@ -295,14 +319,17 @@ export class VaultObservation<
 	 * and only those of origins its filter takes.
 	 */
 	readonly subscribeEffect = Effect.fn("VaultObservation.subscribe")(
-		function* (
+		function* <E>(
 			this: VaultObservation<Ev, M>,
-			handler: ObservationHandler<M>,
+			handler: ObservationHandler<M, E>,
 			options: SubscribeOptions = {},
 		): Effect.fn.Return<
 			VaultObservationSubscription<M>,
 			VamSubscriptionError
 		> {
+			const subscriptionSpan = Option.getOrUndefined(
+				yield* Effect.option(Effect.currentSpan),
+			);
 			const scope = yield* Scope.fork(this.core.rootScope, "sequential");
 			const subscription = yield* PubSub.subscribe(this.core.pubsub).pipe(
 				Effect.provideService(Scope.Scope, scope),
@@ -318,12 +345,13 @@ export class VaultObservation<
 			if (!options.gated) yield* Deferred.succeed(delivering, undefined);
 			const state: SubscriberState<M> = {
 				cursor: { value: this.sequence.current },
+				deliver: this.deliverTo(handler),
 				delivering,
 				filter: options.filter ?? originFilter(),
-				handler,
 				id,
 				pendingBarriers,
 				scope,
+				subscriptionSpan,
 			};
 
 			yield* Scope.addFinalizer(
@@ -336,7 +364,10 @@ export class VaultObservation<
 				return next;
 			});
 
+			// Detached from the subscribing span: each delivery is a root of
+			// its own, linked back to the subscription.
 			yield* this.subscriberLoopEffect(state, subscription).pipe(
+				detached,
 				Effect.forkIn(scope),
 			);
 			yield* this.ensureSessionEffect().pipe(
@@ -500,7 +531,7 @@ export class VaultObservation<
 								intake,
 								this.options,
 								(window) => this.publishWindowEffect(window),
-							).pipe(Effect.forkIn(scope));
+							).pipe(detached, Effect.forkIn(scope));
 
 							return { closed, intake, scope };
 						}.bind(this),
@@ -518,9 +549,7 @@ export class VaultObservation<
 		);
 	});
 
-	private readonly publishWindowEffect = Effect.fn(
-		"VaultObservation.publishWindow",
-	)(function* (
+	private readonly publishWindowEffect = Effect.fnUntraced(function* (
 		this: VaultObservation<Ev, M>,
 		window: BulkWindow<ObservedCallback<Ev>>,
 	): Effect.fn.Return<void> {
@@ -554,14 +583,46 @@ export class VaultObservation<
 		filter: OriginFilter,
 		window: BulkWindow<ObservedCallback<Ev>>,
 		whole: M,
-		byFilter?: Map<string, M>,
 	): M | null {
+		return (
+			this.deliveryAfter(cursor, filter, window, whole)?.message ?? null
+		);
+	}
+
+	/**
+	 * `messageAfter`'s message, with the callbacks it holds; `null` when it
+	 * holds none.
+	 */
+	private deliveryAfter(
+		cursor: number,
+		filter: OriginFilter,
+		window: BulkWindow<ObservedCallback<Ev>>,
+		whole: M,
+		byFilter?: Map<string, M>,
+	): Delivery<Ev, M> | null {
 		const callbacks = window.allObsidianEvents;
 		const kept = callbacks.filter(
 			({ origin, seq }) => seq > cursor && filter.accepts(origin),
 		);
-		if (kept.length === callbacks.length) return whole;
 		if (kept.length === 0) return null;
+		return {
+			callbacks: kept,
+			message:
+				kept.length === callbacks.length
+					? whole
+					: this.messageOf(window, kept, cursor, filter, byFilter),
+		};
+	}
+
+	/** The message of `kept`, the part of `window` one subscriber receives. */
+	private messageOf(
+		window: BulkWindow<ObservedCallback<Ev>>,
+		kept: ObservedCallback<Ev>[],
+		cursor: number,
+		filter: OriginFilter,
+		byFilter: Map<string, M> | undefined,
+	): M {
+		const callbacks = window.allObsidianEvents;
 		const build = () =>
 			this.buildMessage({ ...window, allObsidianEvents: kept });
 		// Subscribers whose cursor precedes the window differ only by
@@ -641,41 +702,43 @@ export class VaultObservation<
 	 * handled what was published before it, and answers it without
 	 * waiting; `null` when there is no subscriber.
 	 */
-	private readonly publishSubscriberBarrierEffect = Effect.fn(
-		"VaultObservation.publishSubscriberBarrier",
-	)(function* (
-		this: VaultObservation<Ev, M>,
-	): Effect.fn.Return<SubscriberBarrier | null> {
-		const subscribers = yield* Ref.get(this.core.subscribers);
-		if (subscribers.size === 0) return null;
+	private readonly publishSubscriberBarrierEffect = Effect.fnUntraced(
+		function* (
+			this: VaultObservation<Ev, M>,
+		): Effect.fn.Return<SubscriberBarrier | null> {
+			const subscribers = yield* Ref.get(this.core.subscribers);
+			if (subscribers.size === 0) return null;
 
-		const barrier: SubscriberBarrier = {
-			completed: yield* Deferred.make<void>(),
-			remaining: yield* Ref.make(subscribers.size),
-		};
-		for (const subscriber of subscribers.values()) {
-			yield* Ref.update(subscriber.pendingBarriers, (barriers) => {
-				const next = new Set(barriers);
-				next.add(barrier);
-				return next;
-			});
-		}
-
-		const published = yield* PubSub.publish(this.core.pubsub, {
-			_tag: "Barrier",
-			barrier,
-		});
-		if (!published) {
+			const barrier: SubscriberBarrier = {
+				completed: yield* Deferred.make<void>(),
+				remaining: yield* Ref.make(subscribers.size),
+			};
 			for (const subscriber of subscribers.values()) {
-				yield* this.releaseBarrierEffect(subscriber, barrier);
+				yield* Ref.update(subscriber.pendingBarriers, (barriers) => {
+					const next = new Set(barriers);
+					next.add(barrier);
+					return next;
+				});
 			}
-		}
-		return barrier;
-	});
 
-	private readonly subscriberLoopEffect = Effect.fn(
-		"VaultObservation.subscriberLoop",
-	)(function* (
+			const published = yield* PubSub.publish(this.core.pubsub, {
+				_tag: "Barrier",
+				barrier,
+			});
+			if (!published) {
+				for (const subscriber of subscribers.values()) {
+					yield* this.releaseBarrierEffect(subscriber, barrier);
+				}
+			}
+			return barrier;
+		},
+	);
+
+	/**
+	 * Delivers one message at a time: the next waits until the handler is
+	 * done with this one, so a subscriber handles windows in order.
+	 */
+	private readonly subscriberLoopEffect = Effect.fnUntraced(function* (
 		this: VaultObservation<Ev, M>,
 		state: SubscriberState<M>,
 		subscription: PubSub.Subscription<PublishedMessage<Ev, M>>,
@@ -692,46 +755,100 @@ export class VaultObservation<
 			}
 			// The cursor is read as the message is taken, so a snapshot
 			// taken while it waited drops what that snapshot holds.
-			const bulk = this.messageAfter(
+			const delivery = this.deliveryAfter(
 				state.cursor.value,
 				state.filter,
 				message.published.window,
 				message.published.shared,
 				message.published.byFilter,
 			);
-			if (bulk === null) continue;
+			if (delivery === null) continue;
 
 			yield* Ref.update(
 				this.core.activeHandlerWork,
 				(count) => count + 1,
 			);
-			// The handler runs in a fiber of its own, scoped to the channel,
-			// so closing the subscription from inside it cannot interrupt it.
-			// Suspended, so a handler that throws instead of failing fails
-			// that fiber, not this loop.
-			const handling = yield* Effect.suspend(() =>
-				state.handler(bulk),
-			).pipe(
-				Effect.withSpan("vam.observation.handle"),
-				Effect.forkIn(this.core.rootScope),
-			);
-			yield* Fiber.await(handling).pipe(
-				Effect.flatMap((exit) =>
-					Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
-						? Effect.logError(
-								"[VaultObservation] Subscriber failed",
-								exit.cause,
-							)
-						: Effect.void,
-				),
-				Effect.ensuring(
-					Ref.update(this.core.activeHandlerWork, (count) =>
-						Math.max(0, count - 1),
+			yield* state
+				.deliver(delivery.message, this.deliverySpan(state, delivery))
+				.pipe(
+					Effect.ensuring(
+						Ref.update(this.core.activeHandlerWork, (count) =>
+							Math.max(0, count - 1),
+						),
 					),
-				),
-			);
+				);
 		}
 	});
+
+	/**
+	 * `handler` as its subscriber's deliveries run it. Each delivery runs in
+	 * a fiber of its own, scoped to the channel, so closing the subscription
+	 * from inside the handler cannot interrupt it. The handler is suspended,
+	 * so one that throws instead of failing fails that fiber, not the loop.
+	 */
+	private deliverTo<E>(handler: ObservationHandler<M, E>): Deliver<M> {
+		const rootScope = this.core.rootScope;
+		return (message, span) =>
+			Effect.suspend(() => handler(message)).pipe(
+				Effect.tapCause((cause) =>
+					Cause.hasInterruptsOnly(cause)
+						? Effect.void
+						: Effect.logError(
+								"[VaultObservation] Subscriber failed",
+								cause,
+							),
+				),
+				Effect.withSpan("vam.observation.deliver", span),
+				Effect.forkIn(rootScope),
+				Effect.flatMap(Fiber.await),
+				Effect.asVoid,
+			);
+	}
+
+	/**
+	 * A delivery's span: a root, linked to the subscription and to each
+	 * Dispatch Batch that caused a callback it delivers, once per batch.
+	 */
+	private deliverySpan(
+		state: SubscriberState<M>,
+		{ callbacks, message }: Delivery<Ev, M>,
+	): Tracer.SpanOptionsNoTrace {
+		const links: Tracer.SpanLink[] = [];
+		if (state.subscriptionSpan !== undefined)
+			links.push({
+				attributes: { "vam.link": "subscription" },
+				span: state.subscriptionSpan,
+			});
+		const linked = new Set<Tracer.AnySpan>();
+		const origins = new Set<string>();
+		const operations = new Set<string>();
+		for (const { dispatchSpan, origin } of callbacks) {
+			origins.add(origin.kind);
+			if (origin.kind === "External") continue;
+			operations.add(origin.operationId);
+			if (dispatchSpan === undefined || linked.has(dispatchSpan))
+				continue;
+			linked.add(dispatchSpan);
+			links.push({
+				attributes: {
+					"vam.link": "dispatch",
+					"vam.operationId": origin.operationId,
+					"vam.origin": origin.kind,
+				},
+				span: dispatchSpan,
+			});
+		}
+		const attributes: Record<string, unknown> = {
+			...this.source.describe(message),
+			"vam.callbacks": callbacks.length,
+			"vam.origin": [...origins].sort().join(","),
+			"vam.subscriber": state.id,
+			"vam.subscriber.filter": state.filter.key,
+		};
+		if (operations.size > 0)
+			attributes["vam.operationIds"] = [...operations].join(",");
+		return { attributes, links, root: true };
+	}
 
 	private readonly closeSubscriptionEffect = Effect.fn(
 		"VaultObservation.closeSubscription",
@@ -776,21 +893,22 @@ export class VaultObservation<
 		);
 	});
 
-	private readonly releasePendingBarriersEffect = Effect.fn(
-		"VaultObservation.releasePendingBarriers",
-	)(function* (
-		this: VaultObservation<Ev, M>,
-		state: SubscriberState<M>,
-	): Effect.fn.Return<void> {
-		const pending = yield* Ref.getAndSet(state.pendingBarriers, new Set());
-		for (const barrier of pending) {
-			yield* this.completeBarrierEffect(barrier);
-		}
-	});
+	private readonly releasePendingBarriersEffect = Effect.fnUntraced(
+		function* (
+			this: VaultObservation<Ev, M>,
+			state: SubscriberState<M>,
+		): Effect.fn.Return<void> {
+			const pending = yield* Ref.getAndSet(
+				state.pendingBarriers,
+				new Set(),
+			);
+			for (const barrier of pending) {
+				yield* this.completeBarrierEffect(barrier);
+			}
+		},
+	);
 
-	private readonly releaseBarrierEffect = Effect.fn(
-		"VaultObservation.releaseBarrier",
-	)(function* (
+	private readonly releaseBarrierEffect = Effect.fnUntraced(function* (
 		this: VaultObservation<Ev, M>,
 		state: SubscriberState<M>,
 		barrier: SubscriberBarrier,
@@ -804,9 +922,9 @@ export class VaultObservation<
 		if (pending) yield* this.completeBarrierEffect(barrier);
 	});
 
-	private readonly completeBarrierEffect = Effect.fn(
-		"VaultObservation.completeBarrier",
-	)(function* (barrier: SubscriberBarrier): Effect.fn.Return<void> {
+	private readonly completeBarrierEffect = Effect.fnUntraced(function* (
+		barrier: SubscriberBarrier,
+	): Effect.fn.Return<void> {
 		const completed = yield* Ref.modify(barrier.remaining, (remaining) => {
 			const next = Math.max(0, remaining - 1);
 			return [next === 0, next];
@@ -825,7 +943,11 @@ export class VaultObservation<
 		);
 		const exit = Effect.runSyncExitWith(this.core.context)(logged);
 		if (Exit.isFailure(exit)) {
-			logger.error(
+			// The one log that cannot go through Effect: Obsidian calls
+			// `vault.on` callbacks synchronously, and logging through
+			// Effect is what failed.
+			// biome-ignore lint/suspicious/noConsole: VAM's log of last resort, where Effect's loggers failed.
+			console.error(
 				"[VaultObservation] Vault callback logging failed",
 				formatCause(exit.cause),
 			);
@@ -838,6 +960,10 @@ function bulkVaultEventSource(
 	selfEvents: SelfEventTracker,
 ): ObservationSource<VaultEvent, BulkVaultEvent> {
 	return {
+		describe: ({ events, roots }) => ({
+			"vam.events": events.length,
+			"vam.roots": roots.length,
+		}),
 		listen: Effect.fn("VaultObservation.listenForBulk")(function* (
 			intake: Queue.Enqueue<
 				EventAccumulatorCommand<ObservedCallback<VaultEvent>>
@@ -848,11 +974,11 @@ function bulkVaultEventSource(
 			const offer = (
 				seq: number,
 				event: VaultEvent,
-				origin: VaultEventOrigin,
+				attribution: Attribution,
 			) =>
 				Queue.offer(intake, {
 					_tag: "Event",
-					event: { event, origin, seq },
+					event: { ...attribution, event, seq },
 				});
 			// Every callback is offered with its origin; each subscription
 			// leaves out the origins it does not take.
@@ -863,8 +989,9 @@ function bulkVaultEventSource(
 				const seq = sequence.next();
 				runCallback(
 					Effect.gen(function* () {
-						const origin = yield* selfEvents.attributeEffect(path);
-						yield* offer(seq, makeEvent(), origin);
+						const attribution =
+							yield* selfEvents.attributeEffect(path);
+						yield* offer(seq, makeEvent(), attribution);
 					}),
 				);
 			};
@@ -878,16 +1005,17 @@ function bulkVaultEventSource(
 				const seq = sequence.next();
 				runCallback(
 					Effect.gen(function* () {
-						const origin = yield* selfEvents.attributeRenameEffect(
-							oldPath,
-							file.path,
-						);
+						const attribution =
+							yield* selfEvents.attributeRenameEffect(
+								oldPath,
+								file.path,
+							);
 						const event = tryMakeVaultEventForFileRenamed(
 							file,
 							oldPath,
 						);
 						if (event.success)
-							yield* offer(seq, event.event, origin);
+							yield* offer(seq, event.event, attribution);
 					}),
 				);
 			});
@@ -939,12 +1067,16 @@ function mdModifySource(
 	const attribute = Effect.fnUntraced(function* (
 		path: string,
 		mtime: number,
-	): Effect.fn.Return<VaultEventOrigin> {
-		const origin = yield* selfEvents.attributeModifyEffect(path);
-		if (origin.kind !== "External" || !linkUpdates) return origin;
+	): Effect.fn.Return<Attribution> {
+		const attribution = yield* selfEvents.attributeModifyEffect(path);
+		if (attribution.origin.kind !== "External" || !linkUpdates)
+			return attribution;
 		return yield* linkUpdates.attributeEffect(path, mtime);
 	});
 	return {
+		describe: ({ modifications }) => ({
+			"vam.modifications": modifications.length,
+		}),
 		listen: Effect.fn("VaultObservation.listenForMdModify")(function* (
 			intake: Queue.Enqueue<
 				EventAccumulatorCommand<ObservedCallback<MdFileChange>>
@@ -969,7 +1101,7 @@ function mdModifySource(
 							splitPath.kind !== "MdFile"
 						) {
 							// Still pops VAM's expectation for its own write.
-							const origin =
+							const { origin } =
 								yield* selfEvents.attributeModifyEffect(
 									file.path,
 								);
@@ -979,15 +1111,15 @@ function mdModifySource(
 								file.path,
 							);
 						}
-						const origin = yield* attribute(
+						const attribution = yield* attribute(
 							file.path,
 							stat.value.mtime,
 						);
 						yield* Queue.offer(intake, {
 							_tag: "Event",
 							event: {
+								...attribution,
 								event: { splitPath, stat: stat.value },
-								origin,
 								seq,
 							},
 						});

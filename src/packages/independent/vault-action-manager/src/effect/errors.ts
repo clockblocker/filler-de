@@ -225,6 +225,8 @@ export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
  * - `missing`: its file or folder was not there. The action wrote nothing.
  * - `io`: vault or editor I/O failed. The action may have changed the vault.
  * - `defect`: it threw unexpectedly. It may have changed the vault.
+ * - `interrupted`: it was interrupted while it ran. It may have changed the
+ *   vault.
  */
 export const VamActionFailureKindSchema = Schema.Literals([
 	"conflict",
@@ -232,11 +234,30 @@ export const VamActionFailureKindSchema = Schema.Literals([
 	"missing",
 	"io",
 	"defect",
+	"interrupted",
 ]);
 
 export type VamActionFailureKind = typeof VamActionFailureKindSchema.Type;
 
-/** One failed action of a Dispatch Batch, with the error that failed it. */
+/**
+ * What a failed fiber's `cause` holds, kept whole: the error or defect of
+ * its one reason, or the whole `Cause` when it holds more than one, such as
+ * a defect and a finalizer's defect, so none is dropped.
+ */
+export function causeValue(cause: Cause.Cause<unknown>): unknown {
+	const [only, ...others] = cause.reasons;
+	if (only === undefined || others.length > 0) return cause;
+	if (Cause.isFailReason(only)) return only.error;
+	if (Cause.isDieReason(only)) return only.defect;
+	return cause;
+}
+
+/**
+ * One failed action of a Dispatch Batch, with the error that failed it. For
+ * a `defect` or an `interrupted` action, `cause` is `causeValue` of what
+ * ended it: what it threw, or its whole `Cause` when that held more than
+ * one reason, which `formatCause` prints.
+ */
 export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
 	"VamDispatchError",
 	{
@@ -247,7 +268,9 @@ export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
 	},
 ) {
 	override get message(): string {
-		const because = getErrorMessage(this.cause);
+		const because = Cause.isCause(this.cause)
+			? formatCause(this.cause, { stack: false })
+			: getErrorMessage(this.cause);
 		const what = `${this.action.kind} ${describeVaultActionPath(this.action)}`;
 		return because ? `${what}: ${because}` : what;
 	}

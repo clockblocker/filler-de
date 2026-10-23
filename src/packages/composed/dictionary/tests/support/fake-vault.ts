@@ -370,7 +370,13 @@ export class FakeVault implements DictionaryVault {
 			const file = this.files.get(format(splitPath));
 			return file
 				? Effect.succeed(file.content)
-				: Effect.fail(new Error(`No file at ${format(splitPath)}`));
+				: Effect.fail(
+						new VamVaultIoError({
+							cause: new Error(`No file at ${format(splitPath)}`),
+							operation: "readContent",
+							path: format(splitPath),
+						}),
+					);
 		});
 
 	/** Runs one action as VAM and Obsidian would, collisions included. */

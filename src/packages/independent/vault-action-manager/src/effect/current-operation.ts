@@ -1,4 +1,4 @@
-import { Context, Effect } from "effect";
+import { Context, Effect, type Tracer } from "effect";
 import type { VamOperation } from "../types/event-origin";
 
 /**
@@ -10,6 +10,17 @@ export const CurrentVamOperation = Context.Reference<VamOperation>(
 	"@textfresser/vault-action-manager/CurrentVamOperation",
 	{ defaultValue: () => ({ caller: "vam", operationId: "vam" }) },
 );
+
+/**
+ * The span of the Dispatch Batch an action runs in. The Self Events and
+ * link rewrites the action causes record it, so the delivery of each event
+ * links to the batch that caused it. Outside a batch there is none.
+ */
+export const CurrentDispatchSpan = Context.Reference<
+	Tracer.AnySpan | undefined
+>("@textfresser/vault-action-manager/CurrentDispatchSpan", {
+	defaultValue: () => undefined,
+});
 
 /** What the running create or rename found at its target. */
 export type TargetCheck = { taken: boolean | undefined };

@@ -33,23 +33,21 @@ export class SelectionService {
 	 * Sync operation - just reads editor state.
 	 * @returns SelectionInfo or null if no active editor
 	 */
-	getInfo(snapshot?: ActiveEditorSnapshot) {
-		const self = this;
-		return Effect.fn("vam.activeEditor.read.selection")(
-			function* () {
-				yield* Effect.annotateCurrentSpan({
-					operation: "read-selection",
-				});
-				const current = yield* self.reader.sourceSnapshot(snapshot);
-				yield* Effect.annotateCurrentSpan({ path: current.path });
-				return self.fromSnapshot(current);
-			},
-			Effect.catchTag("VamNoActiveEditorError", () =>
-				Effect.succeed(null),
-			),
-			Effect.tapError(annotateFileAccessFailure),
-		)();
-	}
+	readonly getInfo = Effect.fn("vam.activeEditor.read.selection")(
+		function* (
+			this: SelectionService,
+			snapshot: ActiveEditorSnapshot | undefined,
+		) {
+			yield* Effect.annotateCurrentSpan({
+				operation: "read-selection",
+			});
+			const current = yield* this.reader.sourceSnapshot(snapshot);
+			yield* Effect.annotateCurrentSpan({ path: current.path });
+			return this.fromSnapshot(current);
+		},
+		Effect.catchTag("VamNoActiveEditorError", () => Effect.succeed(null)),
+		Effect.tapError(annotateFileAccessFailure),
+	);
 
 	fromSnapshot(current: SourceActiveEditorSnapshot): SelectionInfo {
 		const {
