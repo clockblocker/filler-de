@@ -391,6 +391,55 @@ describe("delimiter migration lifecycle", () => {
 		);
 	});
 
+	test("a defect beside VAM's stopped batch reaches the migration, after its undo", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		const forward = harness.dispatch;
+		harness.dispatch = (actions) =>
+			forward(actions).pipe(
+				Effect.ensuring(Effect.die(new Error("finalizer exploded"))),
+			);
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.execution?.kind).toBe("RolledBack");
+		if (outcome.execution?.kind !== "RolledBack") return;
+		// VAM's undo, read from its typed failure, renamed the moved note back.
+		expect(
+			outcome.execution.rolledBack.map(
+				(action) => action.payload.from.basename,
+			),
+		).toEqual(["alpha-beta"]);
+		expect(outcome.execution.failure.operation).toBe("execute.RenameMdFile");
+		const { dispatch } = outcome.execution.failure;
+		const [failed, died, ...others] = dispatch.reasons;
+		expect(others).toEqual([]);
+		if (!failed || !Cause.isFailReason(failed))
+			throw new Error("the dispatch's first reason is not its failure");
+		expect(failed.error.report.undo?.undone).toHaveLength(1);
+		expect(died && Cause.isDieReason(died) && String(died.defect)).toBe(
+			"Error: finalizer exploded",
+		);
+		expect(reportDelimiterMigration(outcome, delimiters).log).toContain(
+			"dispatch also: finalizer exploded",
+		);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
+	});
+
 	test("a planning failure touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
 		// VAM looks up each rename's target before the batch; only probes
@@ -1238,6 +1287,10 @@ function makeHarness(
 	return {
 		get confirmCalls() {
 			return confirmCalls;
+		},
+		/** The forward batch's dispatch, under VAM's own undo layer. */
+		get dispatch() {
+			return dispatchImpl;
 		},
 		set dispatch(implementation: typeof dispatchImpl) {
 			dispatchImpl = implementation;
