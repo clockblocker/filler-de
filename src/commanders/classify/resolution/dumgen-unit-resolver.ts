@@ -67,7 +67,7 @@ export type DumgenUnitResolverDeps = {
 	readonly dumgen: Pick<DumgenOperations, "resolve">;
 	readonly store: Effect.Effect<ResolutionStore, UnitResolverError>;
 	readonly scroll: ScrollFiles;
-	readonly knowledge: Pick<KnowledgeQueue, "enqueue">;
+	readonly knowledge: Pick<KnowledgeQueue, "enqueueAll">;
 	/** Told what the run could not do: links it skipped, a failed write. */
 	readonly notify?: (message: string) => void;
 	/** Marks each Scroll busy while a run resolves and links in it. */
@@ -528,9 +528,7 @@ export function dumgenUnitResolver(
 							target: [...unit.planned.unit.segments],
 						},
 					}));
-				yield* Effect.forEach(jobs, deps.knowledge.enqueue, {
-					discard: true,
-				});
+				yield* deps.knowledge.enqueueAll(jobs);
 
 				let index = 0;
 				return outcomes.map((outcome, position): UnitResolution => {

@@ -104,6 +104,22 @@ describe("Knowledge queue", () => {
 		expect(notices).toEqual(["✓ Knowledge saved for 2 Readings: See 🌊, Hund 🐕"]);
 	});
 
+	it("answers how many runs it cancels at once, and tells the saved ones once they stopped", async () => {
+		const { notices, open, queue } = await gatedQueue();
+		const { value: hanging } = await inScope(
+			makeKnowledgeQueue({
+				notify: (message) => notices.push(message),
+				run: (job) => (job === hund ? Effect.never : Effect.succeed(published)),
+			}),
+		);
+		await run(hanging.enqueueAll([see, hund]));
+		expect(await run(hanging.cancelAll)).toBe(1);
+		await run(hanging.whenIdle);
+		expect(notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
+		await open();
+		expect(await run(queue.cancelAll)).toBe(0);
+	});
+
 	it("waits in awaitNote only for the runs on that note", async () => {
 		const { open, queue } = await gatedQueue();
 		expect(await run(queue.awaitNote("Worter/🌊 See"))).toBe(false);
@@ -131,13 +147,12 @@ describe("Knowledge queue", () => {
 						: Effect.succeed(published),
 			}),
 		);
-		await run(queue.enqueue(see));
-		await run(queue.enqueue(hund));
+		// One Classify's Readings, each run ending as it starts.
+		await run(queue.enqueueAll([see, hund]));
 		await run(queue.whenIdle);
-		// See's run ended before Hund's began, as the last one going.
 		expect(notices).toEqual([
-			"✓ Knowledge for See 🌊 saved",
 			"⚠ Knowledge for Hund 🐕 failed: Error: the store is gone",
+			"✓ Knowledge for See 🌊 saved",
 		]);
 	});
 });

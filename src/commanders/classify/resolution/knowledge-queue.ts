@@ -32,13 +32,20 @@ export type KnowledgeQueue = {
 	/** Starts the Reading's run unless one is already going. */
 	readonly enqueue: (job: KnowledgeJob) => Effect.Effect<void>;
 	/**
+	 * Starts the runs of one Classify's Readings, as `enqueue` does each.
+	 * They are claimed together first, so the saved ones are told together
+	 * even when one ends as soon as it starts.
+	 */
+	readonly enqueueAll: (jobs: readonly KnowledgeJob[]) => Effect.Effect<void>;
+	/**
 	 * Waits for the runs on the Reading note at `path` (`.md` optional) and
 	 * answers whether any was running.
 	 */
 	readonly awaitNote: (path: string) => Effect.Effect<boolean>;
 	/**
-	 * Interrupts every run; answers how many there were. A run stops asking
-	 * dumgen at once; a publication it already started finishes first.
+	 * Interrupts every run; answers how many there were, without waiting
+	 * for them to stop. A run stops asking dumgen at once; a publication it
+	 * already started finishes first.
 	 */
 	readonly cancelAll: Effect.Effect<number>;
 	/** Ends once no run is going. */
@@ -152,46 +159,47 @@ export const makeKnowledgeQueue = Effect.fnUntraced(function* <E>(
 			if (told.length > 0) yield* tell(savedNotice(told));
 		});
 
-	const enqueue = (job: KnowledgeJob) =>
-		Effect.gen(function* () {
-			const key = readingIdentityKey(job.reading);
-			const starts = yield* SubscriptionRef.modify(
-				state,
-				(current): [boolean, QueueState] =>
-					current.closing || current.running.has(key)
-						? [false, current]
-						: [
-								true,
-								{
-									...current,
-									running: new Map(current.running).set(
-										key,
-										job,
-									),
-								},
-							],
-			);
-			if (!starts) return;
-			yield* FiberMap.run(
-				runs,
-				key,
-				Effect.suspend(() => options.run(job)).pipe(
-					Effect.tapCause((cause) =>
-						Cause.hasInterruptsOnly(cause)
-							? Effect.void
-							: Effect.logWarning(
-									`[Classify] Knowledge for ${job.label} failed:`,
-									cause,
-								),
-					),
-					Effect.onExit((exit) => ended(key, job, exit)),
-					Effect.ignore,
-					idle.track,
-					Effect.withSpan("KnowledgeQueue.run", {
-						attributes: { "knowledge.reading": job.label },
-					}),
+	/** Forks the claimed Reading's run into the map. */
+	const start = (key: string, job: KnowledgeJob) =>
+		FiberMap.run(
+			runs,
+			key,
+			Effect.suspend(() => options.run(job)).pipe(
+				Effect.tapCause((cause) =>
+					Cause.hasInterruptsOnly(cause)
+						? Effect.void
+						: Effect.logWarning(
+								`[Classify] Knowledge for ${job.label} failed:`,
+								cause,
+							),
 				),
+				Effect.onExit((exit) => ended(key, job, exit)),
+				Effect.ignore,
+				idle.track,
+				Effect.withSpan("KnowledgeQueue.run", {
+					attributes: { "knowledge.reading": job.label },
+				}),
+			),
+		);
+
+	const enqueueAll = (jobs: readonly KnowledgeJob[]) =>
+		Effect.gen(function* () {
+			const starting = yield* SubscriptionRef.modify(
+				state,
+				(current): [[string, KnowledgeJob][], QueueState] => {
+					if (current.closing) return [[], current];
+					const running = new Map(current.running);
+					const claimed: [string, KnowledgeJob][] = [];
+					for (const job of jobs) {
+						const key = readingIdentityKey(job.reading);
+						if (running.has(key)) continue;
+						running.set(key, job);
+						claimed.push([key, job]);
+					}
+					return [claimed, { ...current, running }];
+				},
 			);
+			for (const [key, job] of starting) yield* start(key, job);
 		});
 
 	/** Ends once no job `pending` keeps is running. */
@@ -215,12 +223,14 @@ export const makeKnowledgeQueue = Effect.fnUntraced(function* <E>(
 					VaultPath.caseSensitive.same(notePath(readingPath), path),
 				);
 			}),
+		// The runs stop on a fiber of their own, as the caller tells at once.
 		cancelAll: Effect.gen(function* () {
 			const count = yield* FiberMap.size(runs);
-			yield* FiberMap.clear(runs);
+			yield* Effect.forkDetach(FiberMap.clear(runs));
 			return count;
 		}),
-		enqueue,
+		enqueue: (job) => enqueueAll([job]),
+		enqueueAll,
 		running: Effect.map(
 			SubscriptionRef.get(state),
 			({ running }) => running.size,
