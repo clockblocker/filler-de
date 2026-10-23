@@ -22,7 +22,7 @@ export function createScriptedJev(answers: ScriptedJevAnswers = {}): {
 	readonly requests: () => Readonly<Record<string, number>>;
 } {
 	const requests: Record<string, number> = {};
-	const ask: JevAsk = async (request, { stage }) => {
+	const ask: JevAsk = (request, { stage }) => {
 		requests[stage] = (requests[stage] ?? 0) + 1;
 		const answered: Record<string, Answer> = {};
 		for (const [id, question] of Object.entries(request.questions)) {
@@ -46,14 +46,14 @@ export function createScriptedJev(answers: ScriptedJevAnswers = {}): {
 				);
 			}
 		}
-		return {
+		return Promise.resolve({
 			answers: answered,
 			model: request.model,
 			usage: {
 				input_tokens: 10 * Object.keys(request.questions).length,
 				output_tokens: 1,
 			},
-		};
+		});
 	};
 	return { ask, requests: () => ({ ...requests }) };
 }

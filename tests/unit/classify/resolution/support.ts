@@ -31,9 +31,10 @@ import type {
 	ClassifyPlan,
 	PlannedUnit,
 } from "../../../../src/commanders/classify/types";
-import type { Dumgen } from "../../../../src/managers/dumgen/dumgen-over";
+import type { DumgenOperations } from "../../../../src/managers/dumgen";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { defaultRunner } from "../../../support/effect-runner";
+import { fakeDumgen } from "../../dumgen/dumgen-support";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>
 	Effect.runPromise(effect);
@@ -173,7 +174,7 @@ type ReadingStub = (
 	input: ResolveReadingInput,
 ) => ReadingResolution | Promise<ReadingResolution>;
 type KnowledgeStub = (
-	input: Parameters<Dumgen["knowledge"]["produce"]>[0],
+	input: Parameters<DumgenOperations["knowledge"]["produce"]>[0],
 ) => {
 	readonly changes: readonly Dumrel.KnowledgeChange<Dumling.Reading<"de">>[];
 	readonly pendingRelations?: readonly (Dumrel.PendingSemanticRelation & {
@@ -193,11 +194,11 @@ export function stubDumgen(stubs: {
 }) {
 	const calls = {
 		grammar: [] as ResolveGrammarInput[],
-		knowledge: [] as Parameters<Dumgen["knowledge"]["produce"]>[0][],
+		knowledge: [] as Parameters<DumgenOperations["knowledge"]["produce"]>[0][],
 		reading: [] as ResolveReadingInput[],
 	};
 	const unused = () => Effect.die(new Error("not stubbed"));
-	const dumgen: Dumgen = {
+	const dumgen: DumgenOperations = {
 		knowledge: {
 			accumulateTranslations: unused,
 			produce: (input) =>
@@ -259,7 +260,7 @@ export const baseTextKnowledge: KnowledgeStub = (input) => {
 export async function resolutionHarness(options: {
 	readonly scrollPath: string;
 	readonly content: string;
-	readonly dumgen: Dumgen;
+	readonly dumgen: DumgenOperations;
 	readonly vault?: FakeVault;
 	/** Wraps the store the resolver commits through, to inject races. */
 	readonly wrapStore?: (store: DumdictVaultStore) => ResolutionStore;
@@ -287,11 +288,11 @@ export async function resolutionHarness(options: {
 						: { produceParadigm: options.produceParadigm }),
 				},
 				job,
-			),
+			).pipe(Effect.provide(fakeDumgen())),
 		runtime: defaultRunner,
 	});
 	const resolver = dumgenUnitResolver({
-		dumgen: Effect.succeed(options.dumgen),
+		dumgen: options.dumgen,
 		knowledge: queue,
 		notify: (message) => notices.push(message),
 		scroll,
@@ -301,7 +302,9 @@ export async function resolutionHarness(options: {
 		notices,
 		queue,
 		resolve: async (plan: ClassifyPlan) => {
-			const resolutions = await run(resolver.resolve(plan));
+			const resolutions = await run(
+				resolver.resolve(plan).pipe(Effect.provide(fakeDumgen())),
+			);
 			await queue.whenIdle();
 			return resolutions;
 		},

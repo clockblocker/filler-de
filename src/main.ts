@@ -12,7 +12,9 @@ import {
 	type VamSetupError,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Effect, Exit } from "effect";
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
+import { operations } from "dumgen";
+import { Effect, Exit, Option } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
 import {
 	ClassifyCommander,
@@ -49,12 +51,7 @@ import {
 	createLifecycleSupervisor,
 	type LaunchedPlugin,
 } from "./lifecycle/lifecycle-supervisor";
-import {
-	createRequestUrlFetch,
-	createRequestUrlGet,
-	DumgenHost,
-} from "./managers/dumgen";
-import type { ScriptedDumgen } from "./managers/dumgen/dumgen-host";
+import { Dumgen, type ScriptedDumgen } from "./managers/dumgen";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import { createHandlers } from "./managers/obsidian/behavior-manager";
 import {
@@ -119,20 +116,6 @@ type LaunchedServices = {
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
-	/**
-	 * The plugin's one dumgen instance: `this.dumgen.get()`. It is built on
-	 * first use from the TypeSafe and OpenAI keys in the settings, rebuilt
-	 * when a key changes, and disposed on unload. Its calls go through
-	 * `requestUrl` (see `managers/dumgen/request-url-fetch.ts`).
-	 */
-	readonly dumgen = new DumgenHost({
-		fetch: createRequestUrlFetch(requestUrl),
-		get: createRequestUrlGet(requestUrl),
-		keys: () => ({
-			openaiApiKey: this.settings?.openaiApiKey ?? "",
-			typesafeApiKey: this.settings?.typesafeApiKey ?? "",
-		}),
-	});
 	private readonly notices = createLifecycleNotices((message, { sticky }) => {
 		new Notice(message, sticky ? 0 : undefined);
 	});
@@ -141,6 +124,12 @@ export default class TextEaterPlugin extends Plugin {
 	});
 	/** The plugin's one Effect runtime: built in `onload`, disposed in `onunload`. */
 	private runtime: Runtime | null = null;
+	/**
+	 * The runtime's dumgen, once built: each action runs on one build over
+	 * the TypeSafe and OpenAI keys in the settings, through `requestUrl`
+	 * (see `managers/dumgen/request-url-fetch.ts`).
+	 */
+	private dumgen: Dumgen["Service"] | null = null;
 	private services: LaunchedServices | null = null;
 	private overlayManager: OverlayManager | null = null;
 	private textfresser: Textfresser | null = null;
@@ -160,6 +149,11 @@ export default class TextEaterPlugin extends Plugin {
 			const runtime = makePluginRuntime(
 				PluginLive(this.app, {
 					lifecycle: this.lifecycle,
+					providerKeys: () => ({
+						openaiApiKey: this.settings?.openaiApiKey ?? "",
+						typesafeApiKey: this.settings?.typesafeApiKey ?? "",
+					}),
+					requestUrl,
 					trace: recentTrace,
 				}),
 				{
@@ -172,7 +166,11 @@ export default class TextEaterPlugin extends Plugin {
 			runtime.onload(
 				Effect.gen({ self: this }, function* () {
 					const vam = yield* VaultActionManager;
-					yield* this.lifecycle.launch(this.boot(runtime, vam));
+					const dumgen = yield* Dumgen;
+					this.dumgen = dumgen;
+					yield* this.lifecycle.launch(
+						this.boot(runtime, vam, dumgen),
+					);
 				}),
 			);
 			this.addSettingTab(new SettingsTab(this.app, this));
@@ -196,9 +194,11 @@ export default class TextEaterPlugin extends Plugin {
 		const runtime = this.runtime;
 		this.runtime = null;
 		this.services = null;
+		this.dumgen = null;
 		this.overlayManager = null;
-		// Interrupts what runs at an edge, stops the lifecycle (its services
-		// newest first, then the Librarian), then shuts VAM down.
+		// Interrupts what runs at an edge, dumgen's actions included, stops
+		// the lifecycle (its services newest first, then the Librarian), then
+		// shuts VAM down.
 		void (runtime?.dispose() ?? Promise.resolve())
 			// The runtime is gone: only the edge log is left.
 			.catch((error: unknown) =>
@@ -208,21 +208,19 @@ export default class TextEaterPlugin extends Plugin {
 					error,
 				),
 			)
-			.finally(() => {
-				this.dumgen.dispose();
-				clearState();
-			});
+			.finally(() => clearState());
 	}
 
 	/**
 	 * Builds the plugin's services once Obsidian has laid out the workspace
 	 * and indexed the vault, each owned by the lifecycle, which releases them
-	 * newest first on unload. VAM comes from the runtime, which shuts it down
-	 * after the lifecycle stopped.
+	 * newest first on unload. VAM and dumgen come from the runtime, which
+	 * shuts VAM down after the lifecycle stopped.
 	 */
 	private boot(
 		runtime: Runtime,
 		vam: VaultActionManager,
+		dumgen: Dumgen["Service"],
 	): Effect.Effect<LaunchedPlugin<Librarian>, unknown> {
 		const { lifecycle } = this;
 		return Effect.gen({ self: this }, function* () {
@@ -237,7 +235,7 @@ export default class TextEaterPlugin extends Plugin {
 				stillLoading: this.notices.stillLoading,
 				vam: () => this.services?.vam ?? null,
 			});
-			this.rebuildTextfresser(vam);
+			this.rebuildTextfresser(vam, dumgen);
 
 			const store = createDictionaryStoreService({
 				build: () => this.buildDictionaryStore(vam),
@@ -255,36 +253,40 @@ export default class TextEaterPlugin extends Plugin {
 					}),
 				try: () => store.get(),
 			});
-			const dumgen = Effect.try({
-				catch: (cause) =>
-					new UnitResolverError({
-						cause,
-						message: `dumgen is unavailable: ${getErrorMessage(cause)}`,
-					}),
-				try: () => this.dumgen.get(),
-			});
-
+			// Each Reading's Knowledge runs in the background, on the build
+			// every background run shares.
+			const runKnowledge = (
+				job: Parameters<KnowledgeQueue["enqueue"]>[0],
+			) =>
+				dictionary.pipe(
+					Effect.flatMap((built) =>
+						produceKnowledge(
+							{
+								dumgen: operations,
+								store: built,
+								translationLanguages:
+									this.settings.languages.known === "Russian"
+										? ["en", "ru"]
+										: ["en"],
+							},
+							job,
+						),
+					),
+					dumgen.provideBackground,
+					Effect.catchTag("DumgenUnavailable", (error) =>
+						Effect.fail(
+							new UnitResolverError({
+								cause: error.cause,
+								message: error.message,
+							}),
+						),
+					),
+				);
 			const knowledgeQueue = createKnowledgeQueue({
 				notify: (message) => new Notice(message),
 				onEnd: decrementPending,
 				onStart: incrementPending,
-				run: (job) =>
-					Effect.all([dumgen, dictionary]).pipe(
-						Effect.flatMap(([instance, built]) =>
-							produceKnowledge(
-								{
-									dumgen: instance,
-									store: built,
-									translationLanguages:
-										this.settings.languages.known ===
-										"Russian"
-											? ["en", "ru"]
-											: ["en"],
-								},
-								job,
-							),
-						),
-					),
+				run: runKnowledge,
 				runtime: runtime.hops,
 			});
 			yield* lifecycle.own(
@@ -311,23 +313,24 @@ export default class TextEaterPlugin extends Plugin {
 			const segmentationCache = filesSegmentationCache(
 				this.app.vault.adapter,
 			);
-			const segmenterVersion = () => {
-				const scripted = this.dumgen.scriptedJevTag();
-				return scripted
-					? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
-					: DUMGEN_SEGMENTER_VERSION;
-			};
+			const segmenterVersion = Effect.map(
+				dumgen.scriptedJevTag,
+				(scripted) =>
+					scripted
+						? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
+						: DUMGEN_SEGMENTER_VERSION,
+			);
 			const scrollActivity = createScrollActivity();
 			const classify = new ClassifyCommander({
 				blockedBy: (scrollPath) =>
 					lifecycle.classifyRefusal() ??
 					protectedPathRefusal(vam, scrollPath),
 				cache: segmentationCache,
-				dumgen: () => this.dumgen.get(),
-				missingProviderKeys: () => this.dumgen.missingKeys(),
+				dumgen: dumgen.provide,
+				missingProviderKeys: dumgen.missingKeys,
 				resolver: dumgenUnitResolver({
 					activity: scrollActivity,
-					dumgen,
+					dumgen: operations,
 					knowledge: knowledgeQueue,
 					notify: (message) => new Notice(message),
 					scroll: vamScrollFiles(vam),
@@ -356,10 +359,15 @@ export default class TextEaterPlugin extends Plugin {
 				activity: scrollActivity,
 				app: this.app,
 				cache: segmentationCache,
-				checkProviderKeys: () => this.dumgen.checkKeys(),
-				dumgen: () => this.dumgen.get(),
+				checkProviderKeys: dumgen.checkKeys,
+				dumgen: dumgen.provide,
 				knowledge: knowledgeQueue,
-				missingProviderKeys: () => this.dumgen.missingKeys(),
+				// Read in the modal's click, to decide it.
+				missingProviderKeys: () =>
+					Option.getOrElse(
+						Exit.getSuccess(runtime.readSync(dumgen.missingKeys)),
+						() => [],
+					),
 				runtime: runtime.hops,
 				segmenterVersion,
 				store: () => store.get(),
@@ -565,10 +573,13 @@ export default class TextEaterPlugin extends Plugin {
 
 	private rebuildTextfresser(
 		vam: VaultActionManager | undefined = this.services?.vam,
+		dumgen: Dumgen["Service"] | null = this.dumgen,
 	): void {
-		if (!vam) return;
-		this.textfresser = new Textfresser(vam, this.settings.languages, () =>
-			this.dumgen.get(),
+		if (!vam || !dumgen) return;
+		this.textfresser = new Textfresser(
+			vam,
+			this.settings.languages,
+			dumgen.provide,
 		);
 	}
 
@@ -724,15 +735,46 @@ export default class TextEaterPlugin extends Plugin {
 	 * provider, and how many requests that script answered.
 	 */
 	getClassifyTestingApi() {
+		// A scenario must never reach a provider, so a script that cannot be
+		// set throws; a plugin with no runtime holds no script to clear.
+		const useScripted = (script: ScriptedDumgen | null) => {
+			const { dumgen, runtime } = this;
+			const exit =
+				dumgen && runtime
+					? runtime.readSync(dumgen.testing.useScripted(script))
+					: undefined;
+			if (script === null || (exit && Exit.isSuccess(exit))) return;
+			throw new Error(
+				`Textfresser could not script dumgen: ${exit ? formatCause(exit.cause, { stack: false }) : "it is still loading or has unloaded"}`,
+			);
+		};
 		return {
-			dumgenRequests: () => this.dumgen.scriptedRequests() ?? null,
+			dumgenRequests: () => {
+				const requests = this.readDumgenSync(
+					(dumgen) => dumgen.testing.requests,
+				);
+				return Option.getOrUndefined(requests) ?? null;
+			},
 			latestHandoff: () =>
 				this.services?.classify.latestHandoff() ?? null,
-			useScriptedDumgen: (script: ScriptedDumgen | null) =>
-				this.dumgen.useScriptedDumgenForTesting(script),
+			useScriptedDumgen: useScripted,
 			useScriptedJev: (answers: ScriptedJevAnswers | null) =>
-				this.dumgen.useScriptedJevForTesting(answers),
+				useScripted(answers === null ? null : { jev: answers }),
 		};
+	}
+
+	/**
+	 * Runs a read of the runtime's dumgen at once, for the E2E driver's
+	 * synchronous hooks; none while the runtime is still being built or
+	 * after unload.
+	 */
+	private readDumgenSync<A>(
+		read: (dumgen: Dumgen["Service"]) => Effect.Effect<A>,
+	): Option.Option<A> {
+		const { dumgen, runtime } = this;
+		return dumgen && runtime
+			? Exit.getSuccess(runtime.readSync(read(dumgen)))
+			: Option.none();
 	}
 
 	/**

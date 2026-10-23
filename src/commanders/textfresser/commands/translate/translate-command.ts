@@ -1,8 +1,8 @@
 /**
  * Translate: writes the translation of the selection, or of the caret's
  * block without one, under it in the reading note. dumgen's
- * `translate.sentence` writes it on the plugin's one dumgen instance, with
- * the Sentences around the selection as context. A failure, a missing
+ * `translate.sentence` writes it, on the dumgen build its caller provides,
+ * with the Sentences around the selection as context. A failure, a missing
  * OpenAI key included, becomes a command error the orchestrator shows as a
  * notice.
  */
@@ -10,7 +10,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type { TranslateSentenceInput } from "dumgen";
+import { type Luna, operations, type TranslateSentenceInput } from "dumgen";
 import { Effect } from "effect";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
@@ -30,15 +30,15 @@ const TRANSLATION_LANGUAGE_FOR_KNOWN = {
 	Russian: "ru",
 } as const satisfies Record<KnownLanguage, TranslateSentenceInput["into"]>;
 
-const translationFailed = (message: string): CommandError =>
+export const translationFailed = (message: string): CommandError =>
 	commandApiError({ reason: `Translation failed: ${message}` });
 
 export const translateCommand = Effect.fn("Textfresser.translateCommand")(
 	function* (
 		input: CommandInput,
-	): Effect.fn.Return<VaultAction[], CommandError> {
+	): Effect.fn.Return<VaultAction[], CommandError, Luna> {
 		const { activeFile, selection } = input.commandContext;
-		const { getDumgen, languages } = input.textfresserState;
+		const { languages } = input.textfresserState;
 
 		// Get input: selection or fallback to surrounding block
 		const rawInput = selection?.text ?? selection?.surroundingRawBlock;
@@ -67,28 +67,21 @@ export const translateCommand = Effect.fn("Textfresser.translateCommand")(
 			selection: selection.text,
 			selectionStartInBlock: selection.selectionStartInBlock,
 		});
-		const translation = yield* Effect.try({
-			catch: (error) => translationFailed(getErrorMessage(error)),
-			try: getDumgen,
-		}).pipe(
-			Effect.flatMap((instance) =>
-				instance.translate
-					.sentence({
-						into: TRANSLATION_LANGUAGE_FOR_KNOWN[languages.known],
-						language: "de",
-						neighbours,
-						sentence,
-					})
-					.pipe(
-						Effect.mapError((failure) =>
-							translationFailed(failure.message),
-						),
-					),
-			),
-			Effect.catchDefect((defect) =>
-				Effect.fail(translationFailed(getErrorMessage(defect))),
-			),
-		);
+		const translation = yield* operations.translate
+			.sentence({
+				into: TRANSLATION_LANGUAGE_FOR_KNOWN[languages.known],
+				language: "de",
+				neighbours,
+				sentence,
+			})
+			.pipe(
+				Effect.mapError((failure) =>
+					translationFailed(failure.message),
+				),
+				Effect.catchDefect((defect) =>
+					Effect.fail(translationFailed(getErrorMessage(defect))),
+				),
+			);
 
 		// Build replacement: keep blockId with original text
 		const separator = blockIdMatch ? "\n\n" : "\n";

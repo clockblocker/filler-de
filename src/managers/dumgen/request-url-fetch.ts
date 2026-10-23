@@ -1,6 +1,9 @@
 /**
- * dumgen's `Fetch` port over Obsidian's `requestUrl`, the transport both
- * dumgen providers use in the plugin: TypeSafe (jev) and OpenAI (Luna).
+ * The Promise port under `HttpTransport`: Obsidian's `requestUrl` as the
+ * `fetch` both dumgen providers send through in the plugin, TypeSafe (jev)
+ * and OpenAI (Luna). dumgen's transports take a Promise and an
+ * `AbortSignal` (Dumgen ADR 0009), so this stays a Promise; everything
+ * above it is an Effect (`http-transport.ts`).
  *
  * Why `requestUrl` and not `fetch`: `requestUrl` runs outside the renderer,
  * so CORS never applies. OpenAI documents browser use (its SDK's
@@ -23,13 +26,29 @@
  * failure rejects, and dumgen reports that as a `ProviderFailure` too.
  */
 import type { RequestUrlParam, RequestUrlResponse } from "obsidian";
-import type { KeyCheckGet } from "./key-check";
-import type { DumgenFetch } from "./providers";
 
 /** The part of Obsidian's `requestUrl` the port uses. */
 export type RequestUrl = (
 	request: RequestUrlParam,
 ) => PromiseLike<Pick<RequestUrlResponse, "status" | "text">>;
+
+/**
+ * One request, settled early when `signal` aborts; HTTP errors resolve
+ * with their status. dumgen's `Fetch` is the `POST` half of it.
+ */
+export type HttpSend = (
+	url: string,
+	init: {
+		readonly method: "GET" | "POST";
+		readonly headers: Readonly<Record<string, string>>;
+		readonly body?: string;
+		readonly signal: AbortSignal;
+	},
+) => Promise<{
+	readonly ok: boolean;
+	readonly status: number;
+	text(): Promise<string>;
+}>;
 
 function abortReason(signal: AbortSignal): unknown {
 	return signal.reason ?? new Error("The request was aborted");
@@ -42,19 +61,11 @@ function abortReason(signal: AbortSignal): unknown {
 function sendThrough(
 	requestUrl: RequestUrl,
 	url: string,
-	init: {
-		readonly method: "GET" | "POST";
-		readonly headers: Readonly<Record<string, string>>;
-		readonly body?: string;
-		readonly signal: AbortSignal;
-	},
-): Promise<{
-	readonly ok: boolean;
-	readonly status: number;
-	text(): Promise<string>;
-}> {
+	init: Parameters<HttpSend>[1],
+): ReturnType<HttpSend> {
 	const { signal } = init;
 	if (signal.aborted) return Promise.reject(abortReason(signal));
+	// oxlint-disable-next-line effecttsgo/new-promise -- dumgen's transport port is a Promise that settles when its AbortSignal aborts (Dumgen ADR 0009).
 	return new Promise((resolve, reject) => {
 		const onAbort = () => reject(abortReason(signal));
 		signal.addEventListener("abort", onAbort, { once: true });
@@ -77,7 +88,7 @@ function sendThrough(
 						ok: response.status >= 200 && response.status < 300,
 						status: response.status,
 						// Obsidian decodes the body lazily, and may throw.
-						text: async () => response.text,
+						text: () => Promise.resolve().then(() => response.text),
 					}),
 				reject,
 			)
@@ -85,12 +96,6 @@ function sendThrough(
 	});
 }
 
-export function createRequestUrlFetch(requestUrl: RequestUrl): DumgenFetch {
+export function createRequestUrlFetch(requestUrl: RequestUrl): HttpSend {
 	return (url, init) => sendThrough(requestUrl, url, init);
-}
-
-/** The provider key check's GET (`key-check.ts`) over the same transport. */
-export function createRequestUrlGet(requestUrl: RequestUrl): KeyCheckGet {
-	return (url, init) =>
-		sendThrough(requestUrl, url, { ...init, method: "GET" });
 }

@@ -1,6 +1,6 @@
 import type { SegmentedSentence, Unit } from "dumgen";
 import * as Effect from "effect/Effect";
-import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
+import type { DumgenOperations } from "../../../src/managers/dumgen";
 
 /** The one German Sentence the smoke segments, clicks and translates. */
 export const SMOKE_SENTENCE = "Der alte Hund schläft im Garten.";
@@ -42,7 +42,7 @@ export function clickedUnit(
  * expectation is a failed check; a provider failure fails the Effect.
  */
 export const runDumgenSmoke = Effect.fn("runDumgenSmoke")(function* (
-	dumgen: Dumgen,
+	dumgen: Pick<DumgenOperations, "resolve" | "segment" | "translate">,
 ) {
 	const checks: SmokeCheck[] = [];
 	const check = (name: string, passed: boolean, detail: string) => {

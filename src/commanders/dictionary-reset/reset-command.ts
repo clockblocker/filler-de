@@ -13,6 +13,7 @@ import {
 	describeError,
 	formatCause,
 } from "@textfresser/vault-action-manager/diagnostics";
+import { operations } from "dumgen";
 import {
 	Cause,
 	DateTime,
@@ -23,15 +24,15 @@ import {
 	Predicate,
 } from "effect";
 import { type App, Modal, Notice, Setting } from "obsidian";
-import { conciseFailure, type KeyCheckFailure } from "../../managers/dumgen";
-import type { Dumgen } from "../../managers/dumgen/dumgen-over";
+import {
+	conciseFailure,
+	type DumgenProvide,
+	type KeyCheckFailure,
+} from "../../managers/dumgen";
 import { logAtEdge } from "../../runtime/edge-log";
 import type { EffectRunner } from "../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../utils/get-error-message";
-import {
-	ClassifyError,
-	ClassifySegmenter,
-} from "../classify/classify-selection";
+import { ClassifySegmenter } from "../classify/classify-selection";
 import { dumgenUnitResolver } from "../classify/resolution/dumgen-unit-resolver";
 import type { KnowledgeQueue } from "../classify/resolution/knowledge-queue";
 import type { ScrollActivity } from "../classify/resolution/scroll-activity";
@@ -58,8 +59,9 @@ export const CANCEL_RESET_COMMAND_NAME = "Cancel dictionary reset";
 export type DictionaryResetDeps = {
 	readonly app: App;
 	readonly vam: VaultActionManager;
-	readonly dumgen: () => Dumgen;
-	readonly segmenterVersion: () => string;
+	/** Runs an Execute on one dumgen build: `Dumgen.provide`. */
+	readonly dumgen: DumgenProvide;
+	readonly segmenterVersion: Effect.Effect<string>;
 	readonly cache: SegmentationCache["Service"];
 	readonly store: () => Promise<DumdictVaultStore>;
 	readonly knowledge: KnowledgeQueue;
@@ -67,7 +69,7 @@ export type DictionaryResetDeps = {
 	readonly activity?: ScrollActivity;
 	readonly missingProviderKeys: () => readonly string[];
 	/** Checks the provider keys with each provider; answers what failed. */
-	readonly checkProviderKeys: () => Effect.Effect<readonly KeyCheckFailure[]>;
+	readonly checkProviderKeys: Effect.Effect<readonly KeyCheckFailure[]>;
 	/** Runs the command's steps on the plugin runtime. */
 	readonly runtime: EffectRunner<unknown>;
 };
@@ -254,7 +256,7 @@ export class DictionaryResetCommand {
 				Effect.all(
 					[
 						dryRunReset(vamResetVault(this.deps.vam), { source }),
-						this.deps.checkProviderKeys(),
+						this.deps.checkProviderKeys,
 					],
 					{ concurrency: "unbounded" },
 				).pipe(
@@ -319,7 +321,7 @@ export class DictionaryResetCommand {
 			// Before the backup moves anything: a key the provider rejects
 			// would fail every attestation after Worter/ was moved (#146).
 			const failures = await this.deps.runtime.runPromise(
-				this.deps.checkProviderKeys(),
+				this.deps.checkProviderKeys,
 			);
 			if (failures.length > 0) {
 				notice.hide();
@@ -380,14 +382,7 @@ export class DictionaryResetCommand {
 		};
 		const resolver = dumgenUnitResolver({
 			...(deps.activity === undefined ? {} : { activity: deps.activity }),
-			dumgen: Effect.try({
-				catch: (cause) =>
-					new UnitResolverError({
-						cause,
-						message: `dumgen is unavailable: ${getErrorMessage(cause)}`,
-					}),
-				try: deps.dumgen,
-			}),
+			dumgen: operations,
 			knowledge: deps.knowledge,
 			notify: (message) => notices.push(message),
 			scroll: vamScrollFiles(deps.vam),
@@ -404,17 +399,12 @@ export class DictionaryResetCommand {
 		const layer = Layer.mergeAll(
 			Layer.succeed(SegmentationCache, deps.cache),
 			Layer.succeed(UnitResolver, resolver),
-			Layer.succeed(ClassifySegmenter, {
-				dumgen: Effect.try({
-					catch: (cause) =>
-						new ClassifyError({
-							message: `dumgen is unavailable: ${getErrorMessage(cause)}`,
-							reason: "DumgenUnavailable",
-						}),
-					try: deps.dumgen,
-				}),
-				segmenterVersion: deps.segmenterVersion(),
-			}),
+			Layer.effect(
+				ClassifySegmenter,
+				Effect.map(deps.segmenterVersion, (segmenterVersion) => ({
+					segmenterVersion,
+				})),
+			),
 		);
 		const local = DateTime.toParts(
 			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
@@ -436,6 +426,16 @@ export class DictionaryResetCommand {
 					vault: vamResetVault(deps.vam),
 				}).pipe(
 					Effect.provide(layer),
+					// One Execute is one dumgen action, on one request budget.
+					deps.dumgen,
+					Effect.catchTag("DumgenUnavailable", (error) =>
+						Effect.fail(
+							new ResetFailed({
+								cause: error,
+								message: error.message,
+							}),
+						),
+					),
 					// The report holds one line per failure (#147); the
 					// provider's own words go to the log.
 					Effect.tap((result) =>

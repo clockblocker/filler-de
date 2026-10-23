@@ -16,6 +16,7 @@ import { makeEdgeLog, ObservabilityLive } from "../../../src/runtime/observabili
 import { PluginLive } from "../../../src/runtime/plugin-live";
 import { makePluginRuntime } from "../../../src/runtime/plugin-runtime";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
+import { unreachable } from "../dumgen/dumgen-support";
 
 /** Lets every fiber and promise that can move, move. */
 async function until(done: () => boolean): Promise<void> {
@@ -66,7 +67,12 @@ describe("Plugin logging", () => {
 			}),
 		});
 		const runtime = makePluginRuntime(
-			PluginLive(vault.app as unknown as App, { lifecycle, trace }),
+			PluginLive(vault.app as unknown as App, {
+				lifecycle,
+				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
+				requestUrl: unreachable,
+				trace,
+			}),
 			{
 				onBuildFailed: (cause) => {
 					throw new Error(Cause.pretty(cause));

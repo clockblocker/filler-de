@@ -154,7 +154,7 @@ export type UnlinkObserverDeps = {
 	readonly store: Effect.Effect<UnlinkStore, unknown>;
 	readonly scrolls: UnlinkScrolls;
 	readonly cache: SegmentationCache["Service"];
-	readonly segmenterVersion: () => string;
+	readonly segmenterVersion: Effect.Effect<string>;
 	readonly activity: ScrollActivity;
 	/** Why no occurrence may be removed now, such as a dictionary reset. */
 	readonly blockedBy?: () => string | undefined;
@@ -560,7 +560,7 @@ const checkScroll = Effect.fnUntraced(function* (
 			content,
 			recorded,
 			deps.cache,
-			deps.segmenterVersion(),
+			yield* deps.segmenterVersion,
 		);
 		recorded = recorded.filter(({ ref }) => held.has(ref));
 	}
@@ -580,7 +580,7 @@ const checkScroll = Effect.fnUntraced(function* (
 				content,
 				judged.unkeyed,
 				deps.cache,
-				deps.segmenterVersion(),
+				yield* deps.segmenterVersion,
 			),
 		);
 

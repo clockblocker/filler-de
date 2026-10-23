@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import { JevTransport, LunaTransport } from "dumgen";
 import { Effect } from "effect";
 import {
 	ClassifyCommander,
@@ -7,19 +6,23 @@ import {
 	pendingUnitResolver,
 } from "../../../src/commanders/classify";
 import { dictionaryNoteRefusal } from "../../../src/commanders/classify/classify-commander";
-import { type Dumgen, dumgenOver } from "../../../src/managers/dumgen";
+import {
+	type DumgenProvide,
+	DumgenUnavailable,
+} from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
+import { provideFakes } from "../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "./support";
 
 const STORY = "Der Hund schläft. Er fängt heute an.\n\nDanach ging er nach Hause.\n";
 
-function commander(dumgen: () => Dumgen) {
+function commander(dumgen: DumgenProvide) {
 	const notices: string[] = [];
 	const classify = new ClassifyCommander({
 		cache: memorySegmentationCache(),
 		dumgen,
 		resolver: pendingUnitResolver,
-		segmenterVersion: () => "test-segmenter",
+		segmenterVersion: Effect.succeed("test-segmenter"),
 	});
 	const run = (content: string, selection: string | null) =>
 		Effect.runPromise(
@@ -35,11 +38,11 @@ function commander(dumgen: () => Dumgen) {
 	return { classify, notices, run };
 }
 
-const scripted = () =>
-	dumgenOver({
-		jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
-		luna: LunaTransport.fromAsk(() => Promise.reject(new Error("no Luna"))),
-	});
+const scripted = provideFakes({ jev: createScriptedJev(FAENGT_AN_ANSWERS).ask });
+
+/** A dumgen that must not be reached. */
+const untouched: DumgenProvide = () =>
+	Effect.die(new Error("this Classify must not reach dumgen"));
 
 describe("ClassifyCommander", () => {
 	it("writes nothing to a Scroll it is blocked on, and says why", async () => {
@@ -51,11 +54,9 @@ describe("ClassifyCommander", () => {
 				return `Textfresser does not write to ${scrollPath}`;
 			},
 			cache: memorySegmentationCache(),
-			dumgen: () => {
-				throw new Error("a blocked Classify must not reach dumgen");
-			},
+			dumgen: untouched,
 			resolver: pendingUnitResolver,
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 		});
 		await Effect.runPromise(
 			classify.execute(
@@ -83,11 +84,9 @@ describe("ClassifyCommander", () => {
 				return undefined;
 			},
 			cache: memorySegmentationCache(),
-			dumgen: () => {
-				throw new Error("Classify in Worter/ must not reach dumgen");
-			},
+			dumgen: untouched,
 			resolver: pendingUnitResolver,
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 		});
 		for (const scrollPath of [
 			"Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/👩 Mutter.md",
@@ -175,13 +174,18 @@ describe("ClassifyCommander", () => {
 		expect(classify.latestHandoff()).toBeNull();
 	});
 
-	it("reports a dumgen that is gone instead of throwing", async () => {
-		const { notices, run } = commander(() => {
-			throw new Error("dumgen was disposed when the plugin unloaded");
-		});
+	it("reports a dumgen that could not be built instead of throwing", async () => {
+		const { notices, run } = commander(() =>
+			Effect.fail(
+				new DumgenUnavailable({
+					cause: new Error("the settings could not be read"),
+					message: "dumgen is unavailable: the settings could not be read",
+				}),
+			),
+		);
 		await run(STORY, "heute");
 		expect(notices).toEqual([
-			"⚠ dumgen is unavailable: dumgen was disposed when the plugin unloaded",
+			"⚠ dumgen is unavailable: the settings could not be read",
 		]);
 	});
 });

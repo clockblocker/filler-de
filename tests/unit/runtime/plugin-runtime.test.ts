@@ -22,6 +22,7 @@ import {
 	PluginEdgeError,
 } from "../../../src/runtime/plugin-runtime";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
+import { unreachable } from "../dumgen/dumgen-support";
 
 const RAMEN = "Library/Soup/Ramen";
 
@@ -155,7 +156,12 @@ describe("PluginLive", () => {
 			}),
 		});
 		const runtime = makePluginRuntime(
-			PluginLive(vault.app as unknown as App, { lifecycle, trace }),
+			PluginLive(vault.app as unknown as App, {
+				lifecycle,
+				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
+				requestUrl: unreachable,
+				trace,
+			}),
 			{
 				onBuildFailed: (cause) => {
 					throw new Error(Cause.pretty(cause));

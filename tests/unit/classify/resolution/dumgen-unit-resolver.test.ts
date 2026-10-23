@@ -22,10 +22,10 @@ import {
 	SegmentationCache,
 } from "../../../../src/commanders/classify/segmentation-cache";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
-import { dumgenOver } from "../../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { defaultRunner } from "../../../support/effect-runner";
+import { fakeDumgen } from "../../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
@@ -434,14 +434,12 @@ describe("dumgenUnitResolver", () => {
 			dumgen: stub.dumgen,
 			scrollPath: SCROLL,
 		});
-		const segmenter = dumgenOver({
-			jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
-			luna: LunaTransport.fromAsk(() =>
-				Promise.reject(new Error("segmentation asked Luna")),
-			),
+		const segmenter = fakeDumgen({
+			jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
+			luna: () => Promise.reject(new Error("segmentation asked Luna")),
 		});
 		const resolver = dumgenUnitResolver({
-			dumgen: Effect.succeed(stub.dumgen),
+			dumgen: stub.dumgen,
 			knowledge: harness.queue,
 			scroll: harness.scroll,
 			store: Effect.succeed(harness.store),
@@ -457,9 +455,9 @@ describe("dumgenUnitResolver", () => {
 						Layer.succeed(SegmentationCache, memorySegmentationCache()),
 						Layer.succeed(UnitResolver, resolver),
 						Layer.succeed(ClassifySegmenter, {
-							dumgen: Effect.succeed(segmenter),
 							segmenterVersion: "test-segmenter",
 						}),
+						segmenter,
 					),
 				),
 			),
@@ -744,15 +742,15 @@ describe("Classify without provider keys", () => {
 		const notices: string[] = [];
 		const commander = new ClassifyCommander({
 			cache: memorySegmentationCache(),
-			dumgen: () => {
-				asked++;
-				throw new Error("no dumgen without keys");
-			},
-			missingProviderKeys: () => ["OpenAI"],
+			dumgen: () =>
+				Effect.sync(() => {
+					asked++;
+				}).pipe(Effect.andThen(Effect.die(new Error("no dumgen without keys")))),
+			missingProviderKeys: Effect.succeed(["OpenAI"]),
 			resolver: {
 				resolve: () => Effect.die(new Error("resolution ran without keys")),
 			},
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 		});
 		await run(
 			commander.execute(

@@ -1,6 +1,6 @@
 /**
  * The `classify-resolution` desktop scenario's story without Obsidian: the
- * plugin's dumgen host with the scenario's script, the real resolver, the
+ * plugin's dumgen service with the scenario's script, the real resolver, the
  * dictionary store over a fake vault and the Scroll in memory. It proves
  * the scripted dumgen resolves the noun, the separable verb and the
  * Locution through the real dumgen, so the desktop scenario tests the
@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from "bun:test";
 import { makeDumdictVaultStore } from "@textfresser/dictionary";
-import type { Answer } from "dumgen";
+import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
@@ -18,7 +18,6 @@ import { produceKnowledge } from "../../../src/commanders/classify/resolution/pr
 import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
 import { createUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
-import { DumgenHost } from "../../../src/managers/dumgen";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
 import {
@@ -33,6 +32,7 @@ import {
 import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
+import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
 
@@ -69,14 +69,16 @@ const notesOf = (vault: FakeVault) =>
 
 describe("Classify resolves a selection end to end", () => {
 	it("links the noun, the separable verb and the Locution, then re-encounters the noun without Knowledge calls", async () => {
-		const host = new DumgenHost({
-			fetch: () => Promise.reject(new Error("no provider in tests")),
-			keys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
-		});
-		host.useScriptedDumgenForTesting({
+		const dumgen = dumgenServiceOver(unreachable, () => ({
+			openaiApiKey: "",
+			typesafeApiKey: "",
+		}));
+		Effect.runSync(
+			dumgen.testing.useScripted({
 			jev: answersOf(CLASSIFY_RESOLUTION_DUMGEN.jev),
 			luna: CLASSIFY_RESOLUTION_DUMGEN.luna,
-		});
+			}),
+		);
 		// Obsidian knows the Scroll, so refs name it by its basename.
 		const vault = new FakeVault({ [SCROLL]: STORY });
 		const store = await Effect.runPromise(
@@ -88,26 +90,26 @@ describe("Classify resolves a selection end to end", () => {
 			notify: (message) => notices.push(message),
 			run: (job) =>
 				produceKnowledge(
-					{ dumgen: host.get(), store, translationLanguages: ["en", "ru"] },
+					{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
 					job,
-				),
+				).pipe(dumgen.provideBackground),
 			runtime: defaultRunner,
 		});
 		const cache = memorySegmentationCache();
 		const activity = createScrollActivity();
 		const commander = new ClassifyCommander({
 			cache,
-			dumgen: () => host.get(),
-			missingProviderKeys: () => host.missingKeys(),
+			dumgen: dumgen.provide,
+			missingProviderKeys: dumgen.missingKeys,
 			resolver: dumgenUnitResolver({
 				activity,
-				dumgen: Effect.sync(() => host.get()),
+				dumgen: operations,
 				knowledge: queue,
 				notify: (message) => notices.push(message),
 				scroll,
 				store: Effect.succeed(store),
 			}),
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 		});
 		const classify = async (selection: string) => {
 			const from = scroll.content.indexOf(selection);
@@ -161,7 +163,7 @@ describe("Classify resolves a selection end to end", () => {
 		const afterFirst = notesOf(vault);
 		const knowledgeCalls = () =>
 			KNOWLEDGE_STAGES.map(
-				(stage) => host.scriptedRequests()?.luna[stage] ?? 0,
+				(stage) => Effect.runSync(dumgen.testing.requests)?.luna[stage] ?? 0,
 			);
 		const before = knowledgeCalls();
 		expect(before.every((count) => count > 0)).toBe(true);
@@ -196,7 +198,7 @@ describe("Classify resolves a selection end to end", () => {
 					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
 				resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
 			},
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 			store: Effect.succeed(store),
 		});
 		scroll.content = scroll.content

@@ -14,10 +14,18 @@
  *    discontinuous unit links to the same Reading. A Sentence repeated in
  *    the Scroll shares its segmentation, but each instance gives units of
  *    its own, so each stays its own occurrence.
+ *
+ * It needs `Jev` and `Luna`: its caller provides one dumgen build for the
+ * whole Classify, resolution included (`Dumgen.provide`).
  */
-import type { SegmentedSentence, Unit } from "dumgen";
+import {
+	type Jev,
+	type Luna,
+	operations,
+	type SegmentedSentence,
+	type Unit,
+} from "dumgen";
 import { Context, Effect, Option, Schema } from "effect";
-import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import type { UserLinks } from "./resolution/scroll-links";
 import {
 	type ScrollSentence,
@@ -58,13 +66,10 @@ export class ClassifyError extends Schema.TaggedError<ClassifyError>()(
 	},
 ) {}
 
-/** dumgen and the version that keys what it segments. */
+/** The version that keys what dumgen segments. */
 export class ClassifySegmenter extends Context.Service<
 	ClassifySegmenter,
-	{
-		readonly dumgen: Effect.Effect<Dumgen, ClassifyError>;
-		readonly segmenterVersion: string;
-	}
+	{ readonly segmenterVersion: string }
 >()("textfresser/classify/ClassifySegmenter") {}
 
 export type ClassifyInput = {
@@ -163,7 +168,6 @@ function coveredUnits(
 }
 
 const detectGerman = Effect.fnUntraced(function* (
-	dumgen: Dumgen,
 	sentences: readonly ScrollSentence[],
 	touched: readonly number[],
 ) {
@@ -172,7 +176,7 @@ const detectGerman = Effect.fnUntraced(function* (
 		sentences.length,
 		(touched.at(-1) ?? 0) + DETECTION_CONTEXT + 1,
 	);
-	const detected = yield* dumgen.language
+	const detected = yield* operations.language
 		.detect({
 			paragraphs: [
 				{
@@ -202,7 +206,7 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 ): Effect.fn.Return<
 	ClassifyOutcome,
 	ClassifyError,
-	ClassifySegmenter | SegmentationCache | UnitResolver
+	ClassifySegmenter | SegmentationCache | UnitResolver | Jev | Luna
 > {
 	const { selection } = input;
 	if (selection.to <= selection.from)
@@ -221,8 +225,7 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 		});
 
 	const segmenter = yield* ClassifySegmenter;
-	const dumgen = yield* segmenter.dumgen;
-	const german = yield* detectGerman(dumgen, scroll.sentences, touched);
+	const german = yield* detectGerman(scroll.sentences, touched);
 	if (german.length === 0)
 		return yield* new ClassifyError({
 			message: "The selection holds no German Sentence.",
@@ -255,7 +258,7 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 	const segmentedText =
 		misses.length === 0
 			? []
-			: (yield* dumgen.segment.inUnits({
+			: (yield* operations.segment.inUnits({
 					language: "de",
 					paragraphs: [{ sentences: misses.map(([, text]) => text) }],
 				})).paragraphs.flatMap(({ sentences }) => sentences);

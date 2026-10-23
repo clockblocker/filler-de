@@ -5,13 +5,15 @@
  * each aspect finishes, so an interrupted run keeps what it already paid
  * for and the next encounter asks only for the rest; structural aspects
  * and relations land together at the end. It runs after the commit and the
- * links, never on their path.
+ * links, never on their path, as an action of its own: its caller provides
+ * it one dumgen build (`Dumgen.provide`).
  */
 import { canonicalJson } from "common-utils";
 import { authoredReading, closedRoute } from "dumcorpus/inventories";
+import type { Jev, Luna } from "dumgen";
 import { readingIdentityKey, routeOf } from "dumling";
 import { Effect } from "effect";
-import type { Dumgen } from "../../../managers/dumgen/dumgen-over";
+import type { DumgenOperations } from "../../../managers/dumgen";
 import {
 	isEmptyRequest,
 	knowledgeRequestFor,
@@ -52,7 +54,8 @@ export type KnowledgeOutcome =
 	  };
 
 export type ProduceKnowledgeDeps = {
-	readonly dumgen: Dumgen;
+	/** dumgen's `operations`, which a test stubs. */
+	readonly dumgen: Pick<DumgenOperations, "knowledge">;
 	readonly store: ResolutionStore;
 	readonly translationLanguages: readonly TranslationLanguage[];
 	readonly publishRelations?: boolean;
@@ -63,7 +66,7 @@ export type ProduceKnowledgeDeps = {
 export const produceKnowledge = Effect.fnUntraced(function* (
 	deps: ProduceKnowledgeDeps,
 	job: KnowledgeJob,
-): Effect.fn.Return<KnowledgeOutcome, DictionaryCommitFailed> {
+): Effect.fn.Return<KnowledgeOutcome, DictionaryCommitFailed, Jev | Luna> {
 	const publishRelations =
 		deps.publishRelations ?? PUBLISH_GENERATED_RELATIONS;
 	const { reading } = job;

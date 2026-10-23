@@ -1,12 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { Effect } from "effect";
-import { createRequestUrlGet, DumgenHost } from "../../../src/managers/dumgen";
+import { HttpTransport } from "../../../src/managers/dumgen";
 import {
 	checkProviderKeys,
 	KEY_CHECK_URLS,
-	type KeyCheckGet,
 } from "../../../src/managers/dumgen/key-check";
-import { createRequestUrlFetch } from "../../../src/managers/dumgen/request-url-fetch";
 import { type StubAnswer, stubRequestUrl } from "./request-url-stub";
 
 const KEYS = { openaiApiKey: "sk-test", typesafeApiKey: "ts-test" };
@@ -20,10 +18,9 @@ function checkOver(
 	const stub = stubRequestUrl((request) => answer(request.url));
 	const run = Effect.runPromise(
 		checkProviderKeys({
-			get: createRequestUrlGet(stub.requestUrl),
 			keys,
 			...(timeoutMs === undefined ? {} : { timeoutMs }),
-		}),
+		}).pipe(Effect.provide(HttpTransport.layer(stub.requestUrl))),
 	);
 	return { requests: stub.requests, run };
 }
@@ -121,54 +118,5 @@ describe("checkProviderKeys", () => {
 			{ provider: "OpenAI", reason: "Textfresser has no OpenAI API key" },
 		]);
 		expect(requests.map(({ url }) => url)).toEqual([KEY_CHECK_URLS.TypeSafe]);
-	});
-});
-
-describe("DumgenHost.checkKeys", () => {
-	const host = (get?: KeyCheckGet) =>
-		new DumgenHost({
-			fetch: createRequestUrlFetch(stubRequestUrl(() => "never").requestUrl),
-			...(get === undefined ? {} : { get }),
-			keys: () => KEYS,
-		});
-
-	it("checks the settings' keys through its GET", async () => {
-		const urls: string[] = [];
-		const checked = host(async (url, { headers }) => {
-			urls.push(`${url} ${headers.Authorization}`);
-			return { status: 200, text: async () => "" };
-		});
-		expect(await Effect.runPromise(checked.checkKeys())).toEqual([]);
-		expect(urls).toEqual([
-			`${KEY_CHECK_URLS.TypeSafe} Bearer ts-test`,
-			`${KEY_CHECK_URLS.OpenAI} Bearer sk-test`,
-		]);
-	});
-
-	it("answers a scripted dumgen's key check from its script, reaching no provider", async () => {
-		const scripted = host(async () => {
-			throw new Error("a provider was reached");
-		});
-		scripted.useScriptedDumgenForTesting({ jev: {} });
-		expect(await Effect.runPromise(scripted.checkKeys())).toEqual([]);
-		scripted.useScriptedDumgenForTesting({
-			jev: {},
-			keyCheck: {
-				TypeSafe: {
-					body: '{"detail":{"error_type":"authentication_error"}}',
-					status: 401,
-				},
-			},
-		});
-		expect(await Effect.runPromise(scripted.checkKeys())).toEqual([
-			{
-				provider: "TypeSafe",
-				reason: "TypeSafe rejected the API key (401 authentication_error)",
-			},
-		]);
-	});
-
-	it("checks nothing without a GET", async () => {
-		expect(await Effect.runPromise(host().checkKeys())).toEqual([]);
 	});
 });

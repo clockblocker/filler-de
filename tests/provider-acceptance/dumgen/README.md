@@ -1,8 +1,8 @@
 # dumgen provider acceptance
 
 This opt-in smoke checks that the plugin's dumgen wiring reaches both live
-providers: TypeSafe (jev) and OpenAI (Luna). It builds dumgen through
-`buildDumgen` and `createRequestUrlFetch` from `src/managers/dumgen`.
+providers: TypeSafe (jev) and OpenAI (Luna). It builds `DumgenLive` over
+`dumgenTransports` and `createRequestUrlFetch` from `src/managers/dumgen`.
 The runtime's `fetch` stands in for Obsidian's `requestUrl`, so requests go
 through the plugin's own requestUrl port. It does not start Obsidian.
 
