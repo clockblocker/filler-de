@@ -659,7 +659,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	const planner = createDumdictPlanner("de");
 	const lock = yield* Semaphore.make(1);
 	sessionCounter += 1;
-	const session = `${Date.now().toString(36)}${sessionCounter.toString(36)}`;
+	const startedAt = yield* Clock.currentTimeMillis;
+	const session = `${startedAt.toString(36)}${sessionCounter.toString(36)}`;
 	/** The published index version; replaced, never changed, under the lock. */
 	let index = new NoteIndex();
 	let counter = 0;

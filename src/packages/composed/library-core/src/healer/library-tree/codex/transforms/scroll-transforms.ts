@@ -35,12 +35,12 @@ export function makeStripScrollBacklinkTransform(): Transform {
  *
  * @param parentChain - Chain to parent section
  * @param codecs - Codec API
- * @returns Transform function
+ * @returns A synchronous transform, so a Codex transform built on it stays one
  */
 export function makeBacklinkTransform(
 	parentChain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Transform {
+): (content: string) => string {
 	return (content: string): string => {
 		// Scrolls always have a parent (at minimum, the library root)
 		if (parentChain.length === 0) {

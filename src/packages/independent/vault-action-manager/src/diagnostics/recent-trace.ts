@@ -74,6 +74,7 @@ class Ring<A> {
 
 class RingSpan extends Tracer.NativeSpan {
 	/** Wall time, as log entries have it; Effect's clock times durations. */
+	// oxlint-disable-next-line effecttsgo/global-date -- the recent-trace ring stamps wall time, so a pasted trace shows when it happened (#187).
 	readonly startedAt = Date.now();
 	constructor(
 		options: ConstructorParameters<typeof Tracer.NativeSpan>[0],
@@ -228,6 +229,7 @@ export function makeRecentTrace(
 		logger,
 		recordLog: (level, message) =>
 			logs.push({
+				// oxlint-disable-next-line effecttsgo/global-date -- the recent-trace ring stamps wall time (#187); an edge log runs outside Effect, with no Clock.
 				at: Date.now(),
 				cause: undefined,
 				level: level.toUpperCase(),
@@ -308,7 +310,7 @@ function renderNode(
 	const { span } = node;
 	const duration =
 		span.end === undefined
-			? `${milliseconds(Date.now() - span.start)} so far`
+			? `${milliseconds(runningFor(span))} so far`
 			: milliseconds(span.end - span.start);
 	const attributes = span.attributes
 		? [...span.attributes]
@@ -329,10 +331,17 @@ function renderNode(
 
 const milliseconds = (value: number) => `${value.toFixed(1)}ms`;
 
+/** How long a span that has not ended has run, in wall time. */
+function runningFor(span: RecordedSpan): number {
+	// oxlint-disable-next-line effecttsgo/global-date -- the recent-trace ring's spans start at wall time (#187), so their age is measured in it.
+	return Date.now() - span.start;
+}
+
 const pad = (value: number, width = 2) => String(value).padStart(width, "0");
 
 /** `HH:MM:SS.mmm` in local time. */
 function clock(epochMillis: number): string {
+	// oxlint-disable-next-line effecttsgo/global-date -- formats a recorded wall time (#187); it reads no clock.
 	const date = new Date(Math.floor(epochMillis));
 	return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 }

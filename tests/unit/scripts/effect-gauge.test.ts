@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	applyAllowances,
 	areaOf,
 	checkTargets,
 	countSource,
@@ -10,6 +11,7 @@ import {
 	ruleOf,
 	totalOf,
 } from "../../../scripts/effect-gauge";
+import { EDGE_ALLOWLIST } from "../../../scripts/effect-gauge-allowlist";
 
 describe("areaOf", () => {
 	it("names a package by its directory", () => {
@@ -98,11 +100,15 @@ describe("countSource", () => {
 		`	new Notice("done");`,
 		`	this.addCommand({ id: "x" });`,
 		`	app.workspace.openLinkText("Note", "", true);`,
+		`	// oxlint-disable-next-line effecttsgo/global-date -- wall time, by #187`,
+		`	Date.now();`,
+		`	/* eslint-disable no-console */`,
+		`	// "oxlint-disable" in a comment that is no directive`,
 		`}`,
 	].join("\n");
 
 	it("counts code, not comments or strings", () => {
-		expect(countSource("src/a.ts", source, [])).toEqual({
+		expect(countSource("src/a.ts", source)).toEqual({
 			"cause-squash": 1,
 			"global-settings-calls": 1,
 			"host-calls": 3,
@@ -112,24 +118,70 @@ describe("countSource", () => {
 			"neverthrow-files": 1,
 			"run-sites": 4,
 			"schema-files": 1,
+			suppressions: 2,
 			throw: 1,
 			try: 1,
+			"unexplained-suppressions": 1,
 		});
 	});
 
 	it("counts no host calls in the host services", () => {
 		expect(
-			countSource("src/managers/obsidian/host/notices.ts", source, [])[
+			countSource("src/managers/obsidian/host/notices.ts", source)[
 				"host-calls"
 			],
 		).toBe(undefined);
 	});
+});
 
-	it("skips run sites in allowlisted files", () => {
-		const allowlist = [{ pattern: "src/a.ts", reason: "edge" }];
-		expect(countSource("src/a.ts", source, allowlist)["run-sites"]).toBe(
-			undefined,
+describe("applyAllowances", () => {
+	const allowlist = [
+		{
+			allow: { "run-sites": Number.POSITIVE_INFINITY },
+			pattern: "src/runtime/**",
+			reason: "the run boundary",
+		},
+		{ allow: { throw: 2, try: 1 }, pattern: "src/a.ts", reason: "edge" },
+	];
+
+	it("counts only what a file holds beyond its allowance", () => {
+		const { counted, stale } = applyAllowances(
+			new Map([
+				["src/a.ts", { "run-sites": 1, throw: 3, try: 1 }],
+				["src/b.ts", { throw: 1 }],
+				["src/runtime/x.ts", { "run-sites": 9, throw: 1 }],
+			]),
+			allowlist,
 		);
+		expect(Object.fromEntries(counted)).toEqual({
+			"src/a.ts": { "run-sites": 1, throw: 1 },
+			"src/b.ts": { throw: 1 },
+			"src/runtime/x.ts": { throw: 1 },
+		});
+		expect(stale).toEqual([]);
+	});
+
+	it("reports an allowance a file no longer uses up, or no file matches", () => {
+		expect(
+			applyAllowances(new Map([["src/a.ts", { throw: 2 }]]), allowlist)
+				.stale,
+		).toEqual(["src/a.ts try: allows 1, holds 0", "src/runtime/**: matches no file"]);
+	});
+
+	it("rejects a file that two allowances match", () => {
+		expect(() =>
+			applyAllowances(new Map([["src/a.ts", {}]]), [
+				...allowlist,
+				{ allow: { try: 1 }, pattern: "src/*.ts", reason: "again" },
+			]),
+		).toThrow("src/a.ts matches more than one allowance");
+	});
+
+	it("gives every allowance in the repo's allowlist a reason", () => {
+		for (const entry of EDGE_ALLOWLIST) {
+			expect(entry.reason.length).toBeGreaterThan(20);
+			expect(Object.keys(entry.allow).length).toBeGreaterThan(0);
+		}
 	});
 });
 
@@ -152,7 +204,7 @@ describe("isRunSite", () => {
 			`import { runPromise as run } from "effect/Effect";`,
 			`run(program);`,
 		].join("\n");
-		expect(countSource("src/a.ts", source, [])["run-sites"]).toBe(1);
+		expect(countSource("src/a.ts", source)["run-sites"]).toBe(1);
 	});
 });
 

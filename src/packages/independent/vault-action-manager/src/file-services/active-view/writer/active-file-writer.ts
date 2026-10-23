@@ -417,7 +417,8 @@ export class ActiveFileWriter {
 							snapshot.path,
 							cause,
 						),
-			try: async () => transform(before),
+			// A synchronous throw is caught too, as a rejection would be.
+			try: () => Promise.resolve(transform(before)),
 		});
 		if (after === before) return { _tag: "NoOp" } as const;
 		yield* assertSnapshotCurrent(snapshot, "processActiveContent.write");
