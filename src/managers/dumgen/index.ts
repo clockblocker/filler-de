@@ -1,10 +1,11 @@
 export { DumgenHost } from "./dumgen-host";
+export { type Dumgen, type DumgenOptions, dumgenOver } from "./dumgen-over";
 export type { KeyCheckFailure } from "./key-check";
 export { conciseFailure } from "./provider-failure";
 export {
 	buildDumgen,
-	createDumgenProviders,
 	type DumgenProviderKeys,
+	dumgenTransports,
 } from "./providers";
 export {
 	createRequestUrlFetch,

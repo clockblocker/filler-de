@@ -1,4 +1,4 @@
-import { type Answer, createDumgen } from "dumgen";
+import { type Answer, JevTransport, LunaTransport } from "dumgen";
 import { Effect, Layer } from "effect";
 import {
 	type ClassifyInput,
@@ -13,6 +13,7 @@ import {
 	pendingUnitResolver,
 	UnitResolver,
 } from "../../../src/commanders/classify/unit-resolver";
+import { dumgenOver } from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
 
 const picked = (choice: string): Answer => ({
@@ -43,12 +44,15 @@ export function classifyHarness(
 	} = {},
 ) {
 	const scripted = createScriptedJev(options.answers ?? FAENGT_AN_ANSWERS);
-	const dumgen = createDumgen({
-		jev: (request, context) =>
+	const dumgen = dumgenOver({
+		jev: JevTransport.fromAsk((request, context) =>
 			context.stage === options.failStage
 				? Promise.reject(new Error("jev is down"))
 				: scripted.ask(request, context),
-		luna: () => Promise.reject(new Error("segmentation asked Luna")),
+		),
+		luna: LunaTransport.fromAsk(() =>
+			Promise.reject(new Error("segmentation asked Luna")),
+		),
 	});
 	const cache = memorySegmentationCache();
 	const handedOver: unknown[] = [];

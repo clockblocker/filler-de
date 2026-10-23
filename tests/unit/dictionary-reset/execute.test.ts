@@ -8,7 +8,7 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { createDumgen } from "dumgen";
+import { JevTransport, LunaTransport } from "dumgen";
 import { Deferred, Effect, Layer } from "effect";
 import { ClassifySegmenter } from "../../../src/commanders/classify/classify-selection";
 import {
@@ -26,6 +26,7 @@ import {
 	ResetFailed,
 	type ResetVault,
 } from "../../../src/commanders/dictionary-reset/ports";
+import { dumgenOver } from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
 
 const FIXTURE = join(import.meta.dir, "fixtures/vault");
@@ -192,9 +193,11 @@ function stubDictionary(vault: FakeResetVault): ResetDictionary {
 }
 
 function servicesWith(resolver: UnitResolver["Service"]) {
-	const dumgen = createDumgen({
-		jev: createScriptedJev().ask,
-		luna: () => Promise.reject(new Error("no Luna in this test")),
+	const dumgen = dumgenOver({
+		jev: JevTransport.fromAsk(createScriptedJev().ask),
+		luna: LunaTransport.fromAsk(() =>
+			Promise.reject(new Error("no Luna in this test")),
+		),
 	});
 	return Layer.mergeAll(
 		Layer.succeed(SegmentationCache, memorySegmentationCache()),

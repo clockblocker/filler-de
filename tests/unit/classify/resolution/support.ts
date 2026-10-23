@@ -7,15 +7,7 @@ import {
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
-import type {
-	Dumgen,
-	GrammarResolution,
-	ReadingResolution,
-	ResolveGrammarInput,
-	ResolveReadingInput,
-	SegmentedSentence,
-	Unit,
-} from "dumgen";
+import type { GrammarResolution, ReadingResolution, ResolveGrammarInput, ResolveReadingInput, SegmentedSentence, Unit } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
@@ -32,6 +24,7 @@ import type {
 	ClassifyPlan,
 	PlannedUnit,
 } from "../../../../src/commanders/classify/types";
+import type { Dumgen } from "../../../../src/managers/dumgen/dumgen-over";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>

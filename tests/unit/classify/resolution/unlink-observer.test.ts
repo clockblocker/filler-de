@@ -4,7 +4,7 @@ import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import { makeSurfaceId } from "dumdict";
 import { createPendingSemanticRelationRecord } from "dumdict/pending";
 import { createDumdictPlanner } from "dumdict/planning";
-import { createDumgen, type Unit } from "dumgen";
+import { JevTransport, LunaTransport, type Unit } from "dumgen";
 import type * as Dumling from "dumling/types";
 import { Effect, Layer } from "effect";
 import {
@@ -27,6 +27,7 @@ import {
 } from "../../../../src/commanders/classify/segmentation-cache";
 import { sentenceKey } from "../../../../src/commanders/classify/sentence-key";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
+import { dumgenOver } from "../../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import {
@@ -635,9 +636,11 @@ describe("unlink observer", () => {
 		});
 		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
 		const cache = memorySegmentationCache();
-		const segmenter = createDumgen({
-			jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
-			luna: () => Promise.reject(new Error("segmentation asked Luna")),
+		const segmenter = dumgenOver({
+			jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
+			luna: LunaTransport.fromAsk(() =>
+				Promise.reject(new Error("segmentation asked Luna")),
+			),
 		});
 		const resolver = dumgenUnitResolver({
 			dumgen: Effect.succeed(stub.dumgen),

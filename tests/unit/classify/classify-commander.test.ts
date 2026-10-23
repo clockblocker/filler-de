@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createDumgen } from "dumgen";
+import { JevTransport, LunaTransport } from "dumgen";
 import { Effect } from "effect";
 import {
 	ClassifyCommander,
@@ -7,12 +7,13 @@ import {
 	pendingUnitResolver,
 } from "../../../src/commanders/classify";
 import { dictionaryNoteRefusal } from "../../../src/commanders/classify/classify-commander";
+import { type Dumgen, dumgenOver } from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
 import { FAENGT_AN_ANSWERS, selectionOf } from "./support";
 
 const STORY = "Der Hund schläft. Er fängt heute an.\n\nDanach ging er nach Hause.\n";
 
-function commander(dumgen: () => ReturnType<typeof createDumgen>) {
+function commander(dumgen: () => Dumgen) {
 	const notices: string[] = [];
 	const classify = new ClassifyCommander({
 		cache: memorySegmentationCache(),
@@ -35,9 +36,9 @@ function commander(dumgen: () => ReturnType<typeof createDumgen>) {
 }
 
 const scripted = () =>
-	createDumgen({
-		jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
-		luna: () => Promise.reject(new Error("no Luna")),
+	dumgenOver({
+		jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
+		luna: LunaTransport.fromAsk(() => Promise.reject(new Error("no Luna"))),
 	});
 
 describe("ClassifyCommander", () => {

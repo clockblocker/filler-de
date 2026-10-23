@@ -1,5 +1,6 @@
-import type { Dumgen, SegmentedSentence, Unit } from "dumgen";
+import type { SegmentedSentence, Unit } from "dumgen";
 import * as Effect from "effect/Effect";
+import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 
 /** The one German Sentence the smoke segments, clicks and translates. */
 export const SMOKE_SENTENCE = "Der alte Hund schläft im Garten.";

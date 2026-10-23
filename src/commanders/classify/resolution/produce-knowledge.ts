@@ -9,9 +9,9 @@
  */
 import { canonicalJson } from "common-utils";
 import { authoredReading, closedRoute } from "dumcorpus/inventories";
-import type { Dumgen } from "dumgen";
 import { readingIdentityKey, routeOf } from "dumling";
 import { Effect } from "effect";
+import type { Dumgen } from "../../../managers/dumgen/dumgen-over";
 import {
 	isEmptyRequest,
 	knowledgeRequestFor,

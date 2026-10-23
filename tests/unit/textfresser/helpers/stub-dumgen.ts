@@ -1,4 +1,5 @@
-import type { Dumgen, TranslateSentenceInput } from "dumgen";
+import type { TranslateSentenceInput } from "dumgen";
+import type { Dumgen } from "../../../../src/managers/dumgen/dumgen-over";
 
 /**
  * A dumgen whose `translate.sentence` answers with `translate`, recording

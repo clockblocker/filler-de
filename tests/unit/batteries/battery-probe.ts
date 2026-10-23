@@ -5,7 +5,7 @@ import { canonicalJson } from "common-utils";
 import { checkIfGrundform } from "dumcorpus/inventories";
 import { parseAsLemmaRecord } from "dumdict";
 import { lemmaRecordSchema } from "dumdict/schema";
-import { createDumgen } from "dumgen";
+import { DumgenLive } from "dumgen";
 import { normalizeForm } from "dumling";
 import { parseReadingKnowledge } from "dumrel";
 
@@ -13,7 +13,7 @@ export const batteryExports = {
 	"common-utils": canonicalJson,
 	dumcorpus: checkIfGrundform,
 	dumdict: parseAsLemmaRecord,
-	dumgen: createDumgen,
+	dumgen: DumgenLive,
 	dumling: normalizeForm,
 	dumrel: parseReadingKnowledge,
 } as const;

@@ -3,8 +3,8 @@
  */
 
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { Dumgen } from "dumgen";
 import { Effect } from "effect";
+import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";

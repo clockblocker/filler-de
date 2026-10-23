@@ -1,4 +1,4 @@
-import type { Dumgen } from "dumgen";
+import type { Dumgen } from "../../../managers/dumgen/dumgen-over";
 import type { LanguagesConfig } from "../../../types";
 
 export type TextfresserState = {

@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { createDumgen, type OperationTrace } from "dumgen";
+import type { OperationTrace } from "dumgen";
 import * as Effect from "effect/Effect";
 import * as Result from "effect/Result";
 import {
-	createDumgenProviders,
+	buildDumgen,
 	createRequestUrlFetch,
 	type DumgenProviderKeys,
 	type RequestUrl,
@@ -81,14 +81,15 @@ async function main(): Promise<void> {
 	const keys = requireOptIn(process.env);
 	const options = parseCliOptions(process.argv.slice(2), process.env);
 	const traces: OperationTrace[] = [];
-	const dumgen = createDumgen({
-		...createDumgenProviders({
+	const dumgen = buildDumgen(
+		{
 			...keys,
 			fetch: createRequestUrlFetch(fetchAsRequestUrl),
 			timeoutMs: SMOKE_TIMEOUT_MS,
-		}),
-		onOperation: (trace) => traces.push(trace),
-	});
+		},
+		undefined,
+		{ onOperation: (trace) => traces.push(trace) },
+	);
 	// A provider failure still writes the report, with the traces that explain it.
 	const outcome = await Effect.runPromise(
 		Effect.result(runDumgenSmoke(dumgen)),

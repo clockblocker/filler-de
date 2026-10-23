@@ -7,20 +7,18 @@
  * every call, so dumgen reports a `ProviderFailure` that names the missing
  * setting, and the operations that never reach that provider still work:
  * `translate.sentence` needs only the OpenAI key, `segment.inUnits` and
- * `language.detect` only the TypeSafe key.
+ * `language.detect` only the TypeSafe key. The missing transport is a
+ * `fromAsk` over a refusing ask, as tf-demo's `deploymentDumgen` does,
+ * because `typeSafe` and `openAI` refuse an empty key when they are built.
  */
-import {
-	createDumgen,
-	createOpenAILuna,
-	createTypeSafeAsk,
-	type Dumgen,
-	type JevAsk,
-	type LunaAsk,
-} from "dumgen";
+import { JevTransport, LunaTransport } from "dumgen";
+import type * as Layer from "effect/Layer";
+import type * as Scope from "effect/Scope";
+import { type Dumgen, type DumgenOptions, dumgenOver } from "./dumgen-over";
 
 /** The `fetch` subset dumgen's TypeSafe and OpenAI transports send through. */
 export type DumgenFetch = NonNullable<
-	Parameters<typeof createTypeSafeAsk>[0]["fetch"]
+	Parameters<typeof JevTransport.typeSafe>[0]["fetch"]
 >;
 
 export type DumgenProviderKeys = {
@@ -40,9 +38,10 @@ const missingKey = (provider: string) => async (): Promise<never> => {
 	);
 };
 
-export function createDumgenProviders(options: DumgenProviderOptions): {
-	readonly jev: JevAsk;
-	readonly luna: LunaAsk;
+/** The jev and Luna transports `DumgenLive` builds over, from the keys. */
+export function dumgenTransports(options: DumgenProviderOptions): {
+	readonly jev: Layer.Layer<JevTransport>;
+	readonly luna: Layer.Layer<LunaTransport>;
 } {
 	const transport = {
 		fetch: options.fetch,
@@ -54,14 +53,22 @@ export function createDumgenProviders(options: DumgenProviderOptions): {
 	const openaiApiKey = options.openaiApiKey.trim();
 	return {
 		jev: typesafeApiKey
-			? createTypeSafeAsk({ apiKey: typesafeApiKey, ...transport })
-			: missingKey("TypeSafe"),
+			? JevTransport.typeSafe({ apiKey: typesafeApiKey, ...transport })
+			: JevTransport.fromAsk(missingKey("TypeSafe")),
 		luna: openaiApiKey
-			? createOpenAILuna({ apiKey: openaiApiKey, ...transport })
-			: missingKey("OpenAI"),
+			? LunaTransport.openAI({ apiKey: openaiApiKey, ...transport })
+			: LunaTransport.fromAsk(missingKey("OpenAI")),
 	};
 }
 
-export function buildDumgen(options: DumgenProviderOptions): Dumgen {
-	return createDumgen(createDumgenProviders(options));
+/**
+ * dumgen over the providers' transports, built in `scope`; `extra` adds
+ * `DumgenLive`'s other options, such as `onOperation`.
+ */
+export function buildDumgen(
+	options: DumgenProviderOptions,
+	scope?: Scope.Scope,
+	extra: Omit<DumgenOptions, "jev" | "luna"> = {},
+): Dumgen {
+	return dumgenOver({ ...extra, ...dumgenTransports(options) }, scope);
 }
