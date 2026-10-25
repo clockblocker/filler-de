@@ -45,6 +45,7 @@ import {
 } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "../managers/overlay-manager";
 import { listenForOverlay } from "../managers/overlay-manager/overlay-listeners";
+import { listenForUnitHover } from "../managers/overlay-manager/unit-hover/unit-hover";
 import type { PluginServices } from "../runtime/plugin-live";
 import type { PluginRuntime } from "../runtime/plugin-runtime";
 import type { ParsedUserSettings } from "../settings/parsed-settings";
@@ -334,7 +335,10 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 		}),
 	);
 
-/** The overlay: toolbars, edge zones and the context menu, as plain DOM. */
+/**
+ * The overlay: toolbars, edge zones and the context menu, as plain DOM, and
+ * the highlight of a hovered unit's parts.
+ */
 export const OverlayLive = (
 	deps: PluginServicesDeps & {
 		readonly commandExecutor: CommandExecutor;
@@ -370,6 +374,7 @@ export const OverlayLive = (
 			);
 			// Released before the overlay is destroyed: newest first.
 			yield* listenForOverlay(overlay);
+			yield* listenForUnitHover(document);
 			// The toolbars follow the settings' button placements.
 			yield* settings.changes.pipe(
 				Stream.map(placements),
