@@ -66,6 +66,17 @@ class EditorUnitHover {
 		);
 	}
 
+	/**
+	 * The pointer left a link for `to`: the highlight stays only if `to` is
+	 * a link of this editor, whose own `mouseover` decides. A pointer
+	 * moving fast can jump straight to a link of another editor, and that
+	 * one's `mouseover` reaches only its own plugin.
+	 */
+	leave(to: EventTarget | null): void {
+		const link = editorLinkOf(to);
+		if (!link || !this.view.contentDOM.contains(link)) this.clear();
+	}
+
 	clear(): void {
 		this.show("", Decoration.none);
 	}
@@ -88,7 +99,7 @@ const editorUnitHover = ViewPlugin.fromClass(EditorUnitHover, {
 	decorations: (plugin) => plugin.decorations,
 	eventHandlers: {
 		mouseout(event) {
-			if (!editorLinkOf(event.relatedTarget)) this.clear();
+			this.leave(event.relatedTarget);
 		},
 		mouseover(event) {
 			const link = editorLinkOf(event.target);
