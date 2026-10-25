@@ -379,3 +379,14 @@ a:visited {
 	cursor: not-allowed;
 	opacity: 0.4;
 }
+
+/* ------ Unit Hover ------ */
+
+/*
+ * Hovering one part of a unit, such as `fängt … an`, highlights all of its
+ * parts, in the editor and in Reading view (`unit-hover.ts`).
+ */
+.tf-unit-hover {
+	background-color: var(--text-highlight-bg);
+	border-radius: var(--radius-s);
+}
