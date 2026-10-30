@@ -24,8 +24,9 @@ import { byCodeUnit, canonicalData, type NoteIndex } from "./note-index";
 import type { NoteData } from "./notes";
 
 /**
- * The owning Readings one commit moves links in, as tf-demo caps them
- * (`MAX_MOVED_OWNERS`). The rest move in follow-up commits of the same size.
+ * The owning Lemmas one commit moves links in, as tf-demo caps its moved
+ * owners (`MAX_MOVED_OWNERS`). The rest move in follow-up commits of the
+ * same size.
  */
 export const MAX_MOVED_OWNERS = 200;
 
@@ -206,14 +207,21 @@ export type MovedOwners = {
 	readonly leftOver: Set<string>;
 	/** The keys of the owning Readings whose links `intended` moves. */
 	readonly readings: Set<string>;
+	/**
+	 * The keys of the owning Lemmas left over the cap. Their notes stay out
+	 * of the commit's re-renders too, so none is written half-moved; the
+	 * follow-up writes each once.
+	 */
+	readonly deferred: Set<string>;
 };
 
 /**
  * Moves the links of the stored Readings that link by these Shadow keys,
- * outside the Lemmas in `exclude`, up to `cap` Readings in code-unit order
- * of their keys (ADR-0015 "The Lemma upgrade"). An owner whose links
- * already fit counts for nothing, so running it again on what it answered
- * moves nothing.
+ * outside the Lemmas in `exclude`, for up to `cap` owning Lemmas, in code-unit order
+ * of their keys (ADR-0015 "The Lemma upgrade"). A Lemma moves whole: once
+ * one of its Readings moves, so do its others, and once one is left over
+ * the cap, so are its others. An owner whose links already fit counts for
+ * nothing, so running it again on what it answered moves nothing.
  */
 export function moveOwnerLinks(input: {
 	readonly view: NoteIndex;
@@ -237,6 +245,7 @@ export function moveOwnerLinks(input: {
 	const bases = new Map<string, NoteData>();
 	const leftOver = new Set<string>();
 	const readings = new Set<string>();
+	const deferred = new Set<string>();
 	let moved = 0;
 	for (const readingKey of [...owners.keys()].sort(byCodeUnit)) {
 		const lemmaKey = view.readingOwner(readingKey);
@@ -250,7 +259,11 @@ export function moveOwnerLinks(input: {
 		const entry = view.reading(readingKey);
 		if (!base || !entry || !settledEntry(entry, resolver)) continue;
 		moved += 1;
-		if (moved > cap) {
+		if (
+			!intended.has(lemmaKey) &&
+			(deferred.has(lemmaKey) || intended.size >= cap)
+		) {
+			deferred.add(lemmaKey);
 			for (const key of owners.get(readingKey) ?? []) leftOver.add(key);
 			continue;
 		}
@@ -264,5 +277,5 @@ export function moveOwnerLinks(input: {
 		bases.set(lemmaKey, base);
 		readings.add(readingKey);
 	}
-	return { bases, intended, leftOver, moved, readings };
+	return { bases, deferred, intended, leftOver, moved, readings };
 }

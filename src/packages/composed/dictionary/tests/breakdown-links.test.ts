@@ -6,6 +6,7 @@
  * through its Lemma (`unitShadowOf`), so it moves back as a relation does.
  */
 import { describe, expect, test } from "bun:test";
+import { MORPHEMES_LINE_CLASS } from "@textfresser/lemma-note-codec";
 import type { PlannedChangeOp, ReadingEntry } from "dumdict";
 import { unitShadowOf } from "dumdict/pending";
 import type * as Dumling from "dumling/types";
@@ -15,11 +16,12 @@ import {
 	resolverOver,
 	settledEntry,
 } from "../src/breakdown-links";
+import { noteMetadataHelper } from "../src/internal/note-metadata";
 import { lemmaKeyOf, readingKeyOf, shadowKeyOf } from "../src/keys";
 import { NoteIndex } from "../src/note-index";
 import { classifyFile } from "../src/notes";
 import { FakeVault } from "./support/fake-vault";
-import { run } from "./support/files";
+import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	createLemma,
 	createReading,
@@ -458,8 +460,8 @@ describe("the fan-out is capped", () => {
 		expect([...moved.leftOver]).toEqual([shadowKeyOf(kraftwerk)]);
 	});
 
-	test("owners over the store's cap of 200 move in a follow-up commit", async () => {
-		const { store } = await openStore();
+	test("owners over the store's cap of 200 move in a follow-up commit, and each owner's note is written once", async () => {
+		const { store, vault } = await openStore();
 		const owners = Array.from({ length: 201 }, (_, at) =>
 			noun(`${nameOf(at)}kraftwerk`),
 		);
@@ -469,8 +471,22 @@ describe("the fan-out is capped", () => {
 				compound(owner, nameOf(at), "Kraftwerk"),
 			),
 		);
+		const paths = new Set(owners.map((owner) => readingPath(sense(owner))));
+		vault.batches.length = 0;
 		const result = await commit(store, lemmaWithReading(kraftwerk));
 		expect(result).toMatchObject({ status: "committed" });
+		const written = vault.batches.flatMap((batch) =>
+			batch.flatMap(({ payload }) => {
+				const { splitPath } = payload as {
+					splitPath: { pathParts: string[]; basename: string };
+				};
+				const path = `${[...splitPath.pathParts, splitPath.basename].join("/")}.md`;
+				return paths.has(path) ? [path] : [];
+			}),
+		);
+		// No owner is re-rendered half-moved in the commit and again after it.
+		expect(written).toHaveLength(owners.length);
+		expect(new Set(written).size).toBe(owners.length);
 		// The follow-up moved the rest after the commit.
 		expect(await run(store.revision)).not.toBe(
 			result.status === "committed" ? result.nextRevision : "",
@@ -481,4 +497,91 @@ describe("the fan-out is capped", () => {
 				kraftwerk,
 			]);
 	}, 60_000);
+});
+
+/** The note's morphemes line, if it has one. */
+const morphemesLine = (content: string | undefined) =>
+	noteMetadataHelper
+		.body(content ?? "")
+		.split("\n")
+		.find((line) => line.includes(MORPHEMES_LINE_CLASS))
+		?.replace(`<span class="${MORPHEMES_LINE_CLASS}"></span>`, "");
+
+const link = (lemma: Lemma, alias: string) =>
+	`[[${lemmaPath(lemma).replace(/\.md$/u, "")}|${alias}]]`;
+
+describe("a moved link re-renders the lines that walk its owner (#268)", () => {
+	test("storing Kraftwerk re-points Kohlekraftwerk and re-renders Kohlekraftwerksbetreiber in the same commit, and deleting it reverts both", async () => {
+		const kohle = noun("Kohle", "Fem");
+		const kraft = noun("Kraft", "Fem");
+		const werk = noun("Werk");
+		const betreiber = noun("Kohlekraftwerksbetreiber", "Masc");
+		const betreiberReading = sense(betreiber, "🧑‍💼");
+		const kohleReading = sense(kohlekraftwerk);
+		const { store, vault } = await openStore();
+		await seed(store, [
+			...[kohle, kraft, werk].flatMap((lemma) =>
+				lemmaWithReading(lemma, "🧱"),
+			),
+			...withKnowledge(kohleReading, {
+				breakdown: {
+					constituents: [
+						{ letters: "Kohle", target: shadow("Kohle") },
+						{ letters: "kraftwerk", target: shadow("Kraftwerk") },
+					],
+				},
+			}),
+		]);
+		await seed(
+			store,
+			withKnowledge(betreiberReading, {
+				breakdown: {
+					constituents: [
+						{
+							letters: "Kohlekraftwerk",
+							target: shadow("Kohlekraftwerk"),
+						},
+						{ letters: "s" },
+						{ letters: "betreiber", target: shadow("Betreiber") },
+					],
+				},
+			}),
+		);
+		const betreiberNote = readingPath(betreiberReading);
+		const pending = morphemesLine(vault.content(betreiberNote));
+		expect(pending).toBeDefined();
+		expect(pending).not.toContain(link(kraft, "kraft"));
+
+		const result = await commit(store, [
+			...withKnowledge(sense(kraftwerk), {
+				breakdown: {
+					constituents: [
+						{ letters: "Kraft", target: shadow("Kraft") },
+						{ letters: "werk", target: shadow("Werk") },
+					],
+				},
+			}),
+		]);
+		expect(result).toMatchObject({ status: "committed" });
+		// One commit: no follow-up moved or re-rendered anything after it.
+		expect(await run(store.revision)).toBe(
+			result.status === "committed" ? result.nextRevision : "",
+		);
+		expect(await constituentTargets(store, kohleReading)).toEqual([
+			kohle,
+			kraftwerk,
+		]);
+		expect(morphemesLine(vault.content(betreiberNote))).toStartWith(
+			`${link(kohle, "Kohle")}|${link(kraft, "kraft")}|${link(werk, "werk")}|s|`,
+		);
+		await expectIndexMatchesFiles(store, vault);
+
+		await deleteLemma(store, kraftwerk);
+		expect(await constituentTargets(store, kohleReading)).toEqual([
+			kohle,
+			unitShadowOf(kraftwerk),
+		]);
+		expect(morphemesLine(vault.content(betreiberNote))).toBe(pending);
+		await expectIndexMatchesFiles(store, vault);
+	});
 });
