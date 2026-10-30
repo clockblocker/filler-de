@@ -1,5 +1,6 @@
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import { translationText } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { Result } from "effect";
 import { type RetargetedRefLine, retargetedRefLines } from "./attestation-ref";
@@ -27,8 +28,6 @@ import {
 	articleOf,
 	claimLinks,
 	emojiOf,
-	morphemeLinks,
-	participleSourceLine,
 	pronunciation,
 	relationLines,
 	type SectionKind,
@@ -54,9 +53,9 @@ import type { CodecOptions, LemmaRecords, ReadingNoteData } from "./types";
  * note's folder. Its metadata holds the Reading Entry, with its Attestation
  * Links, and the pending relations it is the source of. Its body is the
  * user's dictionary layout (#103, #104): the header, then Deine Kontexte,
- * Note, Semantische Beziehungen, Morpheme, Übersetzung, Definition, Valenz,
- * Partizip von, Art, Flexion (an embed of its Licence Group's table in the
- * Lemma note) and Tags. Freeform stands in the Note section.
+ * Note, Semantische Beziehungen, Übersetzung, Definition, Valenz, Art,
+ * Flexion (an embed of its Licence Group's table in the Lemma note) and
+ * Tags. Freeform stands in the Note section.
  */
 
 /** The Reading note text that invites the user to write, while they have not. */
@@ -170,8 +169,6 @@ const KNOWLEDGE_BLOCKS = {
 	definition: "definition",
 	formula_role: "formulaRole",
 	locution_type: "locutionType",
-	morphology: "morphologicalTree",
-	participle_source: "participleSource",
 	relation: "semanticRelations",
 	saying_type: "sayingType",
 	transcription: "transcription",
@@ -179,10 +176,17 @@ const KNOWLEDGE_BLOCKS = {
 	valency: "valency",
 } as const satisfies Record<string, keyof Dumrel.ReadingKnowledge>;
 
+/**
+ * Aspects of the Breakdown model (texteater ADR 0050, ADR 0051) no Block
+ * shows yet: the plugin asks for neither, and the note keeps a stored one
+ * in its metadata. The Breakdown rendering adds their Blocks.
+ */
+type UnshownAspects = "breakdown" | "source";
+
 /** Fails to compile when dumrel adds a Knowledge aspect no Block shows. */
 type MissingAspects = Exclude<
 	keyof Dumrel.ReadingKnowledge,
-	(typeof KNOWLEDGE_BLOCKS)[keyof typeof KNOWLEDGE_BLOCKS]
+	(typeof KNOWLEDGE_BLOCKS)[keyof typeof KNOWLEDGE_BLOCKS] | UnshownAspects
 >;
 const everyAspectShows: [MissingAspects] extends [never] ? true : never = true;
 void everyAspectShows;
@@ -339,18 +343,10 @@ export function serializeReadingNote<L extends Dumling.Language>(
 		],
 	]);
 
-	const tree = knowledge?.morphologicalTree as { root?: unknown } | undefined;
-	section("morpheme", [
-		[
-			"morphology",
-			tree === undefined
-				? []
-				: [morphemeLinks(tree.root, link).join("|")],
-		],
-	]);
-
 	const translated = new Set(
-		Object.values(knowledge?.translations ?? {}).flat() as string[],
+		Object.values(knowledge?.translations ?? {})
+			.flat()
+			.map(translationText),
 	);
 	const attested = entry.attestedTranslations.filter(
 		(word) => !translated.has(word),
@@ -373,14 +369,6 @@ export function serializeReadingNote<L extends Dumling.Language>(
 		],
 	]);
 	section("valenz", [["valency", valencyLines(knowledge?.valency, link)]]);
-	section("partizip", [
-		[
-			"participle_source",
-			knowledge?.participleSource === undefined
-				? []
-				: [participleSourceLine(knowledge.participleSource, link)],
-		],
-	]);
 	section("art", [
 		[
 			"locution_type",

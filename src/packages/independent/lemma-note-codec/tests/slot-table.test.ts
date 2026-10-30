@@ -149,10 +149,7 @@ describe("the German slot table", () => {
 		expect(order("Lexeme", "PRON")).toEqual(pronominal);
 		expect(order("Lexeme", "DET")).toEqual(pronominal);
 		expect(order("Lexeme", "NOUN")).toEqual(["gender"]);
-		expect(order("Lexeme", "VERB")).toEqual([
-			"hasSepPrefix",
-			"lexicallyReflexive",
-		]);
+		expect(order("Lexeme", "VERB")).toEqual(["hasSepPrefix"]);
 		expect(order("Lexeme", "PROPN")).toEqual(["article", "gender"]);
 		expect(order("Foreign", "Foreign")).toEqual(["sourceLang"]);
 		expect(order("Morpheme", "Prefix")).toEqual(["hasSepPrefix"]);

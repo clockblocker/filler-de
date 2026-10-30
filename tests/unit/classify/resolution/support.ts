@@ -229,7 +229,11 @@ export function stubDumgen(stubs: {
 					return stubs.reading(input);
 				}),
 		},
-		segment: { inUnits: unused },
+		segment: {
+			inConstituents: unused,
+			inMorphemes: unused,
+			inUnits: unused,
+		},
 		translate: { sentence: unused },
 	};
 	return { calls, dumgen };
@@ -252,7 +256,14 @@ export const baseTextKnowledge: KnowledgeStub = (input) => {
 			aspect: "translations",
 			kind: "Contribute",
 			language: language as "en",
-			value: [`${input.reading.lemma.canonicalForm} (${language})`],
+			value: [
+				[
+					{
+						kind: "Text",
+						text: `${input.reading.lemma.canonicalForm} (${language})`,
+					},
+				],
+			],
 		});
 	return { changes };
 };

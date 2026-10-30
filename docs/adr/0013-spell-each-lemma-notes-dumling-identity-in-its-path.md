@@ -32,14 +32,14 @@ Worter/de/Lexeme/ADP/mit.md
 - German slot orders:
   - PRON and DET: pronType, person, gender, number, case, then poss and polite.
   - NOUN: gender.
-  - VERB: hasSepPrefix, lexicallyReflexive.
+  - VERB: hasSepPrefix. Its second slot, lexicallyReflexive, went when dumling deleted the feature (texteater ADR 0052): reflexivity is the Reading's, never Lemma identity.
   - ADJ and ADV: comparable.
   - PROPN: article, gender.
   - INTJ and PART: their type.
   - Foreign: sourceLang.
   - Morpheme PREFIX: hasSepPrefix.
 - A null slot in the middle is written `_`, and trailing null slots are dropped. New features are always appended to a route's order.
-- Flag features, whose only value is `Yes` (`comparable`, `poss`), are written as the feature name when set. Every other value is written verbatim: `lexicallyReflexive` takes `Acc` or `Dat` in dumling, so a reflexive verb sits at `VERB/_/Acc/`. `hasSepPrefix` is written as its value, which is the prefix itself (`über`).
+- Flag features, whose only value is `Yes` (`comparable`, `poss`), are written as the feature name when set. Every other value is written verbatim, such as a pronoun's `Dat`. `hasSepPrefix` is written as its value, which is the prefix itself (`über`).
 - A feature value set, such as a noun's `{mixed: [Masc, Neut]}`, is written with `+` (`Masc+Neut`). A Syncretism (batteries ADR 0046) puts `~` in each slot named in its `syncretic` list.
 - `<Canonical Form>` keeps display casing. Identity folds case, so `LOL` and `lol` share one file and the first writer's casing wins.
 - The basename percent-encodes `% * " \ / < > : | ? # ^ [ ] ~`, `%` first, so the encoding is reversible. It also encodes control characters, a leading `.`, which Obsidian hides and which could leave the folder as `.` or `..`, and leading or trailing whitespace, which file systems and sync trim. Every other Unicode character, `…` included, is kept. Encoding `~` keeps it unambiguous as the shortening mark below. Text slots such as `hasSepPrefix` use the same encoding.

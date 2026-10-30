@@ -38,7 +38,7 @@ import { seed } from "./support/store";
 type Pack = typeof inflectionPacks.de;
 const v1: Pack = inflectionPacks.de;
 
-/** The German pack at version 2, whose labels changed. */
+/** The German pack at its next version, whose labels changed. */
 const v2: Pack = {
 	...v1,
 	labels: {
@@ -46,10 +46,10 @@ const v2: Pack = {
 		axis: (bundle) => `${v1.labels.axis(bundle)}°`,
 		panel: (panelId) => `${v1.labels.panel(panelId)}°`,
 	},
-	version: "2",
+	version: String(Number(v1.version) + 1),
 };
 
-/** The German pack at version 1 with the NOUN Table Schema at version 2. */
+/** The German pack at its version, with the NOUN Table Schema bumped. */
 const nounSchemaBumped: Pack = {
 	...v1,
 	schemaFor: (lemma) => {
@@ -176,11 +176,11 @@ describe("recording versions", () => {
 	test("a Lemma note records its pack and Table Schema versions; Reading notes record none", async () => {
 		const vault = await seededVault(v1);
 		expect(recorded(vault.content(lemmaPath(bank)))).toEqual({
-			pack: "1",
+			pack: v1.version,
 			schema: { id: "de/Lexeme/NOUN", version: 1 },
 		});
 		expect(recorded(vault.content(lemmaPath(gehen)))).toEqual({
-			pack: "1",
+			pack: v1.version,
 			schema: { id: "de/Lexeme/VERB", version: 1 },
 		});
 		expect(vault.content(readingPath(bench))).not.toContain('"tables"');
@@ -209,7 +209,7 @@ describe("re-rendering stale tables", () => {
 			const content = vault.content(path);
 			expect(content).not.toBe(before.get(path));
 			expect(content).toContain("°");
-			expect(recorded(content)?.pack).toBe("2");
+			expect(recorded(content)?.pack).toBe(v2.version);
 			// Table Block IDs hash selection keys, never versions.
 			expect(blockIds(content)).toEqual(blockIds(before.get(path)));
 		}
@@ -252,7 +252,7 @@ describe("re-rendering stale tables", () => {
 			lemmaPath(bank),
 		]);
 		expect(recorded(vault.content(lemmaPath(bank)))).toEqual({
-			pack: "1",
+			pack: v1.version,
 			schema: { id: "de/Lexeme/NOUN", version: 2 },
 		});
 		// The labels did not change, so only the metadata did.
@@ -286,7 +286,7 @@ describe("re-rendering stale tables", () => {
 			/^t-[0-9a-f]{8}$/u,
 		);
 		expect(embedOf(vault.content(readingPath(gehenReading)))).toBe("t");
-		expect(recorded(vault.content(lemmaPath(bank)))?.pack).toBe("1");
+		expect(recorded(vault.content(lemmaPath(bank)))?.pack).toBe(v1.version);
 		await run(store.close);
 	});
 });
@@ -311,7 +311,7 @@ describe("user text and concurrent writers", () => {
 		const content = vault.content(path) ?? "";
 		expect(content).toContain("My own words.");
 		expect(content).toContain("🪑 my bench");
-		expect(recorded(content)?.pack).toBe("2");
+		expect(recorded(content)?.pack).toBe(v2.version);
 		// Each table Block ID stays once, on the fresh rendering.
 		expect(blockIds(content).sort()).toEqual(
 			[...new Set(blockIds(original))].sort(),
@@ -350,7 +350,7 @@ describe("user text and concurrent writers", () => {
 		const content = vault.content(path) ?? "";
 		expect(content).toContain("Typed meanwhile.");
 		expect(content).toContain("°");
-		expect(recorded(content)?.pack).toBe("2");
+		expect(recorded(content)?.pack).toBe(v2.version);
 		await expectIndexMatchesFiles(store, vault);
 		await run(store.close);
 	});
@@ -362,7 +362,7 @@ describe("user text and concurrent writers", () => {
 		const { refreshed, reports, store } = await openSettled(vault, v2);
 		expect(refreshed).toEqual({ lemmas: 1, notes: 1, remaining: 1 });
 		expect(reports).toEqual([refreshed]);
-		expect(recorded(vault.content(path))?.pack).toBe("1");
+		expect(recorded(vault.content(path))?.pack).toBe(v1.version);
 
 		await run(store.rescan);
 		expect(await run(store.refreshTables)).toEqual({
@@ -370,7 +370,7 @@ describe("user text and concurrent writers", () => {
 			notes: 1,
 			remaining: 0,
 		});
-		expect(recorded(vault.content(path))?.pack).toBe("2");
+		expect(recorded(vault.content(path))?.pack).toBe(v2.version);
 		await run(store.close);
 	});
 
@@ -381,7 +381,7 @@ describe("user text and concurrent writers", () => {
 		await seed(store, [createLemma(late)]);
 		// The commit landed while the re-render still had Lemmas to go.
 		expect(rerendered(vault, verbs)).toBeLessThan(verbs.length);
-		expect(recorded(vault.content(lemmaPath(late)))?.pack).toBe("2");
+		expect(recorded(vault.content(lemmaPath(late)))?.pack).toBe(v2.version);
 
 		expect(await run(store.refreshTables)).toMatchObject({
 			lemmas: verbs.length,
@@ -432,7 +432,8 @@ async function manyVerbs(count: number) {
 /** How many of these Lemmas' notes record the version 2 pack. */
 const rerendered = (vault: FakeVault, lemmas: readonly Dumling.Lemma<"de">[]) =>
 	lemmas.filter(
-		(lemma) => recorded(vault.content(lemmaPath(lemma)))?.pack === "2",
+		(lemma) =>
+			recorded(vault.content(lemmaPath(lemma)))?.pack === v2.version,
 	).length;
 
 function verbNamed(

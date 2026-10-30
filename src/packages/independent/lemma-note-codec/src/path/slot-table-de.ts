@@ -38,7 +38,10 @@ const comparable: readonly Slot[] = [flag("comparable")];
  * The positional Core Feature slots of every German route, from coarse to
  * fine (ADR 0013), keyed by Family and then Kind. A route with no Core
  * Features has no slots. New features are only ever appended to a route's
- * list, so existing notes keep their paths.
+ * list, so existing notes keep their paths. VERB's trailing
+ * `lexicallyReflexive` slot went with the feature (texteater ADR 0052): a
+ * verb whose value was null keeps its path, as an empty trailing slot is
+ * never written.
  *
  * `tests/slot-table.test.ts` checks every route and feature against
  * dumling's route schemas, so a new route or Core Feature fails the build
@@ -62,7 +65,7 @@ export const GERMAN_SLOT_TABLE = {
 		PUNCT: [],
 		SCONJ: [],
 		SYM: [],
-		VERB: [text("hasSepPrefix"), value("lexicallyReflexive")],
+		VERB: [text("hasSepPrefix")],
 	},
 	Locution: {
 		ADJ: comparable,
@@ -80,6 +83,7 @@ export const GERMAN_SLOT_TABLE = {
 	Morpheme: {
 		Circumfix: [],
 		Duplifix: [],
+		Ending: [],
 		Infix: [],
 		Interfix: [],
 		Prefix: [text("hasSepPrefix")],

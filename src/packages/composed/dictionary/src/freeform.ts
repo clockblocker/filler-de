@@ -96,7 +96,7 @@ export function placedNoteProblem(input: {
 
 const PROBE_LEMMA: Dumling.Lemma<"de", "Lexeme", "VERB"> = {
 	canonicalForm: "prüfen",
-	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: null },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",

@@ -36,7 +36,7 @@ import {
 	UnitResolver,
 	UnitResolverError,
 } from "../unit-resolver";
-import { commitOccurrence } from "./commit-occurrence";
+import { commitOccurrence, optionallyReflexiveOf } from "./commit-occurrence";
 import type { KnowledgeQueue } from "./knowledge-queue";
 import type { KnowledgeJob, ResolutionStore } from "./knowledge-types";
 import type { ScrollActivity } from "./scroll-activity";
@@ -153,9 +153,14 @@ type JudgedUnit = {
 	readonly attestation: Dumling.Attestation<"de">;
 	readonly sentence: PlannedSentence;
 	readonly decided: Decided;
-	/** Judges the Reading again over `candidates`, keeping a description already `written`. */
+	/**
+	 * Judges the Reading again over `candidates`, those of them with an
+	 * Optional Reflexive Slot named, keeping a description already
+	 * `written`.
+	 */
 	readonly judge: (
 		candidates: readonly string[],
+		optionallyReflexive: readonly string[],
 		written?: string,
 	) => Effect.Effect<Decided, UnitPending, Jev | Luna>;
 };
@@ -203,11 +208,18 @@ const judgeUnit = Effect.fnUntraced(function* (
 	const { attestation } = grammar;
 	const lemma = attestation.surface.lemma;
 
-	const judge = (candidates: readonly string[], written?: string) =>
+	const judge = (
+		candidates: readonly string[],
+		optionallyReflexive: readonly string[],
+		written?: string,
+	) =>
 		dumgen.resolve
 			.reading({
 				attestation,
 				candidates,
+				...(optionallyReflexive.length === 0
+					? {}
+					: { optionallyReflexive }),
 				sentence: sentence.segmented,
 				unit: planned.unit,
 				...(written === undefined
@@ -244,11 +256,13 @@ const judgeUnit = Effect.fnUntraced(function* (
 			reading: yield* readingOf(lemma, undefined),
 		};
 	} else {
+		const readings = stored?.readings ?? [];
 		decided = yield* judge(
-			(stored?.readings ?? []).flatMap(({ reading }) => {
+			readings.flatMap(({ reading }) => {
 				const description = emojiDescriptionOf(reading);
 				return description === undefined ? [] : [description];
 			}),
+			optionallyReflexiveOf(readings),
 		);
 	}
 	return { attestation, decided, judge, sentence };
@@ -307,6 +321,7 @@ const commitUnit = Effect.fnUntraced(function* (
 			});
 		decided = yield* judge(
 			committed.candidates,
+			committed.optionallyReflexive,
 			emojiDescriptionOf(decided.reading),
 		);
 	}

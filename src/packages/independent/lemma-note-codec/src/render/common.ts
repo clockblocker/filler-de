@@ -1,5 +1,5 @@
 import type * as Dumling from "dumling/types";
-import type { projectSemanticRelations } from "dumrel";
+import { type projectSemanticRelations, translationText } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { Predicate } from "effect";
 import type { LinkRenderer } from "../links";
@@ -17,11 +17,9 @@ export type SectionKind =
 	| "kontexte"
 	| "note"
 	| "synonyme"
-	| "morpheme"
 	| "translations"
 	| "definition"
 	| "valenz"
-	| "partizip"
 	| "art"
 	| "flexion"
 	| "tags"
@@ -33,9 +31,7 @@ export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 	definition: "Definition",
 	flexion: "Flexion",
 	kontexte: "Deine Kontexte",
-	morpheme: "Morpheme",
 	note: "Note",
-	partizip: "Partizip von",
 	surfaces: "Begegnete Formen",
 	synonyme: "Semantische Beziehungen",
 	tags: "Tags",
@@ -52,9 +48,7 @@ const SECTION_CLASSES: Readonly<Record<SectionKind, string>> = {
 	definition: "definition",
 	flexion: "flexion",
 	kontexte: "kontexte",
-	morpheme: "morpheme",
 	note: "kontexte",
-	partizip: "partizip",
 	surfaces: "surfaces",
 	synonyme: "synonyme",
 	tags: "tags",
@@ -196,42 +190,22 @@ export function claimLinks<L extends Dumling.Language>(
 		]);
 }
 
-/** A morphological tree's leaves, in order, as the legacy notes listed them. */
-export function morphemeLinks<L extends Dumling.Language>(
-	node: unknown,
+/**
+ * A lexical reflexive Slot (texteater ADR 0052): `sich`, its case named
+ * only when Dat, as Duden writes `sich (Dativ) etwas vorstellen` and as
+ * tf-demo's Valency Line does, and inside a fixed phrase after the
+ * preposition it follows: `[[außer]] sich (Dat)`.
+ */
+function reflexive<L extends Dumling.Language>(
+	value: unknown,
 	link: LinkRenderer<L>,
-): string[] {
-	switch (field(node, "nodeKind")) {
-		case "morphemeReading":
-			return [
-				link({
-					names: {
-						kind: "Reading",
-						reading: field(node, "reading") as Dumling.Reading<L>,
-					},
-					role: "morpheme",
-				}),
-			];
-		case "unitShadow":
-			return [
-				link({
-					names: {
-						kind: "Shadow",
-						shadow: field(
-							node,
-							"unitShadow",
-						) as Dumrel.UnitShadow & {
-							language: L;
-						},
-					},
-					role: "morpheme",
-				}),
-			];
-		default:
-			return list(field(node, "children")).flatMap((child) =>
-				morphemeLinks(child, link),
-			);
-	}
+): string {
+	const governedCase = field(value, "governedCase");
+	const sich = governedCase === "Dat" ? "sich (Dat)" : "sich";
+	const preposition = field(value, "preposition");
+	return preposition === undefined
+		? sich
+		: `${link({ names: { kind: "Lemma", lemma: preposition as Dumling.Lemma<L> }, role: "valency" })} ${sich}`;
 }
 
 function complement<L extends Dumling.Language>(
@@ -249,6 +223,8 @@ function complement<L extends Dumling.Language>(
 			return `${text(field(value, "of"))} ${text(field(value, "marker"))}`;
 		case "Clause":
 			return text(field(value, "form"));
+		case "Reflexive":
+			return reflexive(value, link);
 		default:
 			return text(value);
 	}
@@ -269,26 +245,24 @@ export function valencyLines<L extends Dumling.Language>(
 	);
 }
 
-/** A participle's source verb and the meaning it keeps. */
-export function participleSourceLine<L extends Dumling.Language>(
-	source: unknown,
-	link: LinkRenderer<L>,
-): string {
-	return `${link({ names: { kind: "Lemma", lemma: field(source, "verb") as Dumling.Lemma<L> }, role: "participleSource" })} (${text(field(source, "meaning"))})`;
-}
-
 /** A Saying's type and attribution. */
 export function sayingTypeLine(value: unknown): string {
 	const attribution = field(value, "attribution");
 	return `${text(field(value, "type"))}${attribution === undefined ? "" : ` (${text(attribution)})`}`;
 }
 
-/** Translations: their words, prefixed by the language only when there are several. */
-export function translationLines(translations: unknown): string[] {
-	if (!Predicate.isObject(translations)) return [];
+/**
+ * Translations: each one's text, its pieces joined (texteater ADR 0055),
+ * prefixed by the language only when there are several.
+ */
+export function translationLines(
+	translations: Partial<
+		Record<Dumrel.TranslationLanguage, readonly Dumrel.Translation[]>
+	> = {},
+): string[] {
 	const languages = Object.entries(translations);
-	return languages.map(([language, words]) => {
-		const joined = list(words).map(text).join(", ");
+	return languages.map(([language, equivalents]) => {
+		const joined = (equivalents ?? []).map(translationText).join(", ");
 		return languages.length === 1 ? joined : `${language}: ${joined}`;
 	});
 }

@@ -359,7 +359,7 @@ describe("knowledgeRequestFor", () => {
 			origin: "TopUp",
 			reading,
 			stored: {
-				knowledge: { definition: "a lake", translations: { en: ["lake"] } },
+				knowledge: { definition: "a lake", translations: { en: [[{ kind: "Text", text: "lake" }]] } },
 				pendingRelationKinds: [],
 			},
 			translationLanguages: ["en", "ru"],

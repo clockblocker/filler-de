@@ -20,28 +20,51 @@ async function makeStorage() {
 const removeLemmaNote =
 	(store: DumdictVaultStore, vault: FakeVault) =>
 	(lemma: Dumling.Lemma<"de">) =>
-		Effect.gen(function* () {
-			const note = yield* store.lemmaNote(lemma);
-			if (!note) return;
-			const readings = yield* Effect.forEach(
-				note.readings,
-				({ reading }) => store.readingLocation(reading),
-			);
-			yield* Effect.promise(() =>
-				vault.userDeleteAll([
-					note.path,
-					...readings.flatMap((location) =>
-						location ? [location.path] : [],
-					),
-				]),
-			);
-		});
+		run(
+			Effect.gen(function* () {
+				const note = yield* store.lemmaNote(lemma);
+				if (!note) return;
+				const readings = yield* Effect.forEach(
+					note.readings,
+					({ reading }) => store.readingLocation(reading),
+				);
+				yield* Effect.promise(() =>
+					vault.userDeleteAll([
+						note.path,
+						...readings.flatMap((location) =>
+							location ? [location.path] : [],
+						),
+					]),
+				);
+			}),
+		);
+
+/**
+ * The store as the suite drives it: each of its Effects run as a Promise,
+ * which rejects when the Effect fails.
+ */
+const conformanceStorage = (
+	store: DumdictVaultStore,
+	vault: FakeVault,
+): ConformanceStorage => ({
+	commitChanges: (request) => run(store.commitChanges(request)),
+	loadCleanupRelationsContext: (request) =>
+		run(store.loadCleanupRelationsContext(request)),
+	loadOccurrenceSlice: (request) => run(store.loadOccurrenceSlice(request)),
+	loadReadingEntryContext: (request) =>
+		run(store.loadReadingEntryContext(request)),
+	loadReevaluateShadowsContext: (request) =>
+		run(store.loadReevaluateShadowsContext(request)),
+	loadRekeySurfacesSlice: (request) =>
+		run(store.loadRekeySurfacesSlice(request)),
+	removeLemma: removeLemmaNote(store, vault),
+});
 
 describeStorageConformance(
 	"DumdictVaultStore over a fake VAM",
 	async (): Promise<ConformanceStorage> => {
 		const { store, vault } = await makeStorage();
-		return { ...store, removeLemma: removeLemmaNote(store, vault) };
+		return conformanceStorage(store, vault);
 	},
 	{},
 );
@@ -56,18 +79,12 @@ describeStorageConformance(
 	async (): Promise<ConformanceStorage> => {
 		const { store, vault } = await makeStorage();
 		return {
-			...store,
-			commitChanges: (request) =>
-				store
-					.commitChanges(request)
-					.pipe(
-						Effect.tap(() =>
-							Effect.promise(() =>
-								expectIndexMatchesFiles(store, vault),
-							),
-						),
-					),
-			removeLemma: removeLemmaNote(store, vault),
+			...conformanceStorage(store, vault),
+			commitChanges: async (request) => {
+				const result = await run(store.commitChanges(request));
+				await expectIndexMatchesFiles(store, vault);
+				return result;
+			},
 		};
 	},
 	{},

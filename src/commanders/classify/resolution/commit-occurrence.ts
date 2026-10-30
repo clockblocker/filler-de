@@ -38,6 +38,7 @@ import {
 } from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import type * as Dumrel from "dumrel/types";
 import { Effect, Result } from "effect";
 import {
 	DictionaryCommitFailed,
@@ -89,6 +90,8 @@ export type OccurrenceCommitted =
 			/** The New was refused; `candidates` are the Lemma's stored Emoji Descriptions now. */
 			readonly _tag: "Stale";
 			readonly candidates: readonly string[];
+			/** The candidates with an Optional Reflexive Slot. */
+			readonly optionallyReflexive: readonly string[];
 	  };
 
 type Planned = Result.Result<
@@ -132,6 +135,28 @@ const emojiDescriptionsOf = (
 	);
 
 /**
+ * The Emoji Descriptions of the stored Readings whose Valency Frame has an
+ * Optional Reflexive Slot, as `(sich) ausruhen` has: `resolve.reading`
+ * offers them to a reflexive click beside the 🪞 Readings (texteater ADR
+ * 0052).
+ */
+export const optionallyReflexiveOf = (
+	readings: readonly {
+		reading: Dumling.Reading<"de">;
+		knowledge?: { readonly valency?: Dumrel.ValencyFrame };
+	}[],
+) =>
+	emojiDescriptionsOf(
+		readings.filter(({ knowledge }) =>
+			(knowledge?.valency ?? []).some(
+				(slot) =>
+					slot.status === "Optional" &&
+					slot.complements.some(({ kind }) => kind === "Reflexive"),
+			),
+		),
+	);
+
+/**
  * The occurrence's Attestation Link, when its block can carry an ID: its
  * ref as the dictionary already holds it, if it holds it naming the
  * Scroll another way.
@@ -158,9 +183,7 @@ function linkOf(
  * behind: a Reading with no link, a Surface no link names, a Lemma with no
  * Reading, with the claims on them. Once the plan has landed, the store
  * re-evaluates the Shadows of the Lemmas it removed, as a commit of its own
- * from a slice loaded then (texteater#1257). A plan worked around a stored
- * claim whose target is gone (`danglingRelationClaim`) is logged with its
- * commit.
+ * from a slice loaded then (texteater#1257).
  */
 export function planRemoval(
 	view: DictionaryView,
@@ -183,11 +206,7 @@ export function planRemoval(
 		);
 	if (outcome.plan.changes.length === 0)
 		return Result.succeed(Transaction.stop("Removed"));
-	return Result.succeed(
-		Transaction.commit(outcome.plan, "Removed", {
-			...(outcome.issues === undefined ? {} : { issues: outcome.issues }),
-		}),
-	);
+	return Result.succeed(Transaction.commit(outcome.plan, "Removed"));
 }
 
 /**
@@ -212,11 +231,7 @@ function elsewhere(
 		return Result.succeed(Transaction.stop(unchanged));
 	return Result.map(planRemoval(view, ref), (removal) =>
 		removal._tag === "Commit"
-			? Transaction.commitAndReplan(removal.plan, MOVED, {
-					...(removal.issues === undefined
-						? {}
-						: { issues: removal.issues }),
-				})
+			? Transaction.commitAndReplan(removal.plan, MOVED)
 			: Transaction.replan(
 					removal._tag === "Replan" ? removal.reason : MOVED,
 				),
@@ -391,6 +406,7 @@ function planOccurrence(
 				Transaction.stop<OccurrenceCommitted>({
 					_tag: "Stale",
 					candidates: emojiDescriptionsOf(readings),
+					optionallyReflexive: optionallyReflexiveOf(readings),
 				}),
 			);
 	}

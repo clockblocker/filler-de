@@ -15,6 +15,7 @@ import {
 	ClassifySegmenter,
 	classifySelection,
 } from "../../../../src/commanders/classify/classify-selection";
+import { optionallyReflexiveOf } from "../../../../src/commanders/classify/resolution/commit-occurrence";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import {
@@ -50,7 +51,7 @@ const see = unit({
 
 const anfangen = unit({
 	canonicalForm: "anfangen",
-	coreFeatures: { hasSepPrefix: "an", lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: "an" },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -829,3 +830,35 @@ async function seedReading(store: DumdictVaultStore, emojiDescription: string) {
 	);
 	if (result.status !== "committed") throw new Error("seed did not commit");
 }
+
+describe("optionallyReflexiveOf", () => {
+	const ausruhen = {
+		canonicalForm: "ausruhen",
+		coreFeatures: { hasSepPrefix: "aus" },
+		family: "Lexeme",
+		kind: "VERB",
+		language: "de",
+		unitKind: "Lemma",
+	} as Dumling.Lemma<"de">;
+	const readingOf = (emojiDescription: string) =>
+		({ emojiDescription, lemma: ausruhen, unitKind: "Reading" }) as Dumling.Reading<"de">;
+	const reflexive = (status: "Optional" | "Required") => ({
+		valency: [
+			{
+				complements: [{ governedCase: "Acc" as const, kind: "Reflexive" as const }],
+				status,
+			},
+		],
+	});
+
+	it("names the stored Readings whose frame has an Optional Reflexive Slot (texteater ADR 0052)", () => {
+		expect(
+			optionallyReflexiveOf([
+				{ knowledge: reflexive("Optional"), reading: readingOf("😌") },
+				{ knowledge: reflexive("Required"), reading: readingOf("🪞🛌") },
+				{ reading: readingOf("🛋️") },
+			]),
+		).toEqual(["😌"]);
+	});
+});
+

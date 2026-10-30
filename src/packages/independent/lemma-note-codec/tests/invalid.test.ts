@@ -136,6 +136,52 @@ describe("notes that hold no valid records come back as typed issues", () => {
 		});
 	});
 
+	it("a note written before the batteries moved reflexivity to the frame and translations to pieces", () => {
+		// filler-de #65 resets such notes; until then each reads as a typed
+		// issue and the note stays as it is.
+		const reflexive: Dumling.Lemma<"de"> = {
+			canonicalForm: "schämen",
+			coreFeatures: { hasSepPrefix: null, lexicallyReflexive: "Acc" },
+			family: "Lexeme",
+			kind: "VERB",
+			language: "de",
+			unitKind: "Lemma",
+		} as unknown as Dumling.Lemma<"de">;
+		expect(
+			issueTags(parseLemma({ ...lemma.metadata, lemma: reflexive }).data),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					knowledge: { translations: { en: ["mother"] } },
+				}).data,
+			),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					knowledge: {
+						morphologicalTree: {
+							root: { children: [], nodeKind: "structure" },
+						},
+					},
+				}).data,
+			),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					attestationLinks: [
+						{ ref: "![[Scroll#^1|^]]", surfaceId: null },
+					],
+				}).data,
+			),
+		).toEqual(["InvalidMetadata"]);
+	});
+
 	it("never reads the visible lines: a note whose body lost everything keeps its data", () => {
 		const parsed = parseReading(reading.metadata, "");
 		expect(parsed.data.ok).toBe(true);

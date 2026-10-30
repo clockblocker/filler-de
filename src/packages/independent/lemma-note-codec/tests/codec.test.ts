@@ -103,19 +103,18 @@ describe("round trips for every German Family", () => {
 		});
 	}
 
-	it("keeps nested Dumling and dumrel values exactly: a tree, a Valency Frame, both target modes", () => {
+	it("keeps nested Dumling and dumrel values exactly: a Valency Frame, both target modes", () => {
 		const [entry] = verbData.readingEntries;
 		if (!entry) throw new Error("fixture");
 		const parsed = parseReading(
 			Result.getOrThrow(serializeReadingNote(verbData, entry.reading)),
 		);
-		// As dumdict normalizes it: `⬆️` loses its variation selector.
 		expect(valid(parsed.data).readingEntry.knowledge).toEqual(
 			readingNoteDataOf(verbData, entry.reading).readingEntry.knowledge,
 		);
 		expect(
 			JSON.stringify(valid(parsed.data).readingEntry.knowledge),
-		).toContain('"nodeKind":"structure"');
+		).toContain('"kind":"Preposition"');
 		const ihm = familyFixtures.syncretism;
 		const [ihmEntry] = ihm.readingEntries;
 		if (!ihmEntry) throw new Error("fixture");
@@ -235,11 +234,8 @@ describe("links render the resolution the caller holds", () => {
 		);
 	});
 
-	it("by default: an exact morphemeReading at its Reading note, a morpheme Shadow and a preposition at Crossroads", () => {
+	it("by default: a preposition at its Crossroad", () => {
 		const body = Result.getOrThrow(renderReadingNote(verbData, aufstehen));
-		expect(body).toContain(
-			"[[Worter/de/Morpheme/Prefix/auf/a/auf/auf/⬆ auf|auf]]|[[Worter/s/ste/stehe/stehen|stehen]]",
-		);
 		expect(body).toContain("[[Worter/f/für/für/für|für]] + Acc");
 	});
 
@@ -371,5 +367,107 @@ describe("pending relations", () => {
 		expect(
 			Result.getOrThrow(serializeReadingNote(records, parent)).body,
 		).not.toContain("Schraubteil");
+	});
+});
+
+describe("a lexical reflexive in the Valency Frame (texteater ADR 0052)", () => {
+	const lemmaOf = (
+		canonicalForm: string,
+		hasSepPrefix: string | null = null,
+	): Dumling.Lemma<"de", "Lexeme", "VERB"> => ({
+		canonicalForm,
+		coreFeatures: { hasSepPrefix },
+		family: "Lexeme",
+		kind: "VERB",
+		language: "de",
+		unitKind: "Lemma",
+	});
+	const adp = (canonicalForm: string): Dumling.Lemma<"de"> => ({
+		canonicalForm,
+		coreFeatures: {},
+		family: "Lexeme",
+		kind: "ADP",
+		language: "de",
+		unitKind: "Lemma",
+	});
+	const valencyOf = (
+		lemma: Dumling.Lemma<"de">,
+		valency: NonNullable<
+			LemmaRecords<"de">["readingEntries"][number]["knowledge"]
+		>["valency"],
+	) => {
+		const reading = {
+			emojiDescription: "🪞🧠",
+			lemma,
+			unitKind: "Reading",
+		} as Dumling.Reading<"de">;
+		const records: LemmaRecords<"de"> = {
+			lemmaRecord: { lemma },
+			ownedSurfaceEntries: [],
+			pendingRelations: [],
+			readingEntries: [
+				{
+					attestationLinks: [],
+					attestedTranslations: [],
+					knowledge: { valency },
+					notes: "",
+					reading,
+				},
+			],
+		};
+		const body = Result.getOrThrow(renderReadingNote(records, reading));
+		return body.split("\n").filter((line) => /^\d+\. /u.test(line));
+	};
+
+	it("shows sich, naming its case only when Dat, with an Optional Slot's status", () => {
+		expect(
+			valencyOf(lemmaOf("erinnern"), [
+				{
+					complements: [{ governedCase: "Acc", kind: "Reflexive" }],
+					status: "Required",
+				},
+				{
+					complements: [
+						{
+							governedCase: "Acc",
+							kind: "Preposition",
+							preposition: adp("an") as never,
+							referent: "Either",
+						},
+					],
+					status: "Required",
+				},
+			]),
+		).toEqual([
+			"1. Required: sich",
+			"2. Required: [[Worter/a/an/an/an|an]] + Acc",
+		]);
+		expect(
+			valencyOf(lemmaOf("vorstellen", "vor"), [
+				{
+					complements: [{ governedCase: "Dat", kind: "Reflexive" }],
+					status: "Optional",
+				},
+			]),
+		).toEqual(["1. Optional: sich (Dat)"]);
+	});
+
+	it("puts a fixed phrase's reflexive after the preposition it follows", () => {
+		expect(
+			valencyOf(lemmaOf("sein"), [
+				{
+					complements: [
+						{
+							governedCase: "Dat",
+							kind: "Reflexive",
+							preposition: adp("außer") as never,
+						},
+					],
+					status: "Required",
+				},
+			]),
+		).toEqual([
+			"1. Required: [[Worter/a/auß/außer/außer|außer]] sich (Dat)",
+		]);
 	});
 });

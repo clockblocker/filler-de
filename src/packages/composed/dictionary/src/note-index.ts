@@ -465,8 +465,7 @@ export class NoteIndex {
 				const links = this.refs.get(link.ref) ?? new Map();
 				links.set(readingKey, link);
 				this.refs.set(link.ref, links);
-				if (link.surfaceId !== null)
-					addTo(this.surfaceLinks, link.surfaceId, readingKey);
+				addTo(this.surfaceLinks, link.surfaceId, readingKey);
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				addTo(this.dependents, key, lemmaKey);
@@ -505,8 +504,7 @@ export class NoteIndex {
 				const links = this.refs.get(link.ref);
 				links?.delete(readingKey);
 				if (links?.size === 0) this.refs.delete(link.ref);
-				if (link.surfaceId !== null)
-					removeFrom(this.surfaceLinks, link.surfaceId, readingKey);
+				removeFrom(this.surfaceLinks, link.surfaceId, readingKey);
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				removeFrom(this.dependents, key, lemmaKey);

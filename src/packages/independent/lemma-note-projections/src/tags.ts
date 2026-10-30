@@ -9,9 +9,17 @@ import type * as Dumrel from "dumrel/types";
  * from the batteries' Inflection Packs (#120).
  */
 
-/** What a Reading's Tags read: its Lemma and what its own Licences give it. */
+/**
+ * What a Reading's Tags read: its Lemma, what its own Licences give it, and
+ * its Valency Frame's lexical reflexive.
+ */
 export type TagInput = {
 	readonly lemma: Dumling.Lemma;
+	/**
+	 * The Reading's Reflexive Slot (texteater ADR 0052): its case, or null
+	 * for a reflexive that names none, as English's does.
+	 */
+	readonly reflexive?: { readonly governedCase: "Acc" | "Dat" | null };
 	/** The conjugation class of each Präteritum variant the Reading licenses. */
 	readonly conjugationClasses?: readonly Dumrel.ConjugationClass[];
 	/** The plural marker the Reading licenses instead of a plural form. */
@@ -49,7 +57,6 @@ const VALUE_SLUGS: Readonly<Record<string, Readonly<Record<string, string>>>> =
 		},
 		comparable: { Yes: "comparable" },
 		gender: { Fem: "feminine", Masc: "masculine", Neut: "neuter" },
-		lexicallyReflexive: { Acc: "reflexive-acc", Dat: "reflexive-dat" },
 		number: { Plur: "plural", Sing: "singular" },
 		person: { 1: "person-1", 2: "person-2", 3: "person-3" },
 		polite: { Form: "polite" },
@@ -105,8 +112,9 @@ function featureParts(feature: string, value: unknown): string[] {
 
 /**
  * A Reading's Tags, without `#`: its route, one nested tag per Core Feature
- * value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and
- * the inflection class its Licences give (`verb/weak`, `noun/plural-only`).
+ * value (`noun/masculine`, `verb/separable`), its reflexive's case
+ * (`verb/reflexive-acc`), and the inflection class its Licences give
+ * (`verb/weak`, `noun/plural-only`).
  * The old `common` and `compound` tags have no dumling feature and are
  * gone. A Reading with nothing to add gets its route alone.
  */
@@ -116,6 +124,14 @@ export function deriveTags(input: TagInput): readonly string[] {
 	const parts = Object.keys(core)
 		.sort()
 		.flatMap((feature) => featureParts(feature, core[feature]));
+	if (input.reflexive !== undefined) {
+		const { governedCase } = input.reflexive;
+		parts.push(
+			governedCase === null
+				? "reflexive"
+				: `reflexive-${governedCase.toLowerCase()}`,
+		);
+	}
 	for (const value of input.conjugationClasses ?? [])
 		parts.push(CLASS_SLUGS[value] ?? slug(value));
 	if (input.pluralMarker === "NoPlural") parts.push("singular-only");
@@ -140,10 +156,30 @@ function licensedValues(
 }
 
 /**
- * The Lemma note codec's `tags` hook: one Reading's Tags, from its Lemma
- * and the Paradigm Variants its own Licences take. Each Präteritum variant
- * gives its conjugation class (`fuhr`: Strong), and a licensed `NoPlural`
- * or `PluralOnly` its plural class.
+ * The Reflexive Slot of a Valency Frame, Required or Optional, or none. A
+ * Reading with no frame yet has none.
+ */
+function reflexiveOf(
+	valency: Dumrel.ValencyFrame | undefined,
+): TagInput["reflexive"] {
+	for (const slot of valency ?? [])
+		for (const complement of slot.complements)
+			if (complement.kind === "Reflexive")
+				return {
+					governedCase:
+						"governedCase" in complement
+							? complement.governedCase
+							: null,
+				};
+	return undefined;
+}
+
+/**
+ * The Lemma note codec's `tags` hook: one Reading's Tags, from its Lemma,
+ * the Paradigm Variants its own Licences take and its Knowledge's Valency
+ * Frame. Each Präteritum variant gives its conjugation class (`fuhr`:
+ * Strong), a licensed `NoPlural` or `PluralOnly` its plural class, and a
+ * Reflexive Slot its case.
  */
 export function readingTags(context: {
 	readonly records: {
@@ -152,10 +188,14 @@ export function readingTags(context: {
 			readonly paradigm?: Dumrel.LemmaParadigm;
 		};
 	};
-	readonly entry: { readonly reading: Dumling.Reading };
+	readonly entry: {
+		readonly reading: Dumling.Reading;
+		readonly knowledge?: { readonly valency?: Dumrel.ValencyFrame };
+	};
 }): readonly string[] {
 	const { lemma, paradigm } = context.records.lemmaRecord;
 	const { reading } = context.entry;
+	const reflexive = reflexiveOf(context.entry.knowledge?.valency);
 	const marker = licensedValues(paradigm, "plural", reading).find(
 		(value) => value === "NoPlural" || value === "PluralOnly",
 	);
@@ -169,5 +209,6 @@ export function readingTags(context: {
 		],
 		lemma,
 		...(marker === undefined ? {} : { pluralMarker: marker }),
+		...(reflexive === undefined ? {} : { reflexive }),
 	});
 }
