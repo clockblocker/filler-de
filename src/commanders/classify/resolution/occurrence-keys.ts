@@ -49,7 +49,7 @@ export type CachedSentence = {
  */
 export const cachedSentence = Effect.fnUntraced(function* (
 	sentence: Pick<ScrollSentence, "text">,
-	cache: SegmentationCache["Service"],
+	cache: Pick<SegmentationCache["Service"], "get">,
 	segmenterVersion: string,
 ): Effect.fn.Return<Option.Option<CachedSentence>> {
 	const key = sentenceKey(segmenterVersion, "de", sentence.text);
@@ -114,7 +114,7 @@ function occurrenceIn(
 export const occurrencesAt = Effect.fnUntraced(function* (
 	content: string,
 	ranges: readonly SourceRange[],
-	cache: SegmentationCache["Service"],
+	cache: Pick<SegmentationCache["Service"], "get">,
 	segmenterVersion: string,
 ) {
 	const scroll = scrollSentences(content);
@@ -148,3 +148,47 @@ export const occurrencesAt = Effect.fnUntraced(function* (
 	}
 	return found;
 });
+
+/** How many cached segmentations `rememberedReads` keeps. */
+const REMEMBERED_SEGMENTATIONS = 2_000;
+
+/**
+ * The cache's reads, remembered: an entry is the segmentation of its key
+ * and never changes, so a hit is kept while it is among the latest
+ * `capacity` read; a miss is kept until `forgetMisses`, as Classify may
+ * fill it meanwhile.
+ */
+export function rememberedReads(
+	cache: SegmentationCache["Service"],
+	capacity = REMEMBERED_SEGMENTATIONS,
+): Pick<SegmentationCache["Service"], "get"> & {
+	readonly forgetMisses: () => void;
+} {
+	const hits = new Map<string, SegmentedSentence>();
+	const misses = new Set<string>();
+	return {
+		forgetMisses: () => misses.clear(),
+		get: (key) =>
+			Effect.suspend(() => {
+				const hit = hits.get(key);
+				if (hit) {
+					hits.delete(key);
+					hits.set(key, hit);
+					return Effect.succeedSome(hit);
+				}
+				if (misses.has(key)) return Effect.succeedNone;
+				return Effect.tap(cache.get(key), (read) =>
+					Effect.sync(() => {
+						if (Option.isNone(read)) {
+							misses.add(key);
+							return;
+						}
+						hits.set(key, read.value);
+						const oldest = hits.keys().next();
+						if (hits.size > capacity && !oldest.done)
+							hits.delete(oldest.value);
+					}),
+				);
+			}),
+	};
+}

@@ -4,11 +4,16 @@ import {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { Effect } from "effect";
-import { sectionLinkOffset } from "../../../src/packages/composed/obsidian-event-layer/src/events/click/wikilink-click/link-offset";
+import {
+	editorLinkOffset,
+	sectionLinkOffset,
+} from "../../../src/packages/composed/obsidian-event-layer/src/events/click/wikilink-click/link-offset";
+import { onMacOS } from "../../../src/packages/composed/obsidian-event-layer/src/internal/platform";
 import {
 	eventLayerOn,
 	FakeElement,
 	fakeApp,
+	fakeEditorView,
 	fakeEvent,
 } from "../../support/event-layer";
 
@@ -353,58 +358,6 @@ describe("action element clicks and selection changes", () => {
 describe("wikilink click offsets", () => {
 	const STORY = "Library/Story.md";
 
-	/** A Live Preview link in the editor's only rendered line, which CodeMirror places at `at`. */
-	function editorLink(at: number, inEditor = true) {
-		const link = new FakeElement("SPAN", ["cm-hmd-internal-link"]);
-		link.textContent = "Fahrer";
-		const line = new FakeElement("DIV", ["cm-line"]).append(link);
-		const content = new FakeElement("DIV", ["cm-content"]).append(line);
-		const cm = {
-			contentDOM: { contains: (node: unknown) => inEditor && content.contains(node as FakeElement) },
-			posAtDOM: (node: unknown) => (node === link ? at : -1),
-		};
-		return { cm, link };
-	}
-
-	it("tells where an editor link stands from CodeMirror's position, not its rendered line", () => {
-		// The rendered line is the editor's first, but CodeMirror only
-		// renders the lines in view: the link is far below.
-		const { cm, link } = editorLink(1234);
-		const events = eventLayerOn(
-			fakeApp(STORY, { cm, lines: ["Der [[Worter/f/fah/fahre/fahrer|Fahrer]] fährt. ^0"] }),
-		);
-		const seen: PayloadFor<"WikilinkClicked">[] = [];
-		events.layer.setHandler(UserEventKind.WikilinkClicked, {
-			doesApply: () => true,
-			handle: (payload) =>
-				Effect.sync(() => {
-					seen.push(payload);
-					return { outcome: "handled" } as const;
-				}),
-		});
-		click(events, link);
-		expect(seen.map(({ offset, target }) => ({ offset, target }))).toEqual([
-			{ offset: 1234, target: { alias: "Fahrer", basename: "Worter/f/fah/fahre/fahrer" } },
-		]);
-
-		// A link of another editor than the active note's has none.
-		const elsewhere = editorLink(1234, false);
-		const other = eventLayerOn(
-			fakeApp(STORY, { cm: elsewhere.cm, lines: ["[[Worter/f/fah/fahre/fahrer|Fahrer]]"] }),
-		);
-		const told: (number | undefined)[] = [];
-		other.layer.setHandler(UserEventKind.WikilinkClicked, {
-			doesApply: () => true,
-			handle: (payload) =>
-				Effect.sync(() => {
-					told.push(payload.offset);
-					return { outcome: "handled" } as const;
-				}),
-		});
-		click(other, elsewhere.link);
-		expect(told).toEqual([undefined]);
-	});
-
 	const TEXT = [
 		"# Story",
 		"",
@@ -490,6 +443,77 @@ describe("wikilink click offsets", () => {
 	});
 });
 
+describe("editorLinkOffset", () => {
+	const NOTE = "# Story\n\nDer [[Worter/f/fah/fahre/fahrer|Fahrer]] fährt. ^0\n";
+	const AT = NOTE.indexOf("Fahrer]]");
+
+	/** An editor of `doc` holding `link`, which CodeMirror places at `at`. */
+	function editorOf(doc: string, link: FakeElement, at: number) {
+		const dom = new FakeElement("DIV", ["cm-editor"]);
+		const view = {
+			posAtDOM: (node: unknown) => {
+				if (node !== link && !dom.contains(node as FakeElement))
+					throw new RangeError("outside the document");
+				return at;
+			},
+			state: fakeEditorView(doc).state,
+		};
+		return { dom, view };
+	}
+
+	const linkElement = () => {
+		const link = new FakeElement("SPAN", ["cm-hmd-internal-link"]);
+		link.textContent = "Fahrer";
+		return link;
+	};
+
+	const offsetOf = (link: FakeElement, views: Map<FakeElement, unknown>) =>
+		editorLinkOffset(
+			link as unknown as HTMLElement,
+			(dom) => (views.get(dom as unknown as FakeElement) ?? null) as never,
+		);
+
+	it("reads the offset from the view the link belongs to, in any pane, not from its rendered line", () => {
+		const link = linkElement();
+		const { dom, view } = editorOf(NOTE, link, AT);
+		dom.append(new FakeElement("DIV", ["cm-content"]).append(new FakeElement("DIV", ["cm-line"]).append(link)));
+		expect(offsetOf(link, new Map([[dom, view]]))).toBe(AT);
+	});
+
+	it("tells nothing where no link spans the position, or the element is in no editor", () => {
+		const link = linkElement();
+		const { dom, view } = editorOf(NOTE, link, NOTE.indexOf("fährt"));
+		dom.append(link);
+		expect(offsetOf(link, new Map([[dom, view]]))).toBeUndefined();
+		expect(offsetOf(linkElement(), new Map())).toBeUndefined();
+	});
+
+	it("moves a table cell's offset into the note, where its text stands there once", () => {
+		const table = "| Wer | Was |\n| --- | --- |\n| [[Worter/f/fah/fahre/fahrer\\|Fahrer]] | fährt |";
+		const note = `# Story\n\n${table}\n\nDanach.\n`;
+		const cellText = "[[Worter/f/fah/fahre/fahrer\\|Fahrer]]";
+		const link = linkElement();
+		const cell = editorOf(cellText, link, cellText.indexOf("Fahrer]]"));
+		cell.dom.append(link);
+		const outer = editorOf(note, cell.dom, note.indexOf("| Wer"));
+		outer.dom.append(new FakeElement("DIV", ["cm-table-widget"]).append(cell.dom));
+		const views = new Map<FakeElement, unknown>([
+			[cell.dom, cell.view],
+			[outer.dom, outer.view],
+		]);
+		expect(offsetOf(link, views)).toBe(note.indexOf("Fahrer]]"));
+
+		// The same cell twice in the table: which one is not known.
+		const twice = `# Story\n\n${table}\n${table.split("\n")[2]}\n`;
+		const ambiguous = editorOf(twice, cell.dom, twice.indexOf("| Wer"));
+		const again = new FakeElement("DIV", ["cm-editor"]);
+		again.append(new FakeElement("DIV").append(cell.dom));
+		expect(
+			offsetOf(link, new Map<FakeElement, unknown>([[cell.dom, cell.view], [again, ambiguous.view]])),
+		).toBeUndefined();
+	});
+});
+
 describe("sectionLinkOffset", () => {
 	it("counts the links Reading view renders as internal links, and only those", () => {
 		const text = [
@@ -497,26 +521,32 @@ describe("sectionLinkOffset", () => {
 			"[[InCode]]",
 			"```",
 			"A `x [[Inline]] x` %%[[Hidden]]%% <!-- [[Html]] --> ![[Embed]] ![alt](pic.png) [web](https://x.de)",
-			"[[First|1]] [md](Notes/Second.md) [[Third\\|3]]",
+			"[[First|1]] [md [with] brackets](Notes/Second%20One.md) [![img](pic.png)](Third) [[Fourth\\|4]]",
 		].join("\n");
-		const offsets = [0, 1, 2, 3].map((index) => sectionLinkOffset(text, 0, 4, index));
-		expect(offsets).toEqual([
+		const hrefs = ["First", "Notes/Second One.md", "Third", "Fourth"];
+		expect([0, 1, 2, 3, 4].map((index) => sectionLinkOffset(text, 0, 4, index, hrefs))).toEqual([
 			text.indexOf("[[First") + 2,
-			text.indexOf("[md]") + 1,
-			text.indexOf("[[Third") + 2,
+			text.indexOf("[md [with]") + 1,
+			text.indexOf("[![img]") + 1,
+			text.indexOf("[[Fourth") + 2,
 			undefined,
 		]);
-		expect(sectionLinkOffset(text, 0, 4, 0, "First")).toBe(offsets[0]);
-		expect(sectionLinkOffset(text, 0, 4, 2, "Third")).toBe(offsets[2]);
-		expect(sectionLinkOffset(text, 0, 4, 0, "Other")).toBeUndefined();
 		// Lines the note does not have.
-		expect(sectionLinkOffset(text, 3, 9, 0)).toBeUndefined();
+		expect(sectionLinkOffset(text, 3, 9, 0, hrefs)).toBeUndefined();
+	});
+
+	it("tells nothing unless the source's links and the rendered ones agree one for one", () => {
+		const text = "[[A]] [[B]] [[C]]";
+		expect(sectionLinkOffset(text, 0, 0, 1, ["A", "B", "C"])).toBe(text.indexOf("[[B") + 2);
+		expect(sectionLinkOffset(text, 0, 0, 1, ["A", "B"])).toBeUndefined();
+		expect(sectionLinkOffset(text, 0, 0, 1, ["A", "X", "C"])).toBeUndefined();
+		// A Markdown link this reading misparses renders a link it does not see.
+		expect(sectionLinkOffset("[a](b c d) [[B]]", 0, 0, 0, ["b c d", "B"])).toBeUndefined();
 	});
 
 	it("reads only the section's own lines", () => {
 		const text = "[[A]]\n\n[[B]] [[C]]\n\n[[D]]";
-		expect(sectionLinkOffset(text, 2, 2, 1, "C")).toBe(text.indexOf("[[C]]") + 2);
-		expect(sectionLinkOffset(text, 2, 2, 2)).toBeUndefined();
+		expect(sectionLinkOffset(text, 2, 2, 1, ["B", "C"])).toBe(text.indexOf("[[C]]") + 2);
 	});
 });
 
@@ -545,8 +575,12 @@ describe("observed wikilink clicks", () => {
 		return { clicked, events, observed };
 	}
 
-	it("tells a Cmd/Ctrl-click or a middle click to its handler, and leaves the navigation to Obsidian", () => {
-		for (const init of [{ metaKey: true }, { ctrlKey: true }, { button: 1 }, { button: 1, shiftKey: true }]) {
+	// The platform's modifier, and the key that is not one here.
+	const mod = onMacOS() ? { metaKey: true } : { ctrlKey: true };
+	const notMod = onMacOS() ? { ctrlKey: true } : { metaKey: true };
+
+	it("tells a click with the platform's modifier or a middle click to its handler, and leaves the navigation to Obsidian", () => {
+		for (const init of [mod, { button: 1 }, { button: 1, shiftKey: true }]) {
 			const { clicked, events, observed } = observing();
 			for (const event of click(events, readingLink(), init))
 				expect(event.defaultPrevented).toBe(false);
@@ -563,6 +597,13 @@ describe("observed wikilink clicks", () => {
 				{ fork: { traced: true }, kind: UserEventKind.WikilinkObserved },
 			]);
 		}
+	});
+
+	it("leaves the other key's click alone, such as Ctrl-click's context menu on macOS", () => {
+		const { clicked, events, observed } = observing();
+		for (const event of click(events, readingLink(), notMod))
+			expect(event.defaultPrevented).toBe(false);
+		expect([...clicked, ...observed]).toEqual([]);
 	});
 
 	it("observes no plain click, nor one with only Shift or Alt, nor a right click", () => {

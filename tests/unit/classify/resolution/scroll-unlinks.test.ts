@@ -239,22 +239,49 @@ describe("unlinkedOccurrences", () => {
 		expect(settle(content, recorded, [undefined]).unlinked).toEqual([]);
 	});
 
-	it("keeps an occurrence whose Sentence moved to another instance in its own block", () => {
-		// The second "Der See." was attested; the first was then deleted, so
-		// the one left is the first instance of its text.
-		const second = occurrenceKeyOf({ segments: [2], sentenceKey: "s" }, 1);
-		const recorded = occurrence("1", second);
-		const now: KeyedOccurrence = {
-			instance: 0,
-			occurrence: occurrenceKeyOf({ segments: [2], sentenceKey: "s" }, 0),
+	describe("a repeated Sentence", () => {
+		// "Der See." keyed at its first and second instance.
+		const at = (instance: number): KeyedOccurrence => ({
+			instance,
+			occurrence: occurrenceKeyOf({ segments: [2], sentenceKey: "s" }, instance),
 			segments: [2],
 			sentenceKey: "s",
-		};
-		expect(settle(`Der ${link}. ^1\n`, [recorded], [now]).unlinked).toEqual([]);
-		// Elsewhere, the same text at another instance is another occurrence.
-		expect(
-			settle(`Der See. ^1\n\nDer ${link}. ^2\n`, [recorded], [now]).unlinked,
-		).toEqual([recorded.ref]);
+		});
+		const [k0, k1] = [at(0).occurrence, at(1).occurrence];
+
+		it("keeps the copy left in its block when an earlier copy is deleted from another", () => {
+			// ^0 and ^1 each held a copy; ^0's is deleted, ^0 keeps other
+			// text, and ^1's copy becomes the first instance.
+			const [first, second] = [occurrence("0", k0), occurrence("1", k1)];
+			expect(
+				settle(`Anderes. ^0\n\nDer ${link}. ^1\n`, [first, second], [at(0)]),
+			).toEqual({ unkeyed: [], unlinked: [first.ref] });
+		});
+
+		it("tells two copies in one block apart by their own instances", () => {
+			const [first, second] = [occurrence("0", k0), occurrence("0", k1)];
+			expect(
+				settle(`Der ${link}. Der See. ^0\n`, [first, second], [at(0)]).unlinked,
+			).toEqual([second.ref]);
+		});
+
+		it("keeps an occurrence whose copy moved to a block without an ID, or one that records none, at another instance", () => {
+			// ^3 recorded the second copy; the first was deleted, and the
+			// paragraph was split, leaving the link outside ^3.
+			const recorded = occurrence("3", k1);
+			for (const content of [
+				`Rest. ^3\n\nDer ${link}.\n`,
+				`Rest. ^3\n\nDer ${link}. ^4\n`,
+			])
+				expect(settle(content, [recorded], [at(0)]).unlinked).toEqual([]);
+			// A block that records another occurrence of the Reading claims its
+			// link for that one.
+			const other = occurrence("4", "eeeeeeee");
+			expect(
+				settle(`Rest. ^3\n\nDer ${link}. ^4\n`, [recorded, other], [at(0)])
+					.unlinked,
+			).toEqual([recorded.ref, other.ref]);
+		});
 	});
 });
 

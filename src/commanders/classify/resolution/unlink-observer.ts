@@ -121,6 +121,7 @@ import {
 	cachedSentence,
 	type KeyedOccurrence,
 	occurrencesAt,
+	rememberedReads,
 } from "./occurrence-keys";
 import type { ScrollActivity } from "./scroll-activity";
 import {
@@ -205,7 +206,7 @@ export type UnlinkObserver = {
 const recordedSentencesHeld = Effect.fnUntraced(function* (
 	content: string,
 	recorded: readonly RecordedOccurrence[],
-	cache: SegmentationCache["Service"],
+	cache: Pick<SegmentationCache["Service"], "get">,
 	segmenterVersion: string,
 ) {
 	const wanted = new Map<string, string[]>();
@@ -443,6 +444,7 @@ const refsInto = Effect.fnUntraced(function* (
  */
 const checkScroll = Effect.fnUntraced(function* (
 	deps: UnlinkObserverDeps,
+	cache: Pick<SegmentationCache["Service"], "get">,
 	store: UnlinkStore,
 	scrollPath: string,
 	swept: ReadonlySet<string> | undefined,
@@ -495,7 +497,7 @@ const checkScroll = Effect.fnUntraced(function* (
 		const held = yield* recordedSentencesHeld(
 			content,
 			recorded,
-			deps.cache,
+			cache,
 			yield* deps.segmenterVersion,
 		);
 		recorded = recorded.filter(({ ref }) => held.has(ref));
@@ -515,7 +517,7 @@ const checkScroll = Effect.fnUntraced(function* (
 			yield* occurrencesAt(
 				content,
 				judged.unkeyed.map(({ shown }) => shown),
-				deps.cache,
+				cache,
 				yield* deps.segmenterVersion,
 			),
 		);
@@ -613,6 +615,9 @@ export const makeUnlinkObserver = Effect.fnUntraced(function* <E>(
 		vault: Number.NEGATIVE_INFINITY,
 	});
 	const tell = tellUser(deps.notify);
+	// Each Sentence's segmentation is read once across checks, not once
+	// per link of every check.
+	const reads = rememberedReads(deps.cache);
 
 	/** Counts `effect` as pending, here and on the plugin's idle tracker. */
 	const track = <A, E2, R>(effect: Effect.Effect<A, E2, R>) =>
@@ -687,9 +692,10 @@ export const makeUnlinkObserver = Effect.fnUntraced(function* <E>(
 			if (now - dictionary < sweepQuietMs)
 				return sweepQuietMs - (now - dictionary);
 			entry.again = false;
+			reads.forgetMisses();
 			const checked = yield* attempt(
 				Effect.flatMap(deps.store, (store) =>
-					checkScroll(deps, store, path, entry.sweep?.settled),
+					checkScroll(deps, reads, store, path, entry.sweep?.settled),
 				),
 			);
 			if (checked?._tag === "Busy") {

@@ -7,15 +7,17 @@
  * Obsidian's navigation; when it answers passthrough, the link is opened
  * as Obsidian would have, through the host's workspace, in the same fiber.
  *
- * A click with Cmd/Ctrl, or the middle button, is Obsidian's, for a new
- * tab and the like: it is `WikilinkObserved`, whose handler runs beside
+ * A click with Cmd (Ctrl off macOS), or the middle button, is Obsidian's,
+ * for a new tab and the like: it is `WikilinkObserved`, whose handler runs beside
  * Obsidian's navigation and can neither stop nor replace it. A click with
- * only Shift or Alt is no link click.
+ * only Shift or Alt, or with Ctrl on macOS, which opens the context menu,
+ * is no link click.
  */
 import { Effect } from "effect";
 import type { App } from "obsidian";
 import type { EventDispatch } from "../../../internal/dispatch";
 import { DomSelectors } from "../../../internal/dom-selectors";
+import { holdsMod } from "../../../internal/platform";
 import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { PayloadKind } from "../../../types/payload-base";
 import { getCurrentFilePath } from "../../get-current-file-path";
@@ -52,7 +54,7 @@ function linkClickOf<K extends WikilinkClickKind>(
 		DomSelectors.INTERNAL_LINK_CLASS,
 	)
 		? sections.linkOffset(linkElement, toSourcePath(splitPath) ?? "")
-		: editorLinkOffset(app, linkElement);
+		: editorLinkOffset(linkElement);
 
 	return WikilinkClickCodec.encode({
 		blockContent,
@@ -105,7 +107,7 @@ export function wikilinkClick(
 	};
 }
 
-/** Cmd/Ctrl-clicks and middle clicks on a link, which Obsidian navigates on its own. */
+/** Cmd-clicks (Ctrl off macOS) and middle clicks on a link, which Obsidian navigates on its own. */
 export function wikilinkObserve(
 	dispatch: EventDispatch,
 	sections: RenderedSections,
@@ -115,8 +117,7 @@ export function wikilinkObserve(
 		buttons: [0, MIDDLE_BUTTON],
 		kind: PayloadKind.WikilinkObserved,
 		onMouseDown: (target, evt) => {
-			if (evt.button !== MIDDLE_BUTTON && !(evt.ctrlKey || evt.metaKey))
-				return;
+			if (evt.button !== MIDDLE_BUTTON && !holdsMod(evt)) return;
 
 			const payload = linkClickOf(
 				app,
