@@ -25,6 +25,11 @@ import {
 	readingNoteMetadataOf,
 } from "./metadata";
 import {
+	constituentsLine,
+	morphemesLine,
+	sourceLine,
+} from "./render/breakdown";
+import {
 	articleOf,
 	claimLinks,
 	emojiOf,
@@ -53,7 +58,7 @@ import type { CodecOptions, LemmaRecords, ReadingNoteData } from "./types";
  * note's folder. Its metadata holds the Reading Entry, with its Attestation
  * Links, and the pending relations it is the source of. Its body is the
  * user's dictionary layout (#103, #104): the header, then Deine Kontexte,
- * Note, Semantische Beziehungen, Übersetzung, Definition, Valenz, Art,
+ * Note, Semantische Beziehungen, Morpheme, Übersetzung, Definition, Valenz, Art,
  * Flexion (an embed of its Licence Group's table in the Lemma note) and
  * Tags. Freeform stands in the Note section.
  */
@@ -166,27 +171,23 @@ function withRetargetedRefs(
 
 /** The Reading Knowledge aspect each rendered Block shows. */
 const KNOWLEDGE_BLOCKS = {
+	constituents: "breakdown",
 	definition: "definition",
 	formula_role: "formulaRole",
 	locution_type: "locutionType",
+	morphemes: "breakdown",
 	relation: "semanticRelations",
 	saying_type: "sayingType",
+	source: "source",
 	transcription: "transcription",
 	translation: "translations",
 	valency: "valency",
 } as const satisfies Record<string, keyof Dumrel.ReadingKnowledge>;
 
-/**
- * Aspects of the Breakdown model (texteater ADR 0050, ADR 0051) no Block
- * shows yet: Classify's Knowledge run asks for them, and the note keeps them
- * in its metadata. The Breakdown rendering adds their Blocks.
- */
-type UnshownAspects = "breakdown" | "source";
-
 /** Fails to compile when dumrel adds a Knowledge aspect no Block shows. */
 type MissingAspects = Exclude<
 	keyof Dumrel.ReadingKnowledge,
-	(typeof KNOWLEDGE_BLOCKS)[keyof typeof KNOWLEDGE_BLOCKS] | UnshownAspects
+	(typeof KNOWLEDGE_BLOCKS)[keyof typeof KNOWLEDGE_BLOCKS]
 >;
 const everyAspectShows: [MissingAspects] extends [never] ? true : never = true;
 void everyAspectShows;
@@ -341,6 +342,22 @@ export function serializeReadingNote<L extends Dumling.Language>(
 				shown,
 			),
 		],
+	]);
+
+	// The Breakdown: the morphemes line, then the Constituents, or the
+	// Source a formation names instead of them.
+	const breakdown = {
+		knowledge,
+		link,
+		lookup: options.morphemeSources,
+		policy: options.morphemePolicy,
+		reading: entry.reading,
+	};
+	const constituents = constituentsLine(breakdown);
+	section("morpheme", [
+		["morphemes", morphemesLine(breakdown)],
+		["constituents", constituents],
+		["source", constituents.length > 0 ? [] : sourceLine(breakdown)],
 	]);
 
 	const translated = new Set(

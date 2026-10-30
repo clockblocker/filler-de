@@ -17,6 +17,7 @@ export type SectionKind =
 	| "kontexte"
 	| "note"
 	| "synonyme"
+	| "morpheme"
 	| "translations"
 	| "definition"
 	| "valenz"
@@ -31,6 +32,7 @@ export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 	definition: "Definition",
 	flexion: "Flexion",
 	kontexte: "Deine Kontexte",
+	morpheme: "Morpheme",
 	note: "Note",
 	surfaces: "Begegnete Formen",
 	synonyme: "Semantische Beziehungen",
@@ -48,6 +50,7 @@ const SECTION_CLASSES: Readonly<Record<SectionKind, string>> = {
 	definition: "definition",
 	flexion: "flexion",
 	kontexte: "kontexte",
+	morpheme: "morpheme",
 	note: "kontexte",
 	surfaces: "surfaces",
 	synonyme: "synonyme",

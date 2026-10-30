@@ -13,6 +13,7 @@ import {
 	tableVersionsOf,
 	WORTER_FOLDER,
 } from "@textfresser/lemma-note-codec";
+import { canonicalJson } from "common-utils";
 import { resolveShadow, spellingTarget } from "dumdict";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
@@ -30,7 +31,7 @@ import type { NoteData, PathEntry } from "./notes";
 /** What a host renders into every note beyond the store's own projections. */
 export type NoteProjections = Omit<
 	RenderOptions<"de">,
-	"paths" | "resolve" | "inverseRelations"
+	"paths" | "resolve" | "inverseRelations" | "morphemeSources"
 >;
 
 /**
@@ -41,10 +42,10 @@ export type NoteProjections = Omit<
  *   spelled as its Lemma go to the Lemma note;
  * - a pending relation, which is rendered only while unresolved, and a
  *   Lemma note's own spelling go to the Crossroad note;
- * - every other sense-unknown link (a morpheme's Shadow, an inverse
- *   relation's source, a preposition or a participle's source verb not
- *   stored as named) goes to the Lemma note when its Unit Shadow matches
- *   exactly one stored Lemma, and to the Crossroad note otherwise.
+ * - every other sense-unknown link (a Breakdown piece's or a Source's
+ *   target, an inverse relation's source, a preposition not stored as
+ *   named) goes to the Lemma note when it names a stored Lemma or its Unit
+ *   Shadow matches exactly one, and to the Crossroad note otherwise.
  */
 function linkResolver(view: NoteIndex): LinkResolver<"de"> {
 	const byShadow = (shadow: Dumrel.UnitShadow & { language: "de" }) =>
@@ -83,6 +84,33 @@ function linkResolver(view: NoteIndex): LinkResolver<"de"> {
 	};
 }
 
+/**
+ * The morphemes line's lookup (dumrel's `LookupMorphemeSources`): the
+ * stored Breakdown and Source of each Reading of a target's Lemma that has
+ * either. None for a Unit Shadow, a part not stored yet, as tf-demo reads
+ * it; the store re-points a Shadow to its Lemma (#267).
+ */
+function morphemeSourcesOf(
+	view: NoteIndex,
+): NonNullable<RenderOptions<"de">["morphemeSources"]> {
+	return (target) => {
+		if (!("unitKind" in target)) return [];
+		return (
+			view.lemmaData(lemmaKeyOf(target))?.readingEntries ?? []
+		).flatMap(({ knowledge }) =>
+			knowledge?.breakdown === undefined &&
+			knowledge?.source === undefined
+				? []
+				: [
+						{
+							breakdown: knowledge.breakdown,
+							source: knowledge.source,
+						},
+					],
+		);
+	};
+}
+
 /** The options every note write renders with, against one index version. */
 export function renderOptionsFor(
 	view: NoteIndex,
@@ -97,6 +125,7 @@ export function renderOptionsFor(
 			format,
 			inverseRelations: inverseRelationsHook(inverse.read),
 			language: "de",
+			morphemeSources: morphemeSourcesOf(view),
 			resolve: linkResolver(view),
 		},
 	};
@@ -120,6 +149,67 @@ function claimTargets(data: NoteData | undefined, into: Set<string>) {
 }
 
 /**
+ * The Breakdowns and Sources a Lemma's Readings store, as one comparable
+ * string: what another Reading's morphemes line reads of it.
+ */
+const morphemeSourcesKey = (data: NoteData | undefined): string =>
+	canonicalJson(
+		(data?.readingEntries ?? []).flatMap(({ knowledge }) =>
+			knowledge?.breakdown === undefined &&
+			knowledge?.source === undefined
+				? []
+				: [[knowledge.breakdown ?? null, knowledge.source ?? null]],
+		),
+	);
+
+/** How far a morphemes line's walk reads up its parts: dumrel's own bound. */
+const MORPHEME_WALK_DEPTH = 8;
+
+/**
+ * The most notes one commit re-renders for the morphemes lines it moves, as
+ * tf-demo caps its moved owners. The rest follow after the commit.
+ */
+export const MAX_MORPHEME_READERS = 200;
+
+/**
+ * The Lemmas whose morphemes lines read a Lemma or a Unit Shadow of these
+ * Shadow keys, nearest first, up to the walk's depth: a Lemma whose
+ * Breakdown or Source names one, and so on up, since a walk reads each
+ * part's own Breakdown and resolves each inherited link
+ * (`Kohlekraftwerksbetreiber` reads `Kohlekraftwerk`, which reads
+ * `Kraftwerk`, which links `Werk`). Only Breakdown and Source targets lead
+ * up; a preposition or a relation never does.
+ */
+function morphemeReaders(
+	views: readonly NoteIndex[],
+	starts: Iterable<string>,
+): string[] {
+	const readers: string[] = [];
+	const seen = new Set<string>();
+	let frontier = [...new Set(starts)].sort(byCodeUnit);
+	for (
+		let depth = 0;
+		depth < MORPHEME_WALK_DEPTH && frontier.length > 0;
+		depth++
+	) {
+		const next = new Set<string>();
+		for (const shadow of frontier)
+			for (const view of views)
+				for (const reader of view.breakdownReadersOf(shadow)) {
+					if (seen.has(reader)) continue;
+					seen.add(reader);
+					readers.push(reader);
+					const lemma = views
+						.map((candidate) => candidate.lemmaData(reader))
+						.find(Boolean)?.lemmaRecord.lemma;
+					if (lemma) next.add(shadowKeyOf(lemma));
+				}
+		frontier = [...next].sort(byCodeUnit);
+	}
+	return readers;
+}
+
+/**
  * What a change to these Lemmas moves in other notes, from the index before
  * to the index after it:
  *
@@ -128,6 +218,11 @@ function claimTargets(data: NoteData | undefined, into: Set<string>) {
  * - when a Lemma comes or goes, the notes that link by its Unit Shadow,
  *   whose uniqueness it changes, and the targets of every claim made by a
  *   Lemma with that Shadow, whose inverse links name it;
+ * - when a Lemma's Breakdowns or Sources change, or it comes or goes, which
+ *   moves where an inherited link of its Shadow resolves, the notes whose
+ *   morphemes lines read it, up the walk, at most
+ *   {@link MAX_MORPHEME_READERS}; `overflow` holds the rest, for the store
+ *   to re-render after the change;
  * - the Crossroads of every spelling the Lemmas or their Surfaces have.
  *
  * It answers more than may change; a re-render that changes nothing writes
@@ -137,10 +232,16 @@ export function fanOutOf(
 	before: NoteIndex,
 	after: NoteIndex,
 	touched: Iterable<string>,
-): { readonly lemmas: Set<string>; readonly formKeys: Set<string> } {
+): {
+	readonly lemmas: Set<string>;
+	readonly formKeys: Set<string>;
+	readonly overflow: readonly string[];
+} {
 	const lemmas = new Set<string>();
 	const formKeys = new Set<string>();
 	const shadows = new Set<string>();
+	/** Shadow keys whose morphemes-line readers the change moves. */
+	const walked = new Set<string>();
 	const own = new Set(touched);
 	for (const key of own) {
 		const was = before.lemmaData(key);
@@ -150,8 +251,12 @@ export function fanOutOf(
 			claimTargets(data, lemmas);
 		}
 		const lemma = (is ?? was)?.lemmaRecord.lemma;
-		if (lemma && Boolean(was) !== Boolean(is))
+		if (lemma && Boolean(was) !== Boolean(is)) {
 			shadows.add(shadowKeyOf(lemma));
+			walked.add(shadowKeyOf(lemma));
+		}
+		if (lemma && morphemeSourcesKey(was) !== morphemeSourcesKey(is))
+			walked.add(shadowKeyOf(lemma));
 	}
 	for (const shadow of shadows) {
 		for (const view of [before, after]) {
@@ -164,9 +269,14 @@ export function fanOutOf(
 		}
 	}
 	for (const key of own) lemmas.delete(key);
+	const readers = morphemeReaders([before, after], walked).filter(
+		(key) => !own.has(key) && !lemmas.has(key) && after.lemmaData(key),
+	);
+	for (const key of readers.slice(0, MAX_MORPHEME_READERS)) lemmas.add(key);
 	return {
 		formKeys,
 		lemmas: new Set([...lemmas].filter((key) => after.lemmaData(key))),
+		overflow: readers.slice(MAX_MORPHEME_READERS),
 	};
 }
 

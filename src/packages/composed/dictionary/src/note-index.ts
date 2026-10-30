@@ -193,6 +193,23 @@ function knowledgeShadowKeys(entry: ReadingEntry<"de">): Set<string> {
 	return keys;
 }
 
+/**
+ * The Shadow keys a Reading's Breakdown pieces and Source name, Lemma and
+ * Unit Shadow targets alike: what its morphemes line's walk reads, and what
+ * its links resolve by.
+ */
+function breakdownShadowKeys(entry: ReadingEntry<"de">): Set<string> {
+	const keys = new Set<string>();
+	const { breakdown, source } = entry.knowledge ?? {};
+	for (const { target } of [
+		...(breakdown?.constituents ?? []),
+		...(breakdown?.morphemes ?? []),
+		...(source === undefined ? [] : [source]),
+	])
+		if (target !== undefined) keys.add(shadowKeyOf(target));
+	return keys;
+}
+
 /** A Lemma's notes as the index holds them. */
 type Aggregate = {
 	readonly lemmaKey: string;
@@ -289,6 +306,8 @@ export class NoteIndex {
 	private surfaceLinks = new Map<string, Set<string>>();
 	/** Shadow key → keys of the Lemmas whose notes link by it (morphemes, prepositions). */
 	private dependents = new Map<string, Set<string>>();
+	/** Shadow key → keys of the Lemmas whose Breakdowns or Sources name it. */
+	private breakdownReaders = new Map<string, Set<string>>();
 
 	clone(): NoteIndex {
 		const next = new NoteIndex();
@@ -309,6 +328,7 @@ export class NoteIndex {
 		next.refs = cloneMaps(this.refs);
 		next.surfaceLinks = cloneSets(this.surfaceLinks);
 		next.dependents = cloneSets(this.dependents);
+		next.breakdownReaders = cloneSets(this.breakdownReaders);
 		return next;
 	}
 
@@ -472,6 +492,8 @@ export class NoteIndex {
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				addTo(this.dependents, key, lemmaKey);
+			for (const key of breakdownShadowKeys(entry))
+				addTo(this.breakdownReaders, key, lemmaKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.set(entry.id, { entry, lemmaKey });
@@ -511,6 +533,8 @@ export class NoteIndex {
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				removeFrom(this.dependents, key, lemmaKey);
+			for (const key of breakdownShadowKeys(entry))
+				removeFrom(this.breakdownReaders, key, lemmaKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.delete(entry.id);
@@ -618,6 +642,13 @@ export class NoteIndex {
 	/** Keys of the Lemmas whose notes link something by this Shadow key. */
 	dependentsOf(shadowKey: string): readonly string[] {
 		return [...(this.dependents.get(shadowKey) ?? [])].sort(byCodeUnit);
+	}
+
+	/** Keys of the Lemmas whose Breakdowns or Sources name this Shadow key, Lemma targets included. */
+	breakdownReadersOf(shadowKey: string): readonly string[] {
+		return [...(this.breakdownReaders.get(shadowKey) ?? [])].sort(
+			byCodeUnit,
+		);
 	}
 
 	pendingRecord(
