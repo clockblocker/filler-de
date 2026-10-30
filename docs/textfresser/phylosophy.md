@@ -14,7 +14,6 @@ Wikilinks target one of three destination families:
    - `Library/de/pronomen/relativ/die-relativ-pronomen-de.md`
    - `Library/de/artikel/bestimmter/die-bestimmter-artikel-de.md`
    - `Library/de/grammatik/zeit/plusquamperfekt-zeit-grammatik-de.md`
-   - `Library/de/morphem/praefix/trennbares/uber-trennbares-praefix-de.md`
 2. Open-set lemma notes in `Worter`, for example:
    - `Worter/.../lemma/.../essen.md`
 3. Open-set non-lemma notes in `Worter` (`inflection`/`variant`), for example:
@@ -38,7 +37,7 @@ In `Library`, meaningful grammatical differences are usually split into differen
 
 Example:
 
-- `uber-trennbares-praefix-de.md` and `uber-untrennbares-praefix-de.md` are separate notes.
+- `die-demonstrativ-pronomen-de.md` and `die-relativ-pronomen-de.md` are separate notes.
 - Internal semantic shades inside each of those notes are not normally the primary routing dimension.
 
 ## Librarian naming and global completion behavior
@@ -127,7 +126,7 @@ Semantic meaning is primary. Markdown string shape is a rendering detail.
    - non-Freeform Textfresser sections => `TextfresserCommand`
 2. `intent` is parse-derived from section context:
    - Attestation => `LemmaSemanticAttestation`
-   - Relation/Morphology/Inflection/Morpheme => `GenerateSectionLink`
+   - Relation/Inflection => `GenerateSectionLink`
    - Freeform => `ManualSurfaceLookup`
    - propagation-marked contexts => `PropagationLink`
 3. `LemmaPreflight` is runtime-only command state and is not part of persisted/parsed linguistic DTOs.
@@ -136,7 +135,8 @@ Semantic meaning is primary. Markdown string shape is a rendering detail.
 
 1. Go-back links are Librarian navigation business, not linguistic-wikilink DTOs.
 2. Parser/reader pipelines should strip/ignore go-back links before linguistic DTO extraction.
-3. Dict-entry wikilinks (attestations, relations, inflection links, morpheme links) are linguistic-wikilink DTOs.
+3. Dict-entry wikilinks (attestations, relations, inflection links) are linguistic-wikilink DTOs.
+4. Breakdown links are not. The note codec renders them from the Reading's metadata and never parses them back.
 
 ### Inflection-link rule
 
@@ -146,11 +146,19 @@ Semantic meaning is primary. Markdown string shape is a rendering detail.
    - otherwise target `Worter/.../inflection/.../s.md`.
 3. Link rendering stays surface-first (`[[s]]`), with routing resolved by policy.
 
-### Morpheme-link rule
+### Breakdown-link rule
 
-1. Morpheme breakdown comes from LLM as DTOs with morpheme kind.
-2. German prefixes classified as closed-set route to `Library`.
-3. Other morphemes route to `Worter`.
+1. A Reading's Breakdown is dumrel Reading Knowledge, produced in the background Knowledge run:
+   - `breakdown.constituents`: its immediate parts, one level down (`[[Kohle]] + [[Kraftwerk]]`).
+   - `breakdown.morphemes`: every morpheme, flat (`[[Kohle]]|[[kraft]]|[[werk]]`).
+   - A conversion, participle, clipping or acronym has a `source` instead, its immediate base (`Lauf` <- `laufen`).
+2. Each piece pairs the letters it shows with a target: a Lemma or a Unit Shadow, never a Reading. A `source` targets the same way.
+3. Sense lives in the owning Reading's split, not in the target. The literal and the figurative `Zugkraft` both link to `Kraft`.
+4. A Lemma target links to its Lemma note. A Shadow target, a part not stored yet, links to its spelling's Crossroad note path with an alias.
+5. Once a part's Lemma is stored, the store re-points its Shadow to that Lemma in the same commit, if it is the only stored Lemma the Shadow matches (dumdict's `shadowMatchesLemma`).
+6. A morpheme is a Lemma like any other (`-ung`, `ent-`), so its link lands in `Worter`, never in `Library`.
+
+See texteater [ADR 0050](https://github.com/clockblocker/texteater/blob/main/docs/adr/0050-break-a-reading-down-into-its-constituents.md) (Constituents, Sources, targets) and [ADR 0051](https://github.com/clockblocker/texteater/blob/main/docs/adr/0051-copy-school-morphemic-analysis-into-a-readings-morphemes.md) (the Morphemic Breakdown).
 
 ## Anchor philosophy
 
