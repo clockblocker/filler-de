@@ -18,7 +18,11 @@ import {
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
 import { Effect, Result } from "effect";
-import { commitFailure, MAX_COMMIT_ATTEMPTS } from "./commit-occurrence";
+import {
+	commitFailure,
+	MAX_COMMIT_ATTEMPTS,
+	planOf,
+} from "./commit-occurrence";
 import {
 	DictionaryCommitFailed,
 	type GermanKnowledgeChange,
@@ -106,10 +110,13 @@ const publishOnce = Effect.fnUntraced(function* (
 							message: "The dictionary answered another slice",
 						}),
 					);
-				const outcome = planner.applyGeneratedKnowledge(
-					context.success,
-					request,
+				const slice = context.success;
+				const attempt = planOf(() =>
+					planner.applyGeneratedKnowledge(slice, request),
 				);
+				if (Result.isFailure(attempt))
+					return Result.fail(attempt.failure);
+				const outcome = attempt.success;
 				if (outcome.status === "conflict")
 					return Result.succeed(
 						Transaction.replan(outcome.message ?? outcome.code),

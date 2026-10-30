@@ -13,7 +13,7 @@ type Verb = Dumling.Lemma<"de", "Lexeme", "VERB">;
 export function verb(canonicalForm: string): Verb {
 	return {
 		canonicalForm,
-		coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+		coreFeatures: { hasSepPrefix: null },
 		family: "Lexeme",
 		kind: "VERB",
 		language: "de",

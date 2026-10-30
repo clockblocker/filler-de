@@ -101,7 +101,20 @@ export class DictionaryRefRewriteError extends Data.TaggedError(
 	readonly message: string;
 }> {}
 
+/**
+ * dumdict's planner threw: the slice broke its storage contract, such as a
+ * stored claim on a Lemma no readable note holds (a quarantined one), which
+ * dumdict refuses to plan around (system ADR 0011). Nothing was planned.
+ */
+export class DictionaryPlanError extends Data.TaggedError(
+	"DictionaryPlanError",
+)<{
+	readonly cause: unknown;
+	readonly message: string;
+}> {}
+
 export type DictionaryCommitError =
+	| DictionaryPlanError
 	| DictionaryScanError
 	| DictionaryRequestError
 	| DictionaryPathOccupiedError

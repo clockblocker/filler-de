@@ -103,8 +103,11 @@ export const CLASSIFY_RESOLUTION_DUMGEN = {
 		relationCandidates: [{ output: [] }],
 		transcription: [{ output: "ˈtɛst" }],
 		translations: [
-			{ output: ["слово"], when: '"language":"ru"' },
-			{ output: ["word"] },
+			{
+				output: [[{ kind: "Text", text: "слово" }]],
+				when: '"language":"ru"',
+			},
+			{ output: [[{ kind: "Text", text: "word" }]] },
 		],
 	},
 } as const;

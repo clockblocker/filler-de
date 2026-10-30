@@ -11,8 +11,6 @@ export type Transaction<A> =
 			readonly _tag: "Commit";
 			readonly plan: DumdictPlan<"de">;
 			readonly value: A;
-			/** What the planner worked around, logged with the commit. */
-			readonly issues?: readonly unknown[];
 	  }
 	| {
 			/**
@@ -24,7 +22,6 @@ export type Transaction<A> =
 			readonly _tag: "CommitAndReplan";
 			readonly plan: DumdictPlan<"de">;
 			readonly reason: string;
-			readonly issues?: readonly unknown[];
 	  }
 	| {
 			/** Commit nothing and answer `value`, such as a Stale judgement. */
@@ -40,33 +37,19 @@ export type Transaction<A> =
 			readonly reason: string;
 	  };
 
-type Issues = { readonly issues?: readonly unknown[] };
-
-const withIssues = (options: Issues | undefined) =>
-	options?.issues === undefined || options.issues.length === 0
-		? {}
-		: { issues: options.issues };
-
 export const Transaction = {
-	commit: <A>(
-		plan: DumdictPlan<"de">,
-		value: A,
-		options?: Issues,
-	): Transaction<A> => ({
+	commit: <A>(plan: DumdictPlan<"de">, value: A): Transaction<A> => ({
 		_tag: "Commit",
 		plan,
 		value,
-		...withIssues(options),
 	}),
 	commitAndReplan: (
 		plan: DumdictPlan<"de">,
 		reason: string,
-		options?: Issues,
 	): Transaction<never> => ({
 		_tag: "CommitAndReplan",
 		plan,
 		reason,
-		...withIssues(options),
 	}),
 	replan: (reason: string): Transaction<never> => ({
 		_tag: "Replan",

@@ -54,6 +54,7 @@ import {
 import {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
+	DictionaryPlanError,
 	DictionaryRefRewriteError,
 	DictionaryRequestError,
 	DictionaryRoundTripError,
@@ -109,6 +110,7 @@ import {
 	sameEntry,
 	unreadableEntry,
 } from "./notes";
+import { planned } from "./plan";
 import {
 	crossroadContentOf,
 	crossroadPathOf,
@@ -136,7 +138,10 @@ import {
 	scrollRefNamesOf,
 	scrollRenamesOf,
 } from "./scroll-refs";
-import { loadReevaluateShadowsContext } from "./slices";
+import {
+	loadCleanupRelationsContext,
+	loadReevaluateShadowsContext,
+} from "./slices";
 import { stageChanges } from "./stage-changes";
 import type { Transaction, TransactOptions } from "./transaction";
 import {
@@ -2067,22 +2072,62 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			];
 		});
 
-	const logIssues = (outcome: DumdictPlanOutcome<"de">) =>
-		outcome.status === "planned" && (outcome.issues?.length ?? 0) > 0
-			? Effect.logWarning(
-					"Dictionary re-evaluation worked around stored claims",
-					outcome.issues,
-				)
-			: Effect.void;
+	/**
+	 * Plans one re-evaluation from a slice loaded now and commits it as a
+	 * commit of its own. It never fails: what goes wrong is logged.
+	 */
+	const reevaluate = <S>(
+		load: () => S,
+		plan: (slice: S) => DumdictPlanOutcome<"de">,
+		depth: number,
+	): Effect.Effect<void> =>
+		Effect.gen(function* () {
+			const slice = Result.try(load);
+			if (Result.isFailure(slice)) {
+				yield* Effect.logWarning(
+					"Dictionary could not load a Shadow re-evaluation slice",
+				);
+				return;
+			}
+			const attempt = planned(() => plan(slice.success));
+			if (Result.isFailure(attempt)) {
+				yield* Effect.logWarning(
+					"Dictionary could not plan a Shadow re-evaluation",
+					attempt.failure,
+				);
+				return;
+			}
+			const outcome = attempt.success;
+			if (outcome.status !== "planned") {
+				yield* Effect.logWarning(
+					"Dictionary could not re-evaluate Shadows",
+					outcome,
+				);
+				return;
+			}
+			if (outcome.plan.changes.length === 0) return;
+			const result = yield* Effect.result(
+				commitUnderLock(outcome.plan, depth + 1),
+			);
+			if (
+				result._tag === "Failure" ||
+				result.success.status !== "committed"
+			)
+				yield* Effect.logWarning(
+					"Dictionary Shadow re-evaluation did not commit",
+					result._tag === "Failure" ? result.failure : result.success,
+				);
+		});
 
 	/**
-	 * Re-evaluates every stored Shadow relation whose resolution the Lemmas
-	 * no longer fit, and moves the claims on Lemmas the files no longer hold
-	 * (`reevaluateShadows`), as commits of their own, from slices loaded
-	 * now. It is what makes links converge after a removal, a hand edit or
-	 * a failed commit. `scope` narrows it to the Shadows of Lemmas a change
-	 * added or removed; `removed` names Lemmas removed by a plan. It never
-	 * fails.
+	 * Moves the claims on Lemmas the files no longer hold and re-evaluates
+	 * the Shadows they leave (`reevaluateShadows`), and retries every stored
+	 * Shadow relation whose resolution the Lemmas no longer fit
+	 * (`cleanupRelations`, which re-evaluates the records it names), as
+	 * commits of their own, from slices loaded now. It is what makes links
+	 * converge after a removal, a hand edit or a failed commit. `scope`
+	 * narrows it to the Shadows of Lemmas a change added or removed;
+	 * `removed` names Lemmas removed by a plan. It never fails.
 	 */
 	const converge = (
 		scope: {
@@ -2107,73 +2152,51 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						!view.holdsAnyNoteOf(lemma)
 					)
 						removed.set(lemmaKeyOf(lemma), lemma);
-			const shadows = new Map<
-				string,
-				PendingSemanticRelationRecord<"de">["pending"]["target"]
-			>();
-			for (const record of view.allPending()) {
-				const key = pendingShadowKeyOf(record);
+			if (removed.size > 0) {
+				const request = { removedLemmas: [...removed.values()] };
+				yield* reevaluate(
+					() =>
+						loadReevaluateShadowsContext(
+							index,
+							revision(),
+							request,
+						),
+					(slice) =>
+						planner.reevaluateShadows(slice, {
+							...request,
+							baseRevision: slice.revision,
+						}),
+					depth,
+				);
+			}
+			// The removal's commit settled the Shadows of the Lemmas it
+			// removed; the rest are read from the index it left.
+			const locators: PendingSemanticRelationRecord<"de">["locator"][] =
+				[];
+			for (const record of index.allPending()) {
 				if (
 					scope.shadowKeys !== undefined &&
-					!scope.shadowKeys.has(key)
+					!scope.shadowKeys.has(pendingShadowKeyOf(record))
 				)
 					continue;
-				if (unsettled(view, record))
-					shadows.set(key, record.pending.target);
+				if (unsettled(index, record)) locators.push(record.locator);
 			}
-			if (removed.size === 0 && shadows.size === 0) return;
-			const shadowList = [...shadows.values()];
-			const requests: Omit<
-				ReevaluateShadowsRequest<"de">,
-				"baseRevision"
-			>[] = [];
-			for (
-				let at = 0;
-				at < Math.max(shadowList.length, 1);
-				at += REEVALUATION_CHUNK
-			)
-				requests.push({
-					...(at === 0 && removed.size > 0
-						? { removedLemmas: [...removed.values()] }
-						: {}),
-					shadows: shadowList.slice(at, at + REEVALUATION_CHUNK),
-				});
-			for (const request of requests) {
-				const slice = Result.try(() =>
-					loadReevaluateShadowsContext(index, revision(), request),
+			for (let at = 0; at < locators.length; at += REEVALUATION_CHUNK) {
+				const request = {
+					resolutions: locators
+						.slice(at, at + REEVALUATION_CHUNK)
+						.map((locator) => ({ locator })),
+				};
+				yield* reevaluate(
+					() =>
+						loadCleanupRelationsContext(index, revision(), request),
+					(slice) =>
+						planner.cleanupRelations(slice, {
+							...request,
+							baseRevision: slice.revision,
+						}),
+					depth,
 				);
-				if (Result.isFailure(slice)) {
-					yield* Effect.logWarning(
-						"Dictionary could not load a Shadow re-evaluation slice",
-					);
-					continue;
-				}
-				const outcome = planner.reevaluateShadows(slice.success, {
-					...request,
-					baseRevision: slice.success.revision,
-				});
-				yield* logIssues(outcome);
-				if (outcome.status !== "planned") {
-					yield* Effect.logWarning(
-						"Dictionary could not re-evaluate Shadows",
-						outcome,
-					);
-					continue;
-				}
-				if (outcome.plan.changes.length === 0) continue;
-				const result = yield* Effect.result(
-					commitUnderLock(outcome.plan, depth + 1),
-				);
-				if (
-					result._tag === "Failure" ||
-					result.success.status !== "committed"
-				)
-					yield* Effect.logWarning(
-						"Dictionary Shadow re-evaluation did not commit",
-						result._tag === "Failure"
-							? result.failure
-							: result.success,
-					);
 			}
 		}).pipe(
 			Effect.catchCause((cause) =>
@@ -2420,10 +2443,25 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* rebuild();
 					yield* settle;
 				}
-				const planned = plan(viewOf(index, revision()));
-				if (Result.isFailure(planned))
-					return yield* Effect.fail(planned.failure);
-				const step = planned.success;
+				// A plan that throws, as dumdict's planner does on a slice
+				// that breaks its contract, fails typed instead of as a defect.
+				const attempt: Result.Result<
+					Transaction<A>,
+					E | DictionaryPlanError
+				> = Result.flatMap(
+					Result.try({
+						catch: (cause) =>
+							new DictionaryPlanError({
+								cause,
+								message: `The dictionary could not plan: ${cause instanceof Error ? cause.message : String(cause)}`,
+							}),
+						try: () => plan(viewOf(index, revision())),
+					}),
+					(result) => result,
+				);
+				if (Result.isFailure(attempt))
+					return yield* Effect.fail(attempt.failure);
+				const step = attempt.success;
 				if (step._tag === "Stop")
 					return { _tag: "Done", value: step.value } as const;
 				if (step._tag === "Replan")
@@ -2432,11 +2470,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						cause: step.reason,
 						reason: step.reason,
 					} as const;
-				if (step.issues !== undefined)
-					yield* Effect.logWarning(
-						"Dictionary plan worked around stored claims",
-						step.issues,
-					);
 				const committed = yield* Effect.result(
 					commitUnderLock(step.plan),
 				);

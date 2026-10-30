@@ -1,26 +1,18 @@
 import type { LemmaRecords } from "@textfresser/lemma-note-codec";
 import { authoredMembers } from "dumcorpus/inventories";
 import { makeSurfaceId, type ReadingEntry, type SurfaceEntry } from "dumdict";
+import { lemmaIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { applyParadigmChanges, paradigmChangesFor } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 
 /**
  * The user's dictionary examples (#49, #103, #104) as records: a noun with
- * relations and morphemes, a strong verb, and Mutter with two Licence
+ * relations, a strong verb, and Mutter with two Licence
  * Groups; and the tables of the German Inflection Pack (#120): a separable
  * verb, a Free verb, a comparable adjective and a determiner stem.
  */
 
-const shadow = (canonicalForm: string) => ({
-	nodeKind: "unitShadow" as const,
-	unitShadow: {
-		canonicalForm,
-		family: "Lexeme" as const,
-		kind: "NOUN" as const,
-		language: "de" as const,
-	},
-});
 
 const noun = (
 	canonicalForm: string,
@@ -40,6 +32,16 @@ const readingOf = (
 ): Dumling.Reading<"de"> =>
 	({ emojiDescription, lemma, unitKind: "Reading" }) as Dumling.Reading<"de">;
 
+/**
+ * A Surface id for a ref whose Surface no fixture owns. dumdict reads only
+ * the Lemma an id names, which must be the Reading's.
+ */
+const unownedSurfaceId = (reading: Dumling.Reading<"de">) =>
+	JSON.stringify({
+		lemma: lemmaIdentityKey(reading.lemma),
+		normalizedSurface: reading.lemma.canonicalForm,
+	}) as SurfaceEntry<"de">["id"];
+
 function entry(
 	reading: Dumling.Reading<"de">,
 	content: Partial<Omit<ReadingEntry<"de">, "attestationLinks" | "reading">> & {
@@ -51,7 +53,11 @@ function entry(
 	const { met = [], refs = [], ...rest } = content;
 	return {
 		attestationLinks: [
-			...refs.map((ref) => ({ reading, ref, surfaceId: null })),
+			...refs.map((ref) => ({
+				reading,
+				ref,
+				surfaceId: unownedSurfaceId(reading),
+			})),
 			...met.map(([ref, surfaceId]) => ({ reading, ref, surfaceId })),
 		],
 		attestedTranslations: [],
@@ -130,18 +136,6 @@ export const kohlekraftwerk: LemmaRecords<"de"> = {
 	readingEntries: [
 		entry(kohlekraftwerkReading, {
 			knowledge: {
-				morphologicalTree: {
-					root: {
-						children: [
-							shadow("Kohle"),
-							{
-								children: [shadow("Kraft"), shadow("Werk")],
-								nodeKind: "structure",
-							},
-						],
-						nodeKind: "structure",
-					},
-				},
 				semanticRelations: {
 					antonym: [noun("Windrad", "Neut")],
 					nearSynonym: [noun("Industrieanlage", "Fem"), noun("Fabrik", "Fem")],
@@ -149,7 +143,7 @@ export const kohlekraftwerk: LemmaRecords<"de"> = {
 					targetKind: "lemma",
 				},
 				transcription: "ˈkoːləˌkraftvɛɐ̯k",
-				translations: { en: ["coal-fired power plant"] },
+				translations: { en: [[{ kind: "Text", text: "coal-fired power plant" }]] },
 			},
 			refs: ["![[Atom#^13|^]]", "![[Atom#^14|^]]"],
 		}),
@@ -158,7 +152,7 @@ export const kohlekraftwerk: LemmaRecords<"de"> = {
 
 const fahrenLemma: Dumling.Lemma<"de", "Lexeme", "VERB"> = {
 	canonicalForm: "fahren",
-	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: null },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -195,7 +189,7 @@ export const fahren: LemmaRecords<"de"> = {
 			attestedTranslations: ["drive", "drove"],
 			knowledge: {
 				transcription: "ˈfaːʁən",
-				translations: { en: ["drive", "ride", "go"] },
+				translations: { en: [[{ kind: "Text", text: "drive" }], [{ kind: "Text", text: "ride" }], [{ kind: "Text", text: "go" }]] },
 			},
 			refs: ["![[Ankunft#^3|^]]"],
 		}),
@@ -223,12 +217,12 @@ export const mutter: LemmaRecords<"de"> = {
 		entry(mutterParent, {
 			knowledge: {
 				transcription: "ˈmʊtɐ",
-				translations: { en: ["mother"] },
+				translations: { en: [[{ kind: "Text", text: "mother" }]] },
 			},
 			refs: ["![[Familie#^2|^]]"],
 		}),
 		entry(mutterNut, {
-			knowledge: { translations: { en: ["nut"] } },
+			knowledge: { translations: { en: [[{ kind: "Text", text: "nut" }]] } },
 			refs: ["![[Werkstatt#^5|^]]"],
 		}),
 	],
@@ -257,7 +251,7 @@ const verb = (
 	hasSepPrefix: string | null = null,
 ): Dumling.Lemma<"de", "Lexeme", "VERB"> => ({
 	canonicalForm,
-	coreFeatures: { hasSepPrefix, lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -306,7 +300,7 @@ export const abfahren: LemmaRecords<"de"> = {
 	pendingRelations: [],
 	readingEntries: [
 		entry(abfahrenReading, {
-			knowledge: { translations: { en: ["depart", "leave"] } },
+			knowledge: { translations: { en: [[{ kind: "Text", text: "depart" }], [{ kind: "Text", text: "leave" }]] } },
 			refs: ["![[Bahnhof#^4|^]]"],
 		}),
 	],

@@ -50,7 +50,7 @@ const SurfaceMetadataSchema = z.strictObject({
 
 const LinkMetadataSchema = z.strictObject({
 	ref: z.string(),
-	surfaceId: z.string().nullable(),
+	surfaceId: z.string(),
 });
 
 const PendingMetadataSchema = z.strictObject({

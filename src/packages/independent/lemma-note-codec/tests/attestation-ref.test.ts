@@ -8,7 +8,7 @@ import {
 	type SerializedNote,
 	serializeReadingNote,
 } from "../src";
-import { mutterParent, nounData } from "./fixtures";
+import { mutterParent, nounData, unownedSurfaceId } from "./fixtures";
 import { freeformTexts, parseReading } from "./helpers";
 
 const STORY_0 = "![[Story#^0|^1a2b3c4d]]";
@@ -26,7 +26,7 @@ const records: LemmaRecords<"de"> = {
 					attestationLinks: [STORY_0, STORY_1].map((ref) => ({
 						reading: mutterParent,
 						ref,
-						surfaceId: null,
+						surfaceId: unownedSurfaceId(mutterParent),
 					})),
 				}
 			: entry,

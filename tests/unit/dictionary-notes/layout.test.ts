@@ -60,7 +60,7 @@ function tableBlock(body: string, blockId: string): string {
 }
 
 describe("a Reading note reads as the user's dictionary example", () => {
-	it("lays out a noun with relations, morphemes and two Attestations", () => {
+	it("lays out a noun with relations and two Attestations", () => {
 		expect(Result.getOrThrow(renderReadingNote(kohlekraftwerk, kohlekraftwerkReading, options)))
 			.toBe(`🏭 das [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk|Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
 
@@ -76,8 +76,6 @@ ${title("synonyme", "Semantische Beziehungen")}
 = [[Worter/de/Lexeme/NOUN/Neut/k/kra/kraft/Kraftwerk|Kraftwerk]]
 ≈ [[Worter/de/Lexeme/NOUN/Fem/i/ind/indus/Industrieanlage|Industrieanlage]], [[Worter/de/Lexeme/NOUN/Fem/f/fab/fabri/Fabrik|Fabrik]]
 ≠ [[Worter/de/Lexeme/NOUN/Neut/w/win/windr/Windrad|Windrad]]
-${title("morpheme", "Morpheme")}
-[[Worter/k/koh/kohle/kohle|Kohle]]|[[Worter/k/kra/kraft/kraft|Kraft]]|[[Worter/w/wer/werk/werk|Werk]]
 ${TRANSLATIONS}
 coal-fired power plant
 ${FLEXION}

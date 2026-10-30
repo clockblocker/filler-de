@@ -68,7 +68,7 @@ const see = noun("See", "Masc");
 const lake = readingOf(see, "🌊");
 const anfangen = unit({
 	canonicalForm: "anfangen",
-	coreFeatures: { hasSepPrefix: "an", lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: "an" },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",

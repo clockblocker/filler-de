@@ -5,7 +5,7 @@ import {
 	type SurfaceEntry,
 } from "dumdict";
 import { createPendingSemanticRelationRecord } from "dumdict/pending";
-import { syncretize } from "dumling";
+import { lemmaIdentityKey, syncretize } from "dumling";
 import type * as Dumling from "dumling/types";
 import { applyParadigmChanges, paradigmChangesFor } from "dumrel";
 import type * as Dumrel from "dumrel/types";
@@ -30,7 +30,10 @@ function readingEntry(
 	};
 }
 
-/** An Attestation Link of `ref` to `reading`, with the Surface it realized. */
+/**
+ * An Attestation Link of `ref` to `reading`, with the Surface it realized:
+ * by default one no fixture owns, as the codec stores an id as given.
+ */
 function link(
 	ref: string,
 	reading: Dumling.Reading<De>,
@@ -39,9 +42,22 @@ function link(
 	return {
 		reading,
 		ref,
-		surfaceId: surface === undefined ? null : makeSurfaceId("de", surface),
+		surfaceId:
+			surface === undefined
+				? unownedSurfaceId(reading)
+				: makeSurfaceId("de", surface),
 	};
 }
+
+/**
+ * A Surface id for a ref whose Surface no fixture owns. dumdict reads only
+ * the Lemma an id names, which must be the Reading's.
+ */
+export const unownedSurfaceId = (reading: Dumling.Reading<De>) =>
+	JSON.stringify({
+		lemma: lemmaIdentityKey(reading.lemma),
+		normalizedSurface: reading.lemma.canonicalForm,
+	}) as SurfaceEntry<De>["id"];
 
 /** A Lemma Paradigm from the forms each Reading licenses per dimension. */
 function paradigmOf(
@@ -171,23 +187,29 @@ export const nounData: LemmaRecords<De> = {
 				definition: "A female parent; 100% of the time %% loved.",
 				semanticRelations: { synonym: [mama], targetKind: "lemma" },
 				transcription: "ˈmʊtɐ",
-				translations: { en: ["mother"], ru: ["мать", "мама"] },
+				translations: {
+					en: [[{ kind: "Text", text: "mother" }]],
+					ru: [
+						[{ kind: "Text", text: "мать" }],
+						[{ kind: "Text", text: "мама" }],
+					],
+				},
 			},
 			notes: "First line\n\nSecond paragraph with %%tf:identity {}%% inside.",
 		}),
 		readingEntry(mutterNut, {
 			knowledge: {
-				translations: { en: ["nut"] },
+				translations: { en: [[{ kind: "Text", text: "nut" }]] },
 			},
 		}),
 	],
 };
 
-// Separable VERB with a Valency Frame and a Morphological Tree.
+// Separable VERB with a Valency Frame.
 
 const aufstehen: Lemma<"Lexeme", "VERB"> = {
 	canonicalForm: "aufstehen",
-	coreFeatures: { hasSepPrefix: "auf", lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: "auf" },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -222,36 +244,12 @@ export const verbData: LemmaRecords<De> = {
 				link("![[Morgen#^2|^]]", reading(aufstehen, "🛏️")),
 			],
 			knowledge: {
-				morphologicalTree: {
-					root: {
-						children: [
-							{
-								nodeKind: "morphemeReading",
-								reading: {
-									emojiDescription: "⬆️",
-									lemma: aufPrefix,
-									unitKind: "Reading",
-								},
-							},
-							{
-								children: [
-									{
-										nodeKind: "unitShadow",
-										unitShadow: {
-											canonicalForm: "stehen",
-											family: "Lexeme",
-											kind: "VERB",
-											language: "de",
-										},
-									},
-								],
-								nodeKind: "structure",
-							},
-						],
-						nodeKind: "structure",
-					},
+				translations: {
+					en: [
+						[{ kind: "Text", text: "get up" }],
+						[{ kind: "Text", text: "stand up" }],
+					],
 				},
-				translations: { en: ["get up", "stand up"] },
 				valency: [
 					{
 						complements: [
@@ -289,7 +287,9 @@ const locutionData: LemmaRecords<De> = {
 		readingEntry(reading(insGrasBeissen, "💀"), {
 			knowledge: {
 				locutionType: "Idiom",
-				translations: { en: ["bite the dust"] },
+				translations: {
+					en: [[{ kind: "Text", text: "bite the dust" }]],
+				},
 			},
 		}),
 	],
@@ -314,7 +314,16 @@ const sayingData: LemmaRecords<De> = {
 		readingEntry(reading(morgenstund, "🌅"), {
 			knowledge: {
 				sayingType: { type: "Proverb" },
-				translations: { en: ["the early bird catches the worm"] },
+				translations: {
+					en: [
+						[
+							{
+								kind: "Text",
+								text: "the early bird catches the worm",
+							},
+						],
+					],
+				},
 			},
 		}),
 	],
@@ -328,7 +337,9 @@ const morphemeData: LemmaRecords<De> = {
 	pendingRelations: [],
 	readingEntries: [
 		readingEntry(reading(aufPrefix, "⬆️"), {
-			knowledge: { translations: { en: ["up"] } },
+			knowledge: {
+				translations: { en: [[{ kind: "Text", text: "up" }]] },
+			},
 		}),
 	],
 };
@@ -351,7 +362,13 @@ const foreignData: LemmaRecords<De> = {
 	readingEntries: [
 		readingEntry(
 			{ lemma: foreignLemma, unitKind: "Reading" } as Dumling.Reading<De>,
-			{ knowledge: { translations: { en: ["that's life"] } } },
+			{
+				knowledge: {
+					translations: {
+						en: [[{ kind: "Text", text: "that's life" }]],
+					},
+				},
+			},
 		),
 	],
 };
@@ -387,12 +404,18 @@ const syncretismData: LemmaRecords<De> = {
 	readingEntries: [
 		readingEntry(reading(ihmSyncretism, "👤"), {
 			knowledge: {
-				// Reading target mode: an exact Reading of another Lemma.
+				// Reading target mode: an exact Reading of another Lemma, whose
+				// `♂️` dumdict stores without its variation selector.
 				semanticRelations: {
-					synonym: [reading(ihmMasc, "👨")],
+					synonym: [reading(ihmMasc, "♂️")],
 					targetKind: "reading",
 				},
-				translations: { en: ["him", "it"] },
+				translations: {
+					en: [
+						[{ kind: "Text", text: "him" }],
+						[{ kind: "Text", text: "it" }],
+					],
+				},
 			},
 		}),
 	],
@@ -402,7 +425,7 @@ const syncretismData: LemmaRecords<De> = {
 
 const melken: Lemma<"Lexeme", "VERB"> = {
 	canonicalForm: "melken",
-	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: null },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -431,10 +454,14 @@ const melkenData: LemmaRecords<De> = {
 	pendingRelations: [],
 	readingEntries: [
 		readingEntry(melkenCow, {
-			knowledge: { translations: { en: ["milk"] } },
+			knowledge: {
+				translations: { en: [[{ kind: "Text", text: "milk" }]] },
+			},
 		}),
 		readingEntry(melkenProfit, {
-			knowledge: { translations: { en: ["fleece"] } },
+			knowledge: {
+				translations: { en: [[{ kind: "Text", text: "fleece" }]] },
+			},
 		}),
 	],
 };
@@ -443,7 +470,7 @@ const melkenData: LemmaRecords<De> = {
 
 const senden: Lemma<"Lexeme", "VERB"> = {
 	canonicalForm: "senden",
-	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	coreFeatures: { hasSepPrefix: null },
 	family: "Lexeme",
 	kind: "VERB",
 	language: "de",
@@ -472,10 +499,14 @@ const sendenData: LemmaRecords<De> = {
 	pendingRelations: [],
 	readingEntries: [
 		readingEntry(sendenMail, {
-			knowledge: { translations: { en: ["send"] } },
+			knowledge: {
+				translations: { en: [[{ kind: "Text", text: "send" }]] },
+			},
 		}),
 		readingEntry(sendenBroadcast, {
-			knowledge: { translations: { en: ["broadcast"] } },
+			knowledge: {
+				translations: { en: [[{ kind: "Text", text: "broadcast" }]] },
+			},
 		}),
 	],
 };

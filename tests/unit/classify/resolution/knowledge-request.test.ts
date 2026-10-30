@@ -27,7 +27,7 @@ describe("knowledge.produce's paradigm input (texteater#1230)", () => {
 			readings: [bench],
 			stored,
 		});
-		const fahren = lemma("VERB", "fahren", { hasSepPrefix: null, lexicallyReflexive: null });
+		const fahren = lemma("VERB", "fahren", { hasSepPrefix: null });
 		expect(
 			paradigmRequestFor({ origin: "New", reading: readingOf(fahren, "🚗"), readings: [] })?.dimensions,
 		).toEqual(["preterite", "present1", "present2", "present3", "pastParticiple", "subjunctivePast"]);

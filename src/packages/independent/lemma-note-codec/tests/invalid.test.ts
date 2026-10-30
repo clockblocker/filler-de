@@ -136,6 +136,62 @@ describe("notes that hold no valid records come back as typed issues", () => {
 		});
 	});
 
+	it("a note written before the batteries moved reflexivity to the frame and translations to pieces", () => {
+		// Nearly every note in an existing Worter/ is one of these: each
+		// reads as a typed issue and is quarantined as it is, until the
+		// Dictionary reset (filler-de #65) rewrites it.
+		const reflexive: Dumling.Lemma<"de"> = {
+			canonicalForm: "schämen",
+			coreFeatures: { hasSepPrefix: null, lexicallyReflexive: "Acc" },
+			family: "Lexeme",
+			kind: "VERB",
+			language: "de",
+			unitKind: "Lemma",
+		} as unknown as Dumling.Lemma<"de">;
+		expect(
+			issueTags(parseLemma({ ...lemma.metadata, lemma: reflexive }).data),
+		).toEqual(["InvalidRecord"]);
+		// Every VERB note stored the feature, null on a plain verb.
+		const plain = {
+			...reflexive,
+			canonicalForm: "gehen",
+			coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+		};
+		expect(
+			issueTags(parseLemma({ ...lemma.metadata, lemma: plain }).data),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					knowledge: { translations: { en: ["mother"] } },
+				}).data,
+			),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					knowledge: {
+						morphologicalTree: {
+							root: { children: [], nodeKind: "structure" },
+						},
+					},
+				}).data,
+			),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(
+				parseReading({
+					...reading.metadata,
+					attestationLinks: [
+						{ ref: "![[Scroll#^1|^]]", surfaceId: null },
+					],
+				}).data,
+			),
+		).toEqual(["InvalidMetadata"]);
+	});
+
 	it("never reads the visible lines: a note whose body lost everything keeps its data", () => {
 		const parsed = parseReading(reading.metadata, "");
 		expect(parsed.data.ok).toBe(true);

@@ -333,10 +333,10 @@ export function loadCleanupRelationsContext(
 }
 
 /**
- * The slice `reevaluateShadows` plans from: every stored Shadow relation
- * whose Pending Entry ID the request names, every stored Reading that claims
- * a removed Lemma or one of its Readings, and their neighbourhood, which
- * holds the Lemmas the requested and the removed Lemmas' Shadows name.
+ * The slice `reevaluateShadows` plans from: every stored Shadow relation on
+ * a removed Lemma's Shadow, every stored Reading that claims a removed Lemma
+ * or one of its Readings, and their neighbourhood, which holds the Lemmas
+ * those Shadows name.
  */
 export function loadReevaluateShadowsContext(
 	index: NoteIndex,
@@ -345,13 +345,7 @@ export function loadReevaluateShadowsContext(
 ): ReevaluateShadowsSlice<"de"> {
 	const ids = new Set<string>(reevaluatedPendingEntryIds(request));
 	const removed = request.removedLemmas ?? [];
-	const shadowKeys = [
-		...new Set(
-			[...(request.shadows ?? []), ...removed.map(unitShadowOf)].map(
-				shadowKeyOf,
-			),
-		),
-	];
+	const shadowKeys = [...new Set(removed.map(unitShadowOf).map(shadowKeyOf))];
 	const pendingRelations = shadowKeys
 		.flatMap((key) => index.pendingTargeting(key))
 		.filter(({ locator }) => ids.has(locator.targetPendingId));

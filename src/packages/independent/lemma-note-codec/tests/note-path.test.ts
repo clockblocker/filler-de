@@ -121,15 +121,12 @@ describe("lemmaNotePath", () => {
 			"Worter/de/Lexeme/VERB/über/ü/übe/übers/übersetzen.md",
 			lemma("Lexeme", "VERB", "übersetzen", {
 				hasSepPrefix: "über",
-				lexicallyReflexive: null,
 			}),
 		],
 		[
-			"Worter/de/Lexeme/VERB/_/Acc/s/sch/schäm/schämen.md",
-			lemma("Lexeme", "VERB", "schämen", {
-				hasSepPrefix: null,
-				lexicallyReflexive: "Acc",
-			}),
+			// A reflexive Reading is no Lemma identity (texteater ADR 0052).
+			"Worter/de/Lexeme/VERB/s/sch/schäm/schämen.md",
+			lemma("Lexeme", "VERB", "schämen", { hasSepPrefix: null }),
 		],
 		[
 			"Worter/de/Lexeme/ADJ/comparable/s/sch/schön/schön.md",
@@ -281,7 +278,6 @@ describe("readingNotePath", () => {
 		expect(readingNotePath(reading(maus, "🖱️")).basename).toBe("🖱 Maus");
 		const geben = lemma("Lexeme", "VERB", "geben", {
 			hasSepPrefix: null,
-			lexicallyReflexive: null,
 		});
 		expect(readingNotePath(reading(geben, "🫳🏽")).basename).toBe(
 			"🫳 geben",

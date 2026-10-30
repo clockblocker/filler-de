@@ -27,12 +27,8 @@ export type LinkRole =
 	| "pendingRelation"
 	/** The source of a claim on this Reading, by its Lemma's Unit Shadow. */
 	| "inverseRelation"
-	/** A morphological leaf: an exact `morphemeReading` or a Unit Shadow. */
-	| "morpheme"
 	/** A Valency Frame's preposition. */
 	| "valency"
-	/** A participle's source verb. */
-	| "participleSource"
 	/** An inflection table's form spelled as its own Lemma: `N: die [[Mutter]], die Mütter`. */
 	| "inflection";
 
@@ -70,14 +66,14 @@ export function shadowOf<L extends Dumling.Language>(
 /**
  * What a note knows without a lookup:
  *
- * - an exact Reading, which only an exact claim or a `morphemeReading` names,
- *   goes to its Reading note;
+ * - an exact Reading, which only an exact claim names, goes to its Reading
+ *   note;
  * - a Lemma a direct claim names, a Reading note's own Lemma, and a table's
  *   form spelled as its Lemma, go to the Lemma note: dumdict holds a direct
  *   claim only on a stored Lemma, and a table is its own Lemma's;
  * - everything else goes to its spelling's Crossroad note: Unit Shadows,
- *   inverse sources, a preposition or a source verb that may be stored
- *   nowhere, and a Lemma note's own spelling.
+ *   inverse sources, a preposition that may be stored nowhere, and a Lemma
+ *   note's own spelling.
  */
 export function defaultResolve<L extends Dumling.Language>({
 	names,

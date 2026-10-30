@@ -47,8 +47,11 @@ const BASE_TEXT_ASPECTS = new Set([
 	"translations",
 ]);
 
-/** Never asked: dumgen defers the tree, and tf-demo asks a participle source only on evidence. */
-const NEVER_ASKED = new Set(["morphologicalTree", "participleSource"]);
+/**
+ * Never asked: a Reading's Breakdown and its Source (texteater ADR 0050)
+ * come with the Breakdown adoption, which asks and renders them.
+ */
+const NEVER_ASKED = new Set(["breakdown", "source"]);
 
 function covered(
 	stored: StoredKnowledge,

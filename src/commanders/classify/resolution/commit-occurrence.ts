@@ -25,6 +25,7 @@ import {
 	type DictionaryCommitError,
 	type DictionaryTransactionConflict,
 	type DictionaryView,
+	planned,
 	type ScrollAlias,
 	storedRefFor,
 	Transaction,
@@ -38,6 +39,7 @@ import {
 } from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import type * as Dumrel from "dumrel/types";
 import { Effect, Result } from "effect";
 import {
 	DictionaryCommitFailed,
@@ -89,6 +91,8 @@ export type OccurrenceCommitted =
 			/** The New was refused; `candidates` are the Lemma's stored Emoji Descriptions now. */
 			readonly _tag: "Stale";
 			readonly candidates: readonly string[];
+			/** The candidates with an Optional Reflexive Slot. */
+			readonly optionallyReflexive: readonly string[];
 	  };
 
 type Planned = Result.Result<
@@ -102,6 +106,13 @@ const unchanged: OccurrenceCommitted = { _tag: "Committed", created: false };
 
 const failed = (message: string) => (cause: unknown) =>
 	new DictionaryCommitFailed({ cause, message });
+
+/**
+ * A planner call whose throw, on a slice dumdict refuses such as a claim on
+ * a quarantined Lemma, fails the commit typed.
+ */
+export const planOf = (plan: () => DumdictPlanOutcome<"de">) =>
+	Result.mapError(planned(plan), (error) => failed(error.message)(error));
 
 /**
  * A transaction's failure as resolution reports it: a conflict that
@@ -132,6 +143,28 @@ const emojiDescriptionsOf = (
 	);
 
 /**
+ * The Emoji Descriptions of the stored Readings whose Valency Frame has an
+ * Optional Reflexive Slot, as `(sich) ausruhen` has: `resolve.reading`
+ * offers them to a reflexive click beside the 🪞 Readings (texteater ADR
+ * 0052).
+ */
+export const optionallyReflexiveOf = (
+	readings: readonly {
+		reading: Dumling.Reading<"de">;
+		knowledge?: { readonly valency?: Dumrel.ValencyFrame };
+	}[],
+) =>
+	emojiDescriptionsOf(
+		readings.filter(({ knowledge }) =>
+			(knowledge?.valency ?? []).some(
+				(slot) =>
+					slot.status === "Optional" &&
+					slot.complements.some(({ kind }) => kind === "Reflexive"),
+			),
+		),
+	);
+
+/**
  * The occurrence's Attestation Link, when its block can carry an ID: its
  * ref as the dictionary already holds it, if it holds it naming the
  * Scroll another way.
@@ -158,9 +191,7 @@ function linkOf(
  * behind: a Reading with no link, a Surface no link names, a Lemma with no
  * Reading, with the claims on them. Once the plan has landed, the store
  * re-evaluates the Shadows of the Lemmas it removed, as a commit of its own
- * from a slice loaded then (texteater#1257). A plan worked around a stored
- * claim whose target is gone (`danglingRelationClaim`) is logged with its
- * commit.
+ * from a slice loaded then (texteater#1257).
  */
 export function planRemoval(
 	view: DictionaryView,
@@ -169,7 +200,9 @@ export function planRemoval(
 	const slice = view.loadOccurrenceSlice(
 		planner.occurrenceSliceRequest({ ref }),
 	);
-	const outcome = planner.removeOccurrence(slice, { ref });
+	const attempt = planOf(() => planner.removeOccurrence(slice, { ref }));
+	if (Result.isFailure(attempt)) return Result.fail(attempt.failure);
+	const outcome = attempt.success;
 	if (outcome.status === "conflict")
 		return Result.succeed(
 			Transaction.replan(outcome.message ?? outcome.code),
@@ -183,11 +216,7 @@ export function planRemoval(
 		);
 	if (outcome.plan.changes.length === 0)
 		return Result.succeed(Transaction.stop("Removed"));
-	return Result.succeed(
-		Transaction.commit(outcome.plan, "Removed", {
-			...(outcome.issues === undefined ? {} : { issues: outcome.issues }),
-		}),
-	);
+	return Result.succeed(Transaction.commit(outcome.plan, "Removed"));
 }
 
 /**
@@ -212,11 +241,7 @@ function elsewhere(
 		return Result.succeed(Transaction.stop(unchanged));
 	return Result.map(planRemoval(view, ref), (removal) =>
 		removal._tag === "Commit"
-			? Transaction.commitAndReplan(removal.plan, MOVED, {
-					...(removal.issues === undefined
-						? {}
-						: { issues: removal.issues }),
-				})
+			? Transaction.commitAndReplan(removal.plan, MOVED)
 			: Transaction.replan(
 					removal._tag === "Replan" ? removal.reason : MOVED,
 				),
@@ -270,7 +295,9 @@ const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 				{ intent: "ensureOwnedSurface", request },
 				"ensureOwnedSurface",
 			);
-			outcome = planner.ensureOwnedSurface(context, request);
+			outcome = yield* planOf(() =>
+				planner.ensureOwnedSurface(context, request),
+			);
 		} else {
 			const request = { link, surface: input.surface };
 			const context = yield* loadContext(
@@ -278,7 +305,9 @@ const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 				{ intent: "recordOccurrence", request },
 				"recordOccurrence",
 			);
-			outcome = planner.recordOccurrence(context, request);
+			outcome = yield* planOf(() =>
+				planner.recordOccurrence(context, request),
+			);
 			if (
 				outcome.status === "rejected" &&
 				outcome.code === "occurrenceAttestedElsewhere"
@@ -332,7 +361,9 @@ const planNew = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 			{ intent: "addNewNote", request },
 			"addNewNote",
 		);
-		const outcome = planner.addNewNote(context, request);
+		const outcome = yield* planOf(() =>
+			planner.addNewNote(context, request),
+		);
 		if (outcome.status === "conflict")
 			return Transaction.replan(outcome.message ?? outcome.code);
 		if (outcome.status === "rejected") {
@@ -391,6 +422,7 @@ function planOccurrence(
 				Transaction.stop<OccurrenceCommitted>({
 					_tag: "Stale",
 					candidates: emojiDescriptionsOf(readings),
+					optionallyReflexive: optionallyReflexiveOf(readings),
 				}),
 			);
 	}

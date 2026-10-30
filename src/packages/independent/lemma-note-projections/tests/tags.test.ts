@@ -22,16 +22,12 @@ function noun(
 
 function verb(
 	canonicalForm: string,
-	core: {
-		readonly hasSepPrefix?: string;
-		readonly lexicallyReflexive?: "Acc" | "Dat";
-	} = {},
+	core: { readonly hasSepPrefix?: string } = {},
 ): Dumling.Lemma<De, "Lexeme", "VERB"> {
 	return {
 		canonicalForm,
 		coreFeatures: {
 			hasSepPrefix: core.hasSepPrefix ?? null,
-			lexicallyReflexive: core.lexicallyReflexive ?? null,
 		},
 		family: "Lexeme",
 		kind: "VERB",
@@ -119,12 +115,19 @@ describe("Tags from Core and Licences", () => {
 		).toEqual(["verb/separable", "verb/weak"]);
 	});
 
-	it("a reflexive verb", () => {
+	it("a reflexive Reading, by its reflexive's case", () => {
 		expect(
 			deriveTags(
-				input(verb("sich hüten", { lexicallyReflexive: "Acc" })),
+				input(verb("hüten"), { reflexive: { governedCase: "Acc" } }),
 			),
 		).toEqual(["verb/reflexive-acc"]);
+		expect(
+			deriveTags(
+				input(verb("vorstellen", { hasSepPrefix: "vor" }), {
+					reflexive: { governedCase: "Dat" },
+				}),
+			),
+		).toEqual(["verb/separable", "verb/reflexive-dat"]);
 	});
 
 	it("a plain verb gets its route alone", () => {
@@ -178,9 +181,10 @@ const tagsOf = (
 	lemma: Dumling.Lemma<De>,
 	reading: Dumling.Reading<De>,
 	paradigm?: Dumrel.LemmaParadigm,
+	valency?: Dumrel.ValencyFrame,
 ) =>
 	readingTags({
-		entry: { reading },
+		entry: { reading, ...(valency ? { knowledge: { valency } } : {}) },
 		records: { lemmaRecord: { lemma, ...(paradigm ? { paradigm } : {}) } },
 	});
 
@@ -245,5 +249,46 @@ describe("the tags hook reads a Reading's own Licences in the Lemma Paradigm", (
 	it("tags Core alone without a Paradigm", () => {
 		const tag = noun("Tag", "Masc");
 		expect(tagsOf(tag, readingOf(tag, "📅"))).toEqual(["noun/masculine"]);
+	});
+});
+
+describe("the tags hook reads a Reading's reflexive from its Valency Frame", () => {
+	const erinnern = verb("erinnern");
+
+	it("tags a Required or Optional Reflexive Slot by its case", () => {
+		expect(
+			tagsOf(erinnern, readingOf(erinnern, "🪞🧠"), undefined, [
+				{
+					complements: [{ governedCase: "Acc", kind: "Reflexive" }],
+					status: "Required",
+				},
+			]),
+		).toEqual(["verb/reflexive-acc"]);
+		const ausruhen = verb("ausruhen", { hasSepPrefix: "aus" });
+		expect(
+			tagsOf(ausruhen, readingOf(ausruhen, "😌"), undefined, [
+				{
+					complements: [{ governedCase: "Acc", kind: "Reflexive" }],
+					status: "Optional",
+				},
+			]),
+		).toEqual(["verb/separable", "verb/reflexive-acc"]);
+	});
+
+	it("gives a Reading with no Reflexive Slot no reflexive tag", () => {
+		expect(
+			tagsOf(erinnern, readingOf(erinnern, "💭"), undefined, [
+				{
+					complements: [
+						{
+							governedCase: "Acc",
+							kind: "Case",
+							referent: "Someone",
+						},
+					],
+					status: "Required",
+				},
+			]),
+		).toEqual(["verb"]);
 	});
 });
