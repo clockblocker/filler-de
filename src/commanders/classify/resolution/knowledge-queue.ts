@@ -70,6 +70,9 @@ type QueueState = {
 
 const notePath = (path: string) => (path.endsWith(".md") ? path : `${path}.md`);
 
+/** The aspects a settled Breakdown answers for. */
+const BREAKDOWN_ASPECTS: ReadonlySet<string> = new Set(["breakdown", "source"]);
+
 /** A run that saved everything it asked for; told together once the queue is idle. */
 const SAVED = Symbol("saved");
 
@@ -87,8 +90,17 @@ function describeOutcome<E>(
 				),
 			),
 		];
+		// A settled Breakdown, and its Source, are asked no more.
+		const retried = outcome.failures.some(
+			({ aspect }) =>
+				RETRIED_ASPECTS.has(aspect) &&
+				!(
+					outcome.breakdownSettled !== undefined &&
+					BREAKDOWN_ASPECTS.has(aspect)
+				),
+		);
 		if (missing.length > 0)
-			return `⚠ Knowledge for ${job.label} saved without ${missing.join(", ")}${outcome.failures.some(({ aspect }) => RETRIED_ASPECTS.has(aspect)) ? "; Classify it again to retry" : ""}`;
+			return `⚠ Knowledge for ${job.label} saved without ${missing.join(", ")}${retried ? "; Classify it again to retry" : ""}`;
 		return SAVED;
 	}
 	// Its run logged the failure, in its fiber.

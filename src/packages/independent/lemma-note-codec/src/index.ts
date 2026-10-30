@@ -89,6 +89,8 @@ export {
 	wikilink,
 } from "./links";
 export {
+	type BreakdownSettled,
+	BreakdownSettledSchema,
 	type DataResult,
 	LEMMA_NOTE_METADATA,
 	type LemmaNoteMetadata,

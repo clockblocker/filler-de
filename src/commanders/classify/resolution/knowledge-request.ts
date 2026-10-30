@@ -14,6 +14,7 @@
  * that mask, as in tf-demo: {@link breakdownAskFor} decides whether a run
  * breaks the Reading down.
  */
+import type { BreakdownSettled } from "@textfresser/lemma-note-codec";
 import { authoredFor, closedRoute } from "dumcorpus/inventories";
 import { routeOf } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -158,14 +159,18 @@ export type BreakdownAsk = {
  * base run. The plugin keeps no record of a run but the note, so it asks
  * on any occurrence of a Reading stored without either: the occurrence
  * that created it, and a later one after a failed segmenter or Source,
- * which is how a Partial Breakdown is retried. Once one is stored, a
- * later occurrence asks nothing, as tf-demo's top-up does.
+ * which is how a Partial Breakdown is retried. Once one is stored, or the
+ * note records the Reading as settled with neither (`NoParts`,
+ * `Unresolved`), a later occurrence asks nothing, as tf-demo's top-up does.
  */
 export function breakdownAskFor(input: {
 	readonly reading: Dumling.Reading<"de">;
 	/** The stored entry's Knowledge, if the Reading is stored. */
 	readonly knowledge?: Dumrel.ReadingKnowledge<Dumling.Reading<"de">>;
+	/** Why the stored Reading's Breakdown is asked no more, if its note says. */
+	readonly settled?: BreakdownSettled;
 }): BreakdownAsk | undefined {
+	if (input.settled !== undefined) return undefined;
 	const { lemma } = input.reading;
 	if (!BREAKDOWN_FAMILIES.has(lemma.family)) return undefined;
 	if (closedRoute(routeOf(lemma)) || authoredFor(lemma).length > 0)

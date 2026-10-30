@@ -13,9 +13,14 @@
  * Shadow, so nothing is generated for a part the learner hasn't met. A
  * failed segmenter is a failure of its part, never the run's error: the
  * rest of the Knowledge is still published, and the next Classify of the
- * Reading asks again (`breakdownAskFor`).
+ * Reading asks again (`breakdownAskFor`). A step that finished with nothing
+ * to store, and nothing failed, settles the Reading instead: its segmenters
+ * found no parts, or its Source came back Unresolved. dumrel stores no
+ * "asked, nothing", so the run records it in the Reading note
+ * (`breakdownSettled`), and later occurrences ask no more.
  */
 
+import type { BreakdownSettled } from "@textfresser/lemma-note-codec";
 import type { Jev } from "dumgen";
 import { canonicalFormKey, lemmaIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -46,7 +51,10 @@ export type BreakdownFailure = {
 /** What `knowledge.produce` answered, as far as the Breakdown reads it. */
 export type ProducedKnowledge = {
 	readonly changes: readonly GermanKnowledgeChange[];
-	readonly failures: readonly { readonly aspect: string }[];
+	readonly failures: readonly {
+		readonly aspect: string;
+		readonly code: string;
+	}[];
 };
 
 /** The Breakdown a run adds to what `knowledge.produce` answered. */
@@ -54,6 +62,8 @@ export type BrokenDown = {
 	/** The produced changes, less a Source dropped for pointing back, plus the Breakdown's. */
 	readonly changes: readonly GermanKnowledgeChange[];
 	readonly failures: readonly BreakdownFailure[];
+	/** Why the Reading is asked no more, when the step stored nothing and nothing failed. */
+	readonly settled?: BreakdownSettled;
 };
 
 type Produced = {
@@ -131,37 +141,82 @@ function namesLemma(target: LinkTarget, lemma: Dumling.Lemma<"de">): boolean {
 }
 
 /** The target a Source-setting change links to; a Retract has none. */
-function sourceTargetOf(change: GermanKnowledgeChange): LinkTarget | undefined {
+export function sourceTargetOf(
+	change: GermanKnowledgeChange,
+): LinkTarget | undefined {
 	if (change.aspect !== "source" || change.kind === "Retract")
 		return undefined;
 	const { target } = change.value;
 	return Predicate.isObject(target) ? (target as LinkTarget) : undefined;
 }
 
+/** A stored Lemma with its stored Readings' Knowledge, as a Source's base. */
+export type StoredBase = {
+	readonly lemma: Dumling.Lemma<"de">;
+	readonly readings: readonly {
+		readonly knowledge?: { readonly source?: { readonly target: unknown } };
+	}[];
+};
+
 /**
- * Whether a produced Source points back (texteater #1279): a stored Reading
- * of the Lemma it names already names `owner` as its own Source. The first
- * stored direction wins. A base still pending has no stored Readings, so it
- * never conflicts.
+ * Whether a Source to `target` points back (texteater #1279): a stored
+ * Reading of a Lemma it names already names `owner` as its own Source.
+ * The first stored direction wins. A base still pending has no stored
+ * Readings, so it never conflicts.
  */
-const sourcePointsBack = Effect.fnUntraced(function* (
-	store: Pick<ResolutionStore, "lemmaCandidates" | "lemmaNote">,
+export function pointsBack(
 	owner: Dumling.Lemma<"de">,
 	target: LinkTarget,
-): Effect.fn.Return<boolean> {
+	bases: readonly StoredBase[],
+): boolean {
 	if (target.language !== owner.language) return false;
+	return bases.some(
+		({ lemma, readings }) =>
+			namesLemma(target, lemma) &&
+			readings.some(({ knowledge }) => {
+				const named = knowledge?.source?.target;
+				return (
+					Predicate.isObject(named) &&
+					namesLemma(named as LinkTarget, owner)
+				);
+			}),
+	);
+}
+
+/** The stored Lemmas a Source's target may name, with their Readings, from one view. */
+export function storedBasesOf(
+	view: {
+		readonly lemmaCandidates: (
+			texts: readonly string[],
+		) => readonly { readonly lemma: Dumling.Lemma<"de"> }[];
+		readonly lemmaNote: (
+			lemma: Dumling.Lemma<"de">,
+		) => { readonly readings: StoredBase["readings"] } | undefined;
+	},
+	target: LinkTarget,
+): StoredBase[] {
+	return view
+		.lemmaCandidates([target.canonicalForm])
+		.filter(({ lemma }) => namesLemma(target, lemma))
+		.map(({ lemma }) => ({
+			lemma,
+			readings: view.lemmaNote(lemma)?.readings ?? [],
+		}));
+}
+
+/** {@link storedBasesOf}, read through the store. */
+const loadStoredBases = Effect.fnUntraced(function* (
+	store: Pick<ResolutionStore, "lemmaCandidates" | "lemmaNote">,
+	target: LinkTarget,
+): Effect.fn.Return<StoredBase[]> {
 	const candidates = yield* store.lemmaCandidates([target.canonicalForm]);
+	const bases: StoredBase[] = [];
 	for (const { lemma } of candidates) {
 		if (!namesLemma(target, lemma)) continue;
 		const note = yield* store.lemmaNote(lemma);
-		for (const entry of note?.readings ?? []) {
-			const source = entry.knowledge?.source?.target as
-				| LinkTarget
-				| undefined;
-			if (source !== undefined && namesLemma(source, owner)) return true;
-		}
+		bases.push({ lemma, readings: note?.readings ?? [] });
 	}
-	return false;
+	return bases;
 });
 
 /**
@@ -227,17 +282,23 @@ export const breakDownReading = Effect.fn("classify.breakDownReading")(
 			changes: produced.changes,
 			failures: [],
 		};
-		// A failed or Unresolved Source holds both segmenters.
-		if (produced.failures.some(({ aspect }) => aspect === "source"))
-			return unchanged;
+		// A failed or Unresolved Source holds both segmenters; an Unresolved
+		// answer, unlike a failed call, settles the Reading.
+		const sourceFailures = produced.failures.filter(
+			({ aspect }) => aspect === "source",
+		);
+		if (sourceFailures.length > 0)
+			return sourceFailures.every(({ code }) => code === "Unresolved")
+				? { ...unchanged, settled: "Unresolved" }
+				: unchanged;
 		const source = produced.changes.find(
 			(change) => sourceTargetOf(change) !== undefined,
 		);
 		const target =
 			source === undefined ? undefined : sourceTargetOf(source);
 		if (target !== undefined) {
-			if (!(yield* sourcePointsBack(deps.store, reading.lemma, target)))
-				return unchanged;
+			const bases = yield* loadStoredBases(deps.store, target);
+			if (!pointsBack(reading.lemma, target, bases)) return unchanged;
 			yield* Effect.logWarning("BackPointingSourceRejected").pipe(
 				Effect.annotateLogs({
 					base: target.canonicalForm,
@@ -255,6 +316,10 @@ export const breakDownReading = Effect.fn("classify.breakDownReading")(
 		return {
 			changes: [...kept, ...breakdown.changes],
 			failures: breakdown.failures,
+			...(breakdown.changes.length === 0 &&
+			breakdown.failures.length === 0
+				? { settled: "NoParts" as const }
+				: {}),
 		};
 	},
 );

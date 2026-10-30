@@ -29,6 +29,7 @@ export type ResolutionStore = Pick<
 	| "lemmaNote"
 	| "readingLocation"
 	| "scrollRefNames"
+	| "settleBreakdown"
 	| "transact"
 >;
 

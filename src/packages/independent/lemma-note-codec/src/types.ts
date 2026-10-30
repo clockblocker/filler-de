@@ -5,6 +5,7 @@ import type {
 	SurfaceEntry,
 } from "dumdict";
 import type * as Dumling from "dumling/types";
+import type { BreakdownSettled } from "./metadata";
 
 /** dumdict's Surface identity key. dumdict exports the type only through `SurfaceEntry`. */
 export type SurfaceId<L extends Dumling.Language = Dumling.Language> =
@@ -32,6 +33,8 @@ export type LemmaNoteData<L extends Dumling.Language> = {
 export type ReadingNoteData<L extends Dumling.Language> = {
 	readonly readingEntry: ReadingEntry<L>;
 	readonly pendingRelations: readonly PendingSemanticRelationRecord<L>[];
+	/** Why its Breakdown is asked no more, if it is settled with none (#266). */
+	readonly breakdownSettled?: BreakdownSettled;
 };
 
 export type CodecOptions<L extends Dumling.Language> = {

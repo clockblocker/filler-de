@@ -11,6 +11,7 @@ import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
 import { Effect } from "effect";
 import { breakdownAskFor } from "../../../../src/commanders/classify/resolution/knowledge-request";
+import { publishKnowledge } from "../../../../src/commanders/classify/resolution/publish-knowledge";
 import {
 	attestationOf,
 	baseTextKnowledge,
@@ -135,6 +136,9 @@ describe("breakdownAskFor", () => {
 		expect(stored({ source: { target: KOHLE } })).toBeUndefined();
 		// The base text alone is no Breakdown: a failed one is asked again.
 		expect(stored({ definition: "defined" } as never)).toEqual({ source: true });
+		// A note that records the Reading as settled asks nothing.
+		for (const settled of ["NoParts", "Unresolved"] as const)
+			expect(breakdownAskFor({ reading: readingOf(kohlekraftwerk, "🏭"), settled })).toBeUndefined();
 	});
 
 	it("asks nothing of a Closed Route member or a Morpheme", () => {
@@ -226,18 +230,14 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 		expect(harness.notices).toEqual(["✓ Knowledge for Lauf 🏃 saved"]);
 	});
 
-	it("holds both segmenters on an Unresolved Source, and asks for the Source again on the next Classify", async () => {
+	it("holds both segmenters on an Unresolved Source, and settles the Reading so no later Classify asks again", async () => {
 		const story = nounStory(lauf);
-		let unresolved = true;
 		const stub = stubDumgen({
 			grammar: resolvesNoun(lauf),
-			knowledge: (input) =>
-				unresolved
-					? {
-							...baseTextKnowledge(input),
-							failures: [{ aspect: "source", code: "Unresolved", message: "undecided" }],
-						}
-					: baseTextKnowledge(input),
+			knowledge: (input) => ({
+				...baseTextKnowledge(input),
+				failures: [{ aspect: "source", code: "Unresolved", message: "undecided" }],
+			}),
 			reading: (input) =>
 				input.candidates.length > 0
 					? { _tag: "Reuse", emojiDescription: "🏃" }
@@ -249,12 +249,48 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 		expect(stub.calls.inConstituents).toHaveLength(0);
 		expect(stub.calls.inMorphemes).toHaveLength(0);
 		expect(await storedOf(harness.store, lauf)).toEqual({ breakdown: undefined, source: undefined });
+		// Settled: no retry hint.
+		expect(harness.notices).toEqual(["⚠ Knowledge for Lauf 🏃 saved without source"]);
+		const settled = async () =>
+			(await run(harness.store.readingLocation(readingOf(lauf, "🏃"))))?.breakdownSettled;
+		expect(await settled()).toBe("Unresolved");
+
+		// The next occurrence asks nothing, and its rewrite keeps the marker.
+		await harness.resolve(story.plan(harness.scroll, 1));
+		expect(stub.calls.knowledge).toHaveLength(1);
+		expect(stub.calls.inConstituents).toHaveLength(0);
+		const note = await run(harness.store.lemmaNote(lauf));
+		expect(note?.readings[0]?.attestationLinks).toHaveLength(2);
+		expect(await settled()).toBe("Unresolved");
+	});
+
+	it("asks for the Source again on the next Classify when its call failed", async () => {
+		const story = nounStory(lauf);
+		let failing = true;
+		const stub = stubDumgen({
+			grammar: resolvesNoun(lauf),
+			knowledge: (input) =>
+				failing
+					? {
+							...baseTextKnowledge(input),
+							failures: [{ aspect: "source", code: "ProviderFailure", message: "no answer" }],
+						}
+					: baseTextKnowledge(input),
+			reading: (input) =>
+				input.candidates.length > 0
+					? { _tag: "Reuse", emojiDescription: "🏃" }
+					: { _tag: "New", emojiDescription: "🏃" },
+		});
+		const harness = await resolutionHarness({ content: story.content, dumgen: stub.dumgen, scrollPath: SCROLL });
+		await harness.resolve(story.plan(harness.scroll));
+		expect(stub.calls.inConstituents).toHaveLength(0);
 		expect(harness.notices).toEqual([
 			"⚠ Knowledge for Lauf 🏃 saved without source; Classify it again to retry",
 		]);
+		expect((await run(harness.store.readingLocation(readingOf(lauf, "🏃"))))?.breakdownSettled).toBeUndefined();
 
 		// The next Classify asks for the Source alone, then breaks it down.
-		unresolved = false;
+		failing = false;
 		await harness.resolve(story.plan(harness.scroll, 1));
 		expect(stub.calls.knowledge[1]?.origin).toBe("TopUp");
 		expect(stub.calls.knowledge[1]?.request).toEqual({ source: null });
@@ -384,9 +420,10 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 		]);
 	});
 
-	it("gives a Locution with no Constituents no morphemes", async () => {
+	it("gives a Locution with no Constituents no morphemes, and settles it", async () => {
 		const sentenceText = "Er kommt auf jeden Fall.";
-		const content = `${sentenceText} ^0\n`;
+		const again = "Sie kommt auf jeden Fall.";
+		const content = `${sentenceText} ^0\n\n${again} ^1\n`;
 		const stub = stubDumgen({
 			grammar: (input) =>
 				input.unit.route !== "Unresolved" && input.unit.route.family === "Locution"
@@ -396,20 +433,89 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 						}
 					: { _tag: "Unresolved" },
 			knowledge: baseTextKnowledge,
-			reading: () => ({ _tag: "New", emojiDescription: "✅" }),
+			reading: (input) =>
+				input.candidates.length > 0
+					? { _tag: "Reuse", emojiDescription: "✅" }
+					: { _tag: "New", emojiDescription: "✅" },
 		});
 		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
-		await harness.resolve(
+		const plan = (text: string) =>
 			planFor({
-				content,
+				content: harness.scroll.content,
 				scrollPath: SCROLL,
-				sentenceText,
+				sentenceText: text,
 				units: [{ route: route("Locution", "ADV"), segments: [4, 6, 8] }],
-			}),
-		);
+			});
+		await harness.resolve(plan(sentenceText));
 		expect(stub.calls.knowledge[0]?.request.source).toBeUndefined();
 		expect(stub.calls.inConstituents).toHaveLength(1);
 		expect(stub.calls.inMorphemes).toHaveLength(0);
 		expect(harness.notices).toEqual(["✓ Knowledge for auf jeden Fall ✅ saved"]);
+		expect(
+			(await run(harness.store.readingLocation(readingOf(aufJedenFall, "✅"))))?.breakdownSettled,
+		).toBe("NoParts");
+
+		await harness.resolve(plan(again));
+		expect(stub.calls.inConstituents).toHaveLength(1);
+	});
+
+	describe("two runs that store Sources naming each other (texteater #1279)", () => {
+		const LAUFEN_READING = readingOf(laufen, "🏃");
+		const LAUF_READING = readingOf(lauf, "🏁");
+		const sourceTo = (target: Dumrel.UnitShadow) =>
+			({ aspect: "source", kind: "Contribute", value: { target } }) as const;
+		const toLauf = sourceTo(shadow("Lexeme", "NOUN", "Lauf"));
+		const toLaufen = sourceTo(shadow("Lexeme", "VERB", "laufen"));
+
+		/** Both Readings stored, broken down but with no Source yet. */
+		async function stored() {
+			const sentences = { NOUN: "Der Lauf ist kurz.", VERB: "Wir laufen." } as const;
+			const content = `${sentences.VERB} ^0\n\n${sentences.NOUN} ^1\n`;
+			const stub = stubDumgen({
+				grammar: (input) => {
+					if (input.unit.route === "Unresolved") return { _tag: "Unresolved" };
+					return input.unit.route.kind === "VERB"
+						? { _tag: "Resolved", attestation: attestationOf(laufen, "laufen", ["laufen"], VERB_EVIDENCE) }
+						: { _tag: "Resolved", attestation: attestationOf(lauf, "Lauf", ["Lauf"], NOUN_EVIDENCE) };
+				},
+				knowledge: baseTextKnowledge,
+				reading: (input) => ({
+					_tag: "New",
+					emojiDescription: input.attestation.surface.lemma.kind === "VERB" ? "🏃" : "🏁",
+				}),
+			});
+			const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
+			for (const kind of ["VERB", "NOUN"] as const)
+				await harness.resolve(
+					planFor({
+						content: harness.scroll.content,
+						scrollPath: SCROLL,
+						sentenceText: sentences[kind],
+						units: [{ route: route("Lexeme", kind), segments: [2] }],
+					}),
+				);
+			return harness.store;
+		}
+		const publish = (
+			store: Awaited<ReturnType<typeof stored>>,
+			reading: Dumling.Reading<"de">,
+			change: typeof toLauf,
+		) => run(publishKnowledge(store, { changes: [change], pendingRelations: [], reading }));
+
+		it("keeps laufen's, published first, and drops Lauf's", async () => {
+			const store = await stored();
+			await publish(store, LAUFEN_READING, toLauf);
+			await publish(store, LAUF_READING, toLaufen);
+			expect((await storedOf(store, laufen)).source).toEqual(toLauf.value);
+			expect((await storedOf(store, lauf)).source).toBeUndefined();
+		});
+
+		it("keeps Lauf's, published first, and drops laufen's", async () => {
+			const store = await stored();
+			await publish(store, LAUF_READING, toLaufen);
+			await publish(store, LAUFEN_READING, toLauf);
+			expect((await storedOf(store, lauf)).source).toEqual(toLaufen.value);
+			expect((await storedOf(store, laufen)).source).toBeUndefined();
+		});
 	});
 });

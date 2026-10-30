@@ -12,6 +12,7 @@ import {
 	linkRenderer,
 	type NotePaths,
 } from "../links";
+import type { BreakdownSettled } from "../metadata";
 import type { LemmaRecords } from "../types";
 import {
 	DEFAULT_TITLES,
@@ -63,6 +64,11 @@ export type PreviousDocument = {
 export type SerializeOptions<L extends Dumling.Language> = RenderOptions<L> & {
 	/** The note as parsed before, if it exists: its freeform is kept. */
 	readonly previous?: PreviousDocument;
+	/**
+	 * A Reading note's settled Breakdown marker (#266), written unless its
+	 * Knowledge holds a Breakdown or a Source. A Lemma note ignores it.
+	 */
+	readonly breakdownSettled?: BreakdownSettled;
 };
 
 /** A note as serialize writes it: its visible body and the metadata to store. */

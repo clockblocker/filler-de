@@ -8,6 +8,8 @@
 
 import {
 	type BodySegment,
+	type BreakdownSettled,
+	BreakdownSettledSchema,
 	type CodecOptions,
 	type LemmaNoteParse,
 	type LemmaRecords,
@@ -20,7 +22,7 @@ import {
 	serializeReadingNote,
 } from "@textfresser/lemma-note-codec";
 import type * as Dumling from "dumling/types";
-import { Result } from "effect";
+import { Predicate, Result } from "effect";
 import {
 	LemmaNoteMetadata,
 	type MetadataFormat,
@@ -98,8 +100,13 @@ export function readReadingNote<L extends Dumling.Language>(
 
 export type WriteOptions<L extends Dumling.Language> = Omit<
 	SerializeOptions<L>,
-	"previous"
+	"previous" | "breakdownSettled"
 > & {
+	/**
+	 * A Reading note's settled Breakdown marker (#266): this one, or none
+	 * for `null`; when omitted, the one the note already holds.
+	 */
+	readonly breakdownSettled?: BreakdownSettled | null;
 	readonly language: L;
 	/** Where the metadata goes: the format "Hide metadata" selects. */
 	readonly format: MetadataFormat;
@@ -266,7 +273,13 @@ function writeNote<P extends { readonly document: unknown }, M>(
  */
 export function writeLemmaNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
-	{ extraFreeform, format, language, ...options }: WriteOptions<L>,
+	{
+		breakdownSettled: _readingOnly,
+		extraFreeform,
+		format,
+		language,
+		...options
+	}: WriteOptions<L>,
 ): MetadataTransform {
 	return writeNote(
 		LemmaNoteMetadata,
@@ -290,16 +303,35 @@ export function writeLemmaNote<L extends Dumling.Language>(
 export function writeReadingNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
 	reading: Dumling.Reading<L>,
-	{ extraFreeform, format, language, ...options }: WriteOptions<L>,
+	{
+		breakdownSettled,
+		extraFreeform,
+		format,
+		language,
+		...options
+	}: WriteOptions<L>,
 ): MetadataTransform {
 	return writeNote(
 		ReadingNoteMetadata,
 		(content) => readReadingNote(content, { language }, format),
 		(document) => {
 			const previous = withExtraFreeform(document, extraFreeform);
+			const held = BreakdownSettledSchema.safeParse(
+				Predicate.isObject(document?.metadata)
+					? (document.metadata as { breakdownSettled?: unknown })
+							.breakdownSettled
+					: undefined,
+			);
+			const settled =
+				breakdownSettled === undefined
+					? held.success
+						? held.data
+						: undefined
+					: (breakdownSettled ?? undefined);
 			return serializeReadingNote(records, reading, {
 				...options,
 				...(previous === undefined ? {} : { previous }),
+				...(settled === undefined ? {} : { breakdownSettled: settled }),
 			});
 		},
 		format,

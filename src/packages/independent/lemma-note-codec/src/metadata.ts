@@ -84,14 +84,26 @@ export const LemmaNoteMetadataSchema = z.strictObject({
 });
 
 /**
+ * Why a Reading that stores neither a Breakdown nor a Source asks for
+ * neither again (#266): its segmenters found no parts (`NoParts`), or its
+ * Source came back Unresolved (`Unresolved`). dumrel stores no "asked,
+ * nothing", so the plugin keeps this beside the Knowledge. It goes once
+ * the Knowledge holds a Breakdown or a Source, and with the note.
+ */
+export const BreakdownSettledSchema = z.enum(["NoParts", "Unresolved"]);
+export type BreakdownSettled = z.infer<typeof BreakdownSettledSchema>;
+
+/**
  * A Reading note's metadata: the Reading, with its Lemma, so the note names
  * its identity alone; its Knowledge and learner content; its Attestation
  * Links without the Reading each repeats; and the pending relations it is
  * the source of, without the source and locator their Reading gives.
+ * `breakdownSettled` is the plugin's, not a dumdict record.
  */
 export const ReadingNoteMetadataSchema = z.strictObject({
 	attestationLinks: z.array(LinkMetadataSchema).optional(),
 	attestedTranslations: z.array(z.string()).optional(),
+	breakdownSettled: BreakdownSettledSchema.optional(),
 	knowledge: z.unknown().optional(),
 	notes: z.string().optional(),
 	pendingRelations: z.array(PendingMetadataSchema).optional(),
@@ -168,6 +180,21 @@ export function lemmaNoteMetadataOf<L extends Dumling.Language>(
 	);
 }
 
+/**
+ * The marker a note keeps: none once the Knowledge holds a Breakdown or a
+ * Source, which settle the question themselves.
+ */
+function breakdownSettledOf(
+	knowledge:
+		| { readonly breakdown?: unknown; readonly source?: unknown }
+		| undefined,
+	settled: BreakdownSettled | undefined,
+): BreakdownSettled | undefined {
+	return knowledge?.breakdown === undefined && knowledge?.source === undefined
+		? settled
+		: undefined;
+}
+
 export function readingNoteMetadataOf<L extends Dumling.Language>(
 	data: ReadingNoteData<L>,
 	rendering: readonly RenderingSeal[],
@@ -182,6 +209,10 @@ export function readingNoteMetadataOf<L extends Dumling.Language>(
 				})),
 			),
 			attestedTranslations: nonEmpty(entry.attestedTranslations),
+			breakdownSettled: breakdownSettledOf(
+				entry.knowledge,
+				data.breakdownSettled,
+			),
 			knowledge: entry.knowledge,
 			notes: entry.notes === "" ? undefined : entry.notes,
 			pendingRelations: nonEmpty(
@@ -398,5 +429,11 @@ export function readingNoteDataOf<L extends Dumling.Language>(
 		);
 		if (record !== undefined) pendingRelations.push(record);
 	});
-	return settle(issues, { pendingRelations, readingEntry });
+	return settle(issues, {
+		pendingRelations,
+		readingEntry,
+		...(metadata.breakdownSettled === undefined
+			? {}
+			: { breakdownSettled: metadata.breakdownSettled }),
+	});
 }

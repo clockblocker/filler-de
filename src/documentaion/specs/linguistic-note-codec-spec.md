@@ -72,7 +72,7 @@ type LemmaRecords<L> = {             // every record of one Lemma
 	pendingRelations: PendingSemanticRelationRecord<L>[];
 };
 type LemmaNoteData<L> = { lemmaRecord: LemmaRecord<L>; ownedSurfaceEntries: SurfaceEntry<L>[] };
-type ReadingNoteData<L> = { readingEntry: ReadingEntry<L>; pendingRelations: PendingSemanticRelationRecord<L>[] };
+type ReadingNoteData<L> = { readingEntry: ReadingEntry<L>; pendingRelations: PendingSemanticRelationRecord<L>[]; breakdownSettled?: "NoParts" | "Unresolved" };
 
 type LemmaNoteDocument = { metadata: LemmaNoteMetadata | undefined; segments: BodySegment[] };
 type ReadingNoteDocument = { metadata: ReadingNoteMetadata | undefined; segments: BodySegment[] };
@@ -148,6 +148,7 @@ Metadata, `readingNote`:
 | `attestationLinks` | Each Attestation Link as `{ ref, surfaceId }`; its Reading is the note's (texteater#1227) |
 | `attestedTranslations`, `notes` | `ReadingEntry`'s learner content, when not empty |
 | `pendingRelations` | The `PendingSemanticRelationRecord`s whose source is the note's Reading, as `{ relation, target, resolvedLemma? }`; source and locator are rebuilt from the Reading |
+| `breakdownSettled` | The plugin's, not a dumdict record (#266): why a Reading with neither a Breakdown nor a Source is asked for neither again, `NoParts` (its segmenters found none) or `Unresolved` (its Source came back Unresolved). A rewrite keeps it; it goes once the Knowledge holds a Breakdown or a Source |
 | `rendering` | The seals of the body's renderings |
 
 Visible Blocks, in canonical order (see Layout):

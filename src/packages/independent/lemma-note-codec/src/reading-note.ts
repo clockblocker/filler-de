@@ -418,7 +418,13 @@ export function serializeReadingNote<L extends Dumling.Language>(
 	return Result.succeed({
 		body,
 		metadata: readingNoteMetadataOf(
-			{ pendingRelations, readingEntry: entry },
+			{
+				pendingRelations,
+				readingEntry: entry,
+				...(options.breakdownSettled === undefined
+					? {}
+					: { breakdownSettled: options.breakdownSettled }),
+			},
 			rendering,
 		),
 	});

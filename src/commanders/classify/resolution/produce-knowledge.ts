@@ -11,6 +11,7 @@
  * commit and the links, never on their path, as an action of its own: its
  * caller provides it one dumgen build (`Dumgen.provide`).
  */
+import type { BreakdownSettled } from "@textfresser/lemma-note-codec";
 import { canonicalJson } from "common-utils";
 import { authoredReading, closedRoute } from "dumcorpus/inventories";
 import type { Jev, Luna } from "dumgen";
@@ -61,6 +62,8 @@ export type KnowledgeOutcome =
 	| { readonly _tag: "Covered" }
 	| {
 			readonly _tag: "Published";
+			/** The Reading's Breakdown is asked no more: it settled with none. */
+			readonly breakdownSettled?: BreakdownSettled;
 			readonly changes: number;
 			readonly failures: readonly KnowledgeFailureSummary[];
 			/** Relation parts that could not fit one commit even alone. */
@@ -97,6 +100,9 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 	const breakdown = breakdownAskFor({
 		reading,
 		...(knowledge ? { knowledge } : {}),
+		...(location?.breakdownSettled === undefined
+			? {}
+			: { settled: location.breakdownSettled }),
 	});
 	const masked = knowledgeRequestFor({
 		origin: job.origin,
@@ -197,8 +203,21 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		pendingRelations,
 		reading,
 	}).pipe(Effect.uninterruptible);
+	const { settled } = brokenDown;
+	if (settled !== undefined)
+		// A marker that did not land only costs the next occurrence an ask.
+		yield* deps.store.settleBreakdown(reading, settled).pipe(
+			Effect.uninterruptible,
+			Effect.catch((error) =>
+				Effect.logWarning(
+					`[Classify] The settled Breakdown of ${job.label} was not recorded:`,
+					error,
+				),
+			),
+		);
 	return {
 		_tag: "Published",
+		...(settled === undefined ? {} : { breakdownSettled: settled }),
 		changes: published.size + changes.length,
 		dropped: final.dropped,
 		failures: [...produced.failures, ...brokenDown.failures].flatMap(

@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 import type { LinkTarget } from "dumdict";
 import { createPendingSemanticRelationRecord } from "dumdict/pending";
 import type * as Dumling from "dumling/types";
+import { parseReadingKnowledge } from "dumrel";
 import { Result } from "effect";
 import {
+	type BreakdownSettled,
 	LemmaNoteMetadataSchema,
 	type LemmaRecords,
 	NoteSerializeError,
@@ -494,11 +496,13 @@ describe("a Reading's Breakdown and Source (texteater ADR 0050)", () => {
 	});
 	const shadow = (family: string, kind: string, canonicalForm: string) =>
 		({ canonicalForm, family, kind, language: "de" }) as never;
-	const roundTrip = (
+	type Knowledge = NonNullable<
+		LemmaRecords<"de">["readingEntries"][number]["knowledge"]
+	>;
+	const parsedNote = (
 		lemma: Dumling.Lemma<"de">,
-		knowledge: NonNullable<
-			LemmaRecords<"de">["readingEntries"][number]["knowledge"]
-		>,
+		knowledge: Knowledge,
+		breakdownSettled?: BreakdownSettled,
 	) => {
 		const reading = {
 			emojiDescription: "🏭",
@@ -519,12 +523,20 @@ describe("a Reading's Breakdown and Source (texteater ADR 0050)", () => {
 				},
 			],
 		};
-		return valid(
-			parseReading(
-				Result.getOrThrow(serializeReadingNote(records, reading)),
-			).data,
-		).readingEntry.knowledge;
+		const note = Result.getOrThrow(
+			serializeReadingNote(
+				records,
+				reading,
+				breakdownSettled === undefined ? {} : { breakdownSettled },
+			),
+		);
+		return {
+			data: valid(parseReading(note).data),
+			metadata: note.metadata,
+		};
 	};
+	const roundTrip = (lemma: Dumling.Lemma<"de">, knowledge: Knowledge) =>
+		parsedNote(lemma, knowledge).data.readingEntry.knowledge;
 
 	it("keeps both halves, each piece's Lemma or Unit Shadow target, and filler", () => {
 		const breakdown = {
@@ -563,5 +575,72 @@ describe("a Reading's Breakdown and Source (texteater ADR 0050)", () => {
 			expect(roundTrip(noun("Laufen"), { source: { target } })).toEqual({
 				source: { target },
 			});
+	});
+
+	it("keeps a participle's Source with its Participle Meaning, which dumrel requires", () => {
+		const gekocht: Dumling.Lemma<"de"> = {
+			canonicalForm: "gekocht",
+			coreFeatures: { comparable: "Yes" },
+			family: "Lexeme",
+			kind: "ADJ",
+			language: "de",
+			unitKind: "Lemma",
+		} as Dumling.Lemma<"de">;
+		const kochen = shadow("Lexeme", "VERB", "kochen");
+		for (const meaning of ["Verbal", "Drifted"] as const)
+			expect(
+				roundTrip(gekocht, { source: { meaning, target: kochen } }),
+			).toEqual({ source: { meaning, target: kochen } });
+		// dumrel holds the rule; dumgen's Source stage writes by it.
+		const reading = {
+			emojiDescription: "🍳",
+			lemma: gekocht,
+			unitKind: "Reading",
+		} as Dumling.Reading<"de">;
+		const checked = (source: unknown) =>
+			parseReadingKnowledge({ knowledge: { source }, source: reading })
+				.success;
+		expect(checked({ meaning: "Verbal", target: kochen })).toBe(true);
+		expect(checked({ target: kochen })).toBe(false);
+	});
+
+	it("keeps a settled marker beside the Knowledge, until the Knowledge holds a Breakdown or a Source", () => {
+		for (const settled of ["NoParts", "Unresolved"] as const) {
+			const note = parsedNote(
+				noun("Kohle"),
+				{ definition: "x" } as never,
+				settled,
+			);
+			expect(note.metadata.breakdownSettled).toBe(settled);
+			expect(
+				ReadingNoteMetadataSchema.safeParse(note.metadata).success,
+			).toBe(true);
+			expect(note.data.breakdownSettled).toBe(settled);
+		}
+		expect(
+			parsedNote(noun("Kohle"), {}).data.breakdownSettled,
+		).toBeUndefined();
+		const broken = parsedNote(
+			noun("Kohle"),
+			{
+				breakdown: {
+					morphemes: [
+						{
+							letters: "Kohle",
+							target: shadow("Morpheme", "Root", "kohl"),
+						},
+					],
+				},
+			},
+			"NoParts",
+		);
+		expect(broken.metadata.breakdownSettled).toBeUndefined();
+		expect(
+			ReadingNoteMetadataSchema.safeParse({
+				breakdownSettled: "Maybe",
+				reading: {},
+				rendering: [],
+			}).success,
+		).toBe(false);
 	});
 });
