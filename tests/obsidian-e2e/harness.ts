@@ -48,6 +48,24 @@ type ScenarioAction =
 			readonly linkpath: string;
 	  }
 	| {
+			/**
+			 * Clicks a link the note holds with real DOM mouse events on its
+			 * rendered element, so Textfresser's click detector sees it, as
+			 * `clickLink`'s `openLinkText` does not.
+			 */
+			readonly kind: "clickScrollLink";
+			/** A Library-relative note holding a `[[<linkpath>]]` or `[[<linkpath>|…]]` link. */
+			readonly path: string;
+			/** The link's target, as written. */
+			readonly linkpath: string;
+			/** Which of the note's links to `linkpath`, from 0; needed when it holds several. */
+			readonly nth?: number;
+			/** Where it is clicked: in Live Preview, as the driver opens notes, or in Reading view. */
+			readonly view?: "livePreview" | "reading";
+			/** A plain left click, one with Cmd (Ctrl off macOS), or a middle click. */
+			readonly press?: "plain" | "mod" | "middle";
+	  }
+	| {
 			readonly direction: "next" | "prev";
 			readonly kind: "runPageNavigation";
 			readonly path: string;
@@ -594,6 +612,15 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 				kind: "followLink",
 				linkpath: action.linkpath,
 				path: action.path,
+			};
+		case "clickScrollLink":
+			return {
+				kind: "clickScrollLink",
+				linkpath: action.linkpath,
+				...(action.nth === undefined ? {} : { nth: action.nth }),
+				path: action.path,
+				press: action.press ?? "plain",
+				view: action.view ?? "livePreview",
 			};
 		case "runPageNavigation":
 			return {

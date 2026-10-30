@@ -2,7 +2,8 @@
  * The shared click stream of the click detectors.
  *
  * Uses mousedown in the capture phase, to catch a click before Obsidian
- * re-renders. Each subscriber filters for its own targets, in order.
+ * re-renders. Each subscriber is told of the buttons it asks for, the left
+ * one by default, and filters for its own targets, in order.
  *
  * When a subscriber prevents a mousedown's default, the mouseup and click
  * that follow on the same target are blocked too, so Obsidian, which
@@ -18,8 +19,12 @@ import type { EventDispatch } from "../../internal/dispatch";
 export type ClickSubscriber = {
 	/** The kind it detects, whose edge logs what it throws. */
 	readonly kind: UserEventKind;
+	/** The mouse buttons it is told about, by `MouseEvent.button`; the left one only by default. */
+	readonly buttons?: readonly number[];
 	readonly onMouseDown: (target: HTMLElement, evt: MouseEvent) => void;
 };
+
+const LEFT_ONLY: readonly number[] = [0];
 
 const CAPTURE = { capture: true } as const;
 
@@ -45,10 +50,9 @@ export const listenForClicks = Effect.fnUntraced(function* (
 		"mousedown",
 		(evt) => {
 			MutableRef.set(handledTarget.ref, null);
-			// Only the left mouse button.
-			if (evt.button !== 0) return;
 			const target = evt.target as HTMLElement;
-			for (const { kind, onMouseDown } of subscribers) {
+			for (const { buttons, kind, onMouseDown } of subscribers) {
+				if (!(buttons ?? LEFT_ONLY).includes(evt.button)) continue;
 				const ran = host.readSync(
 					Effect.sync(() => onMouseDown(target, evt)),
 				);

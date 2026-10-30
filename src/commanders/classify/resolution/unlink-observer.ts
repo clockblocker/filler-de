@@ -111,16 +111,18 @@ import {
 } from "effect";
 import { interruptsOf } from "../../../utils/causes";
 import { IdleTracker } from "../../../utils/idle-tracker";
-import { scrollSentences, segmentSourceRanges } from "../scroll-sentences";
+import { scrollSentences } from "../scroll-sentences";
 import type { SegmentationCache } from "../segmentation-cache";
-import {
-	sentenceInstances,
-	sentenceKey,
-	sentenceStitchedText,
-} from "../sentence-key";
+import { sentenceInstances } from "../sentence-key";
 import { MAX_COMMIT_ATTEMPTS, planRemoval } from "./commit-occurrence";
 import type { DictionaryCommitFailed } from "./knowledge-types";
 import { tellUser } from "./notify";
+import {
+	cachedSentence,
+	type KeyedOccurrence,
+	occurrencesAt,
+	rememberedReads,
+} from "./occurrence-keys";
 import type { ScrollActivity } from "./scroll-activity";
 import {
 	attestationRefPrefixOf,
@@ -131,7 +133,6 @@ import {
 	sourceBlocksOf,
 } from "./scroll-links";
 import {
-	linkKeyOf,
 	linksOneOf,
 	type RecordedOccurrence,
 	type ScrollLink,
@@ -196,75 +197,6 @@ export type UnlinkObserver = {
 };
 
 /**
- * Each link's occurrence key, recomputed as Classify computed it: from its
- * Sentence's cached segmentation, the unit its Segments belong to and the
- * instance of the Sentence's text. Undefined where the Sentence changed,
- * its segmentation is not cached, or the link is not one unit's.
- */
-const occurrenceKeysOf = Effect.fnUntraced(function* (
-	content: string,
-	links: readonly ScrollLink[],
-	cache: SegmentationCache["Service"],
-	segmenterVersion: string,
-) {
-	const scroll = scrollSentences(content);
-	const instances = sentenceInstances(
-		scroll.sentences.map(({ text }) => text),
-	);
-	const keys = new Map<number, string | undefined>();
-	for (const link of links) {
-		const index = scroll.sentences.findIndex(
-			({ source }) =>
-				source.from <= link.shown.from && link.shown.to <= source.to,
-		);
-		const sentence = scroll.sentences[index];
-		keys.set(linkKeyOf(link), undefined);
-		if (!sentence) continue;
-		const key = sentenceKey(segmenterVersion, "de", sentence.text);
-		const cached = Option.filter(
-			yield* cache.get(key),
-			(entry) => entry.text === sentenceStitchedText(sentence.text),
-		);
-		if (Option.isNone(cached)) continue;
-		const segmented = cached.value;
-		const ranges = segmentSourceRanges(
-			scroll,
-			sentence,
-			segmented.segments,
-		);
-		const covered = segmented.segments.flatMap((segment, at) => {
-			const range = ranges[at];
-			return segment.kind !== "Whitespace" &&
-				range !== undefined &&
-				range.from < range.to &&
-				link.shown.from <= range.from &&
-				range.to <= link.shown.to
-				? [at]
-				: [];
-		});
-		const units = segmented.units.filter((unit) =>
-			covered.some((at) => unit.segments.includes(at)),
-		);
-		const [unit] = units;
-		if (
-			covered.length === 0 ||
-			units.length !== 1 ||
-			!unit ||
-			!covered.every((at) => unit.segments.includes(at))
-		)
-			continue;
-		keys.set(
-			linkKeyOf(link),
-			occurrenceKeyOf(
-				{ segments: [...unit.segments], sentenceKey: key },
-				instances[index] ?? 0,
-			),
-		);
-	}
-	return keys;
-});
-
-/**
  * The refs of `recorded` whose occurrence stands in its block of the Scroll
  * as it was recorded: a Sentence of that block, its segmentation cached,
  * has a unit whose occurrence key is the recorded one. The key hashes the
@@ -274,7 +206,7 @@ const occurrenceKeysOf = Effect.fnUntraced(function* (
 const recordedSentencesHeld = Effect.fnUntraced(function* (
 	content: string,
 	recorded: readonly RecordedOccurrence[],
-	cache: SegmentationCache["Service"],
+	cache: Pick<SegmentationCache["Service"], "get">,
 	segmenterVersion: string,
 ) {
 	const wanted = new Map<string, string[]>();
@@ -296,13 +228,10 @@ const recordedSentencesHeld = Effect.fnUntraced(function* (
 		const block = blocks.get(sentence.source.from);
 		if (block?._tag !== "Identified" || !recordedBlocks.has(block.id))
 			continue;
-		const key = sentenceKey(segmenterVersion, "de", sentence.text);
-		const cached = Option.filter(
-			yield* cache.get(key),
-			(entry) => entry.text === sentenceStitchedText(sentence.text),
-		);
+		const cached = yield* cachedSentence(sentence, cache, segmenterVersion);
 		if (Option.isNone(cached)) continue;
-		for (const unit of cached.value.units) {
+		const { key, segmented } = cached.value;
+		for (const unit of segmented.units) {
 			const occurrence = occurrenceKeyOf(
 				{ segments: [...unit.segments], sentenceKey: key },
 				instances[index] ?? 0,
@@ -515,6 +444,7 @@ const refsInto = Effect.fnUntraced(function* (
  */
 const checkScroll = Effect.fnUntraced(function* (
 	deps: UnlinkObserverDeps,
+	cache: Pick<SegmentationCache["Service"], "get">,
 	store: UnlinkStore,
 	scrollPath: string,
 	swept: ReadonlySet<string> | undefined,
@@ -567,14 +497,14 @@ const checkScroll = Effect.fnUntraced(function* (
 		const held = yield* recordedSentencesHeld(
 			content,
 			recorded,
-			deps.cache,
+			cache,
 			yield* deps.segmenterVersion,
 		);
 		recorded = recorded.filter(({ ref }) => held.has(ref));
 	}
 	if (recorded.length === 0) return nothing;
 
-	const judge = (keys?: ReadonlyMap<number, string | undefined>) =>
+	const judge = (keys?: ReadonlyMap<number, KeyedOccurrence | undefined>) =>
 		unlinkedOccurrences({
 			content,
 			links,
@@ -584,10 +514,10 @@ const checkScroll = Effect.fnUntraced(function* (
 	let judged = judge();
 	if (judged.unkeyed.length > 0)
 		judged = judge(
-			yield* occurrenceKeysOf(
+			yield* occurrencesAt(
 				content,
-				judged.unkeyed,
-				deps.cache,
+				judged.unkeyed.map(({ shown }) => shown),
+				cache,
 				yield* deps.segmenterVersion,
 			),
 		);
@@ -685,6 +615,9 @@ export const makeUnlinkObserver = Effect.fnUntraced(function* <E>(
 		vault: Number.NEGATIVE_INFINITY,
 	});
 	const tell = tellUser(deps.notify);
+	// Each Sentence's segmentation is read once across checks, not once
+	// per link of every check.
+	const reads = rememberedReads(deps.cache);
 
 	/** Counts `effect` as pending, here and on the plugin's idle tracker. */
 	const track = <A, E2, R>(effect: Effect.Effect<A, E2, R>) =>
@@ -759,9 +692,10 @@ export const makeUnlinkObserver = Effect.fnUntraced(function* <E>(
 			if (now - dictionary < sweepQuietMs)
 				return sweepQuietMs - (now - dictionary);
 			entry.again = false;
+			reads.forgetMisses();
 			const checked = yield* attempt(
 				Effect.flatMap(deps.store, (store) =>
-					checkScroll(deps, store, path, entry.sweep?.settled),
+					checkScroll(deps, reads, store, path, entry.sweep?.settled),
 				),
 			);
 			if (checked?._tag === "Busy") {

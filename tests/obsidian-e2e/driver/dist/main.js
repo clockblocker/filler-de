@@ -1,7 +1,14 @@
 "use strict";
 
 const { createHash, randomUUID } = require("node:crypto");
-const { apiVersion, MarkdownView, Plugin, TFile, TFolder } = require("obsidian");
+const {
+	apiVersion,
+	MarkdownView,
+	Platform,
+	Plugin,
+	TFile,
+	TFolder,
+} = require("obsidian");
 const {
 	PROTOCOL_VERSION,
 	ProtocolError,
@@ -363,6 +370,69 @@ async function persistActiveEditor(app) {
 	if (!file || !isFile(file)) return;
 	if (view.editor.getValue() === (await app.vault.read(file))) return;
 	await view.save();
+}
+
+/**
+ * The starts of the note's wikilinks to `linkpath` as written, `[[<linkpath>]]`,
+ * `[[<linkpath>|…]]` or `[[<linkpath>#…]]`, and where each one's shown text
+ * starts and ends.
+ */
+function wikilinksTo(content, linkpath) {
+	const found = [];
+	const open = `[[${linkpath}`;
+	for (
+		let start = content.indexOf(open);
+		start >= 0;
+		start = content.indexOf(open, start + 1)
+	) {
+		if (content[start - 1] === "!") continue;
+		const after = content[start + open.length];
+		if (after !== "]" && after !== "|" && after !== "#") continue;
+		const end = content.indexOf("]]", start);
+		if (end < 0) continue;
+		const pipe = content.indexOf("|", start);
+		const shownFrom = pipe >= 0 && pipe < end ? pipe + 1 : start + 2;
+		found.push({ end: end + 2, shownFrom, shownTo: end, start });
+	}
+	return found;
+}
+
+/**
+ * Dispatches one click's mouse events on `element`, at its middle, as the
+ * mouse makes them: mousedown, mouseup, then click, or auxclick for the
+ * middle button.
+ */
+function dispatchClick(element, press) {
+	const rect = element.getBoundingClientRect();
+	const middle = press === "middle";
+	const mod = press === "mod";
+	const init = {
+		bubbles: true,
+		button: middle ? 1 : 0,
+		buttons: middle ? 4 : 1,
+		cancelable: true,
+		clientX: rect.left + rect.width / 2,
+		clientY: rect.top + rect.height / 2,
+		ctrlKey: mod && !Platform.isMacOS,
+		metaKey: mod && Platform.isMacOS,
+		view: element.ownerDocument.defaultView,
+	};
+	const MouseEventOf = element.ownerDocument.defaultView.MouseEvent;
+	element.dispatchEvent(new MouseEventOf("mousedown", init));
+	element.dispatchEvent(new MouseEventOf("mouseup", { ...init, buttons: 0 }));
+	element.dispatchEvent(
+		new MouseEventOf(middle ? "auxclick" : "click", { ...init, buttons: 0 }),
+	);
+}
+
+/** Polls `find` every 20 ms until it answers, for at most `timeoutMs`. */
+async function waitFor(find, timeoutMs) {
+	const deadline = Date.now() + timeoutMs;
+	for (;;) {
+		const found = find();
+		if (found || Date.now() >= deadline) return found ?? null;
+		await sleep(20);
+	}
 }
 
 function relativeTo(base, fullPath) {
@@ -1444,6 +1514,120 @@ class TextfresserE2EDriver extends Plugin {
 				await this.app.workspace.openLinkText(linkpath, file.path, false);
 				break;
 			}
+			case "clickScrollLink": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot click a link in '${source.resolved}': markdown file not found`,
+					);
+				}
+				const linkpath = assertString(
+					operation.linkpath,
+					"params.operation.linkpath",
+					{ maxLength: 1_024 },
+				);
+				const view = operation.view ?? "livePreview";
+				if (view !== "livePreview" && view !== "reading") {
+					throw new DriverError(
+						"InvalidOperation",
+						"clickScrollLink view must be livePreview or reading",
+					);
+				}
+				const press = operation.press ?? "plain";
+				if (press !== "plain" && press !== "mod" && press !== "middle") {
+					throw new DriverError(
+						"InvalidOperation",
+						"clickScrollLink press must be plain, mod or middle",
+					);
+				}
+				const editor = await openSourceEditor(this.app, file);
+				const content = editor.getValue();
+				const links = wikilinksTo(content, linkpath);
+				const { nth } = operation;
+				if (
+					nth !== undefined &&
+					(!Number.isInteger(nth) || nth < 0 || nth >= links.length)
+				) {
+					throw new DriverError(
+						"LinkUnavailable",
+						`'${source.resolved}' holds ${links.length} links to '${linkpath}', so none is link ${nth}`,
+					);
+				}
+				if (nth === undefined && links.length !== 1) {
+					throw new DriverError(
+						"LinkUnavailable",
+						`'${source.resolved}' holds ${links.length} links to '${linkpath}'; name one with nth`,
+					);
+				}
+				const index = nth ?? 0;
+				const link = links[index];
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				let element = null;
+				if (view === "livePreview") {
+					// The cursor stays off the link, so Live Preview renders it.
+					const away = link.start > 0 ? 0 : content.length;
+					editor.setCursor(editor.offsetToPos(away));
+					editor.scrollIntoView(
+						{ from: editor.offsetToPos(link.start), to: editor.offsetToPos(link.end) },
+						true,
+					);
+					const cm = markdownView?.editor?.cm;
+					if (!cm) {
+						throw new DriverError(
+							"EditorUnavailable",
+							`no CodeMirror view for '${file.path}'`,
+						);
+					}
+					element = await waitFor(() => {
+						const { node } = cm.domAtPos(
+							Math.min(link.shownFrom + 1, link.shownTo),
+						);
+						const at = node.nodeType === 3 ? node.parentElement : node;
+						return at?.closest?.(".cm-hmd-internal-link") ?? null;
+					}, 2_000);
+				} else {
+					const prior = markdownView.leaf.getViewState();
+					await markdownView.leaf.setViewState({
+						...prior,
+						state: { ...prior.state, mode: "preview" },
+					});
+					const preview = this.app.workspace.getActiveViewOfType(MarkdownView);
+					preview?.previewMode?.applyScroll?.(
+						editor.offsetToPos(link.start).line,
+					);
+					// Every link to `linkpath` renders before the one is picked.
+					element = await waitFor(() => {
+						const rendered = Array.from(
+							preview?.previewMode?.containerEl?.querySelectorAll(
+								"a.internal-link",
+							) ?? [],
+						).filter(
+							(each) =>
+								each.getAttribute("data-href") === linkpath &&
+								!each.closest(".internal-embed"),
+						);
+						return rendered.length === links.length ? rendered[index] : null;
+					}, 5_000);
+				}
+				if (!element) {
+					throw new DriverError(
+						"LinkUnavailable",
+						`link ${index} to '${linkpath}' did not render in ${view} in '${source.resolved}'`,
+					);
+				}
+				const leaves = this.app.workspace.getLeavesOfType("markdown").length;
+				dispatchClick(element, press);
+				// Textfresser, or Obsidian, opens the note after the click, here
+				// or in a new tab.
+				await waitFor(
+					() =>
+						this.app.workspace.getActiveFile()?.path !== file.path ||
+						this.app.workspace.getLeavesOfType("markdown").length > leaves,
+					3_000,
+				);
+				break;
+			}
 			case "pageNavigation": {
 				const file = this.app.vault.getAbstractFileByPath(source.resolved);
 				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
@@ -1627,7 +1811,7 @@ class TextfresserE2EDriver extends Plugin {
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, openDictionaryReset, dryRunDictionaryReset, or restartLibrarian",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, clickScrollLink, pageNavigation, toggleCodexEntry, openDictionaryReset, dryRunDictionaryReset, or restartLibrarian",
 				);
 		}
 
@@ -1639,7 +1823,9 @@ class TextfresserE2EDriver extends Plugin {
 		// answered the save.
 		if (
 			settleAfter &&
-			(operation.kind === "classify" || operation.kind === "followLink")
+			(operation.kind === "classify" ||
+				operation.kind === "followLink" ||
+				operation.kind === "clickScrollLink")
 		) {
 			await persistActiveEditor(this.app);
 			settled = await this.settle({ timeoutMs });

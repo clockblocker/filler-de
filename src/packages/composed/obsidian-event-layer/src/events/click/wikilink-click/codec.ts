@@ -3,24 +3,30 @@
  */
 
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { createEventCodec } from "../../codec-factory";
-import type { WikilinkClickPayload, WikiTarget } from "./payload";
+import type { UserEventPayloadMap } from "../../../contracts";
+import type { WikilinkClickKind, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";
 
-type WikilinkClickData = {
+type WikilinkClickData<K extends WikilinkClickKind> = {
+	kind: K;
 	wikiTarget: WikiTarget;
 	blockContent: string;
 	splitPath: SplitPathToMdFile;
+	/** Where the link stands in the note's text, when it can be told. */
+	offset: number | undefined;
 };
 
-export const WikilinkClickCodec = createEventCodec(
-	/**
-	 * Encode wikilink click data into a payload.
-	 */
-	(data: WikilinkClickData): WikilinkClickPayload =>
+/** Generic in the click's kind, which `createEventCodec`'s encoder cannot be. */
+export const WikilinkClickCodec = {
+	/** Encode wikilink click data into the payload of its kind. */
+	encode: <K extends WikilinkClickKind>(
+		data: WikilinkClickData<K>,
+	): UserEventPayloadMap[K] =>
 		createWikilinkClickPayload(
+			data.kind,
 			data.wikiTarget,
 			data.blockContent,
 			data.splitPath,
+			data.offset,
 		),
-);
+};

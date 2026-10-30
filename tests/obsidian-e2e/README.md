@@ -91,8 +91,8 @@ test("a new scroll is healed", async () => {
 Fixture and action paths are relative to that scenario's logical `Library`.
 `act()` returns only after Textfresser and its Obsidian/VAM event pipeline have
 settled. Textfresser writes into an open note through its editor, which
-Obsidian saves about two seconds later, so after `runClassify` and
-`clickLink` the driver also saves the active editor when it differs from
+Obsidian saves about two seconds later, so after `runClassify`,
+`clickLink` and `clickScrollLink` the driver also saves the active editor when it differs from
 disk, and settles again. `snapshot()` returns one sorted, normalized view of the Library:
 Markdown contents are in `markdown`, and file kinds are `md` or `file`.
 
@@ -106,7 +106,12 @@ a note and wraps it in `[[ ]]` through the editor, as typing `[` twice over a
 selection does, then saves the note once Textfresser has answered the
 completed link. `clickLink` follows a link the note holds through
 `Workspace.openLinkText`, as a click on it does, so an uncreated link creates
-its note where Obsidian puts it. `openDictionaryReset` runs "Reset dictionary
+its note where Obsidian puts it; it never passes Textfresser's click
+detector. `clickScrollLink` does: it dispatches a real mouse click on the
+link's rendered element, in Live Preview or, with `view: "reading"`, in
+Reading view, and with `press: "mod"` or `"middle"` clicks it as Obsidian
+opens a new tab. It takes `nth`, from 0, when the note holds several links
+to the `linkpath`. `openDictionaryReset` runs "Reset dictionary
 from old notes…" and closes its modal again, clicking nothing in it;
 `status().dictionaryReset` then holds what it showed: the source folders it
 offered and the one it pre-selected, or the notice it failed with. `dryRunDictionaryReset` runs it too, clicks Dry

@@ -8,6 +8,7 @@ import { Effect } from "effect";
 import { MarkdownView } from "obsidian";
 import type { EventDispatch } from "../../internal/dispatch";
 import { DomSelectors } from "../../internal/dom-selectors";
+import { holdsMod } from "../../internal/platform";
 import { PayloadKind } from "../../types/payload-base";
 import { getCurrentFilePath } from "../get-current-file-path";
 import { SelectAllCodec } from "./codec";
@@ -24,15 +25,7 @@ export const listenForSelectAll = Effect.fnUntraced(function* (
 });
 
 function isSelectAll(evt: KeyboardEvent): boolean {
-	const isMacOS =
-		typeof navigator !== "undefined" &&
-		navigator.platform.toLowerCase().includes("mac");
-	return (
-		evt.key === "a" &&
-		(isMacOS ? evt.metaKey : evt.ctrlKey) &&
-		!evt.shiftKey &&
-		!evt.altKey
-	);
+	return evt.key === "a" && holdsMod(evt) && !evt.shiftKey && !evt.altKey;
 }
 
 function handleKeydown(dispatch: EventDispatch, evt: KeyboardEvent): void {

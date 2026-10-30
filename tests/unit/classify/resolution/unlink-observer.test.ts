@@ -666,6 +666,42 @@ describe("unlink observer", () => {
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
 	});
 
+	it("lets no link shield an occurrence whose key it computes and nothing records, as one never clicked (#281)", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt.\n";
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
+		// The second Sentence is segmented, but its See was never attested.
+		const kalt = sentenceKey(SEGMENTER_VERSION, "de", "Der See ist kalt.");
+		const segmented = planFor({
+			content,
+			scrollPath: SCROLL,
+			sentenceKey: kalt,
+			sentenceText: "Der See ist kalt.",
+			units: seeUnits,
+		}).sentences.get(kalt)?.segmented;
+		if (!segmented) throw new Error("no plan for Der See ist kalt.");
+		await run(cache.put(kalt, segmented));
+		const link = linkTo(notePath(lake), "See");
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		const { edit } = observerOver({
+			cache,
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			vault: harness.vault,
+		});
+
+		// A link whose Sentence was edited may be the attested one moved: it
+		// stays.
+		await edit(() => {
+			harness.scroll.content = `Der See ist tief. ^0\n\nDer ${link} ist sehr kalt.\n`;
+		});
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		// One whose key is recorded nowhere is another occurrence: it goes.
+		await edit(() => {
+			harness.scroll.content = `Der See ist tief. ^0\n\nDer ${link} ist kalt.\n`;
+		});
+		expect(await refsOf(harness.store, see)).toEqual([]);
+	});
+
 	it("waits for a Classify run on the Scroll to end before it judges", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);

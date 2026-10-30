@@ -2,8 +2,9 @@
  * The user events the plugin answers: clicks, copy and cut, select-all,
  * selection changes and wikilink completions (`obsidian-event-layer`).
  *
- * The layer's DOM listeners and its editor extension are the plugin
- * host's, held in this Layer's scope, so closing it removes them all.
+ * The layer's DOM listeners, its editor extension and its Reading view
+ * post-processor are the plugin host's, held in this Layer's scope, so
+ * closing it removes them all.
  * Each handled event runs on the plugin runtime at its own edge,
  * `user-event.<kind>`, counted as pending work until it ends. Selection
  * changes and toolbar button clicks run untraced: the first are frequent,
@@ -71,6 +72,7 @@ export class UserEvents extends Context.Service<
 					},
 					listen: (type, handler, options) =>
 						host.onDom(deps.document, type, handler, options),
+					markdownPostProcessor: host.markdownPostProcessor,
 					openLink: (target, sourcePath) =>
 						workspace.openLink(target, sourcePath, false),
 					readSync: deps.runtime.readSync,

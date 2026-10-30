@@ -45,7 +45,8 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 | `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
 | `WikilinkCompleted` | Land a bare word typed outside `Worter/` on its Crossroad note's path (ADR-0015); otherwise ask the Librarian to resolve a Library target. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
-| `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify open a Reading note again once its Knowledge lands. |
+| `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify open a Reading note again once its Knowledge lands. The click carries where the link stands in its note (`LinkClick.offset`). |
+| `WikilinkObserved` | No handler yet. A Cmd/Ctrl-click or middle click on a link, which Obsidian opens on its own; its handler can only observe it. |
 
 A handler has two stages, and an optional third:
 

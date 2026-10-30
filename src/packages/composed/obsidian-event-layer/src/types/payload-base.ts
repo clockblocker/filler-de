@@ -9,6 +9,7 @@ const PayloadKindSchema = z.enum([
 	UserEventKind.SelectAll,
 	UserEventKind.WikilinkCompleted,
 	UserEventKind.WikilinkClicked,
+	UserEventKind.WikilinkObserved,
 	UserEventKind.SelectionChanged,
 ]);
 
@@ -23,6 +24,7 @@ export const PayloadKind = {
 	SelectionChanged: UserEventKind.SelectionChanged,
 	WikilinkClicked: UserEventKind.WikilinkClicked,
 	WikilinkCompleted: UserEventKind.WikilinkCompleted,
+	WikilinkObserved: UserEventKind.WikilinkObserved,
 } as const;
 
 export type AnyPayload = UserEventPayloadMap[PayloadKind];

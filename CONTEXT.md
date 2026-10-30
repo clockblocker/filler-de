@@ -226,6 +226,10 @@ _Avoid_: Lemma command, click classification
 The device-local store of Segmented Sentences in the hidden vault folder `.textfresser/segmentation/`, one immutable entry per Sentence key: a hash of the segmenter version, the language and the Sentence's Stitched Text. It holds no Scroll identity, so only an edit to the Sentence invalidates its entry.
 _Avoid_: Sidecar, segmentation index
 
+**Judgement Cache**:
+The device-local store of what dumgen judged each occurrence, in the hidden vault folder `.textfresser/judgements/`: per Sentence key and occurrence key, the unit's Attestation, the Reading it commits under and its Sentence target. A click on an occurrence's link attests it from its entry without judging again (#281). Unlike a Segmentation Cache entry, an entry is overwritten when its occurrence is judged again.
+_Avoid_: Resolution cache
+
 **Unit Ref**:
 The hand-off from segmentation to resolution: a Sentence key plus one dumgen unit's Segment indices, discontinuous pieces included. The unit's route gives its Family and Kind. It never touches disk in piped Classify.
 _Avoid_: Segment ID, provisional link

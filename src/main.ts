@@ -28,7 +28,10 @@ import {
 } from "./lifecycle/lifecycle-supervisor";
 import { Dumgen, type ScriptedDumgen } from "./managers/dumgen";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
-import { createHandlers } from "./managers/obsidian/behavior-manager";
+import {
+	createHandlers,
+	type LinkClick,
+} from "./managers/obsidian/behavior-manager";
 import { CommandKind } from "./managers/obsidian/command-executor";
 import {
 	Confirm,
@@ -323,9 +326,9 @@ export default class TextEaterPlugin extends Plugin {
 	 * A clicked Reading link reopens its note once its Knowledge lands; it
 	 * runs in the click's fiber, under `user-event.wikilinkClicked`.
 	 */
-	private readonly onWikilinkClicked = (
-		target: string,
-	): Effect.Effect<void> =>
+	private readonly onWikilinkClicked = ({
+		target,
+	}: LinkClick): Effect.Effect<void> =>
 		Effect.suspend(() => {
 			const reopen = this.services?.classify.reopenReading;
 			if (!reopen) return Effect.void;

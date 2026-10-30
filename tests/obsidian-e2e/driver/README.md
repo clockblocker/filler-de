@@ -60,7 +60,7 @@ that folder, for the scenario. `cleanupSession` restores that vault config and
 every setting `beginScenario`'s `settings` replaced.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
-`pageNavigation`, `toggleCodexEntry`, `openDictionaryReset`, `dryRunDictionaryReset` and `restartLibrarian` Textfresser interactions; `create` also accepts
+`clickScrollLink`, `pageNavigation`, `toggleCodexEntry`, `openDictionaryReset`, `dryRunDictionaryReset` and `restartLibrarian` Textfresser interactions; `create` also accepts
 `"entryType": "folder"`. `classify` selects its `selection`, which must occur
 exactly once in the file, and runs the Classify command; `status` then
 reports, under `classify`, what that Classify handed to the resolver port.
@@ -69,7 +69,16 @@ in `[[ ]]` with two editor transactions, as Obsidian's bracket auto-pair
 does, waits up to two seconds for Textfresser to answer the completed link,
 and saves the note. `followLink` calls `Workspace.openLinkText` with its
 `linkpath`, which the note must hold as `[[<linkpath>]]` or
-`[[<linkpath>|…]]`. After `classify` and `followLink` settle, the
+`[[<linkpath>|…]]`. `clickScrollLink` clicks the note's link to its
+`linkpath` (its `nth`, from 0, when the note holds several) with real
+`mousedown`, `mouseup` and `click` events on the link's rendered element,
+so Textfresser's click detector sees it, which `openLinkText` skips. Its
+`view` is `livePreview`, where it scrolls the link into view with the
+cursor off it, or `reading`, where it waits for every link to `linkpath`
+to render; its `press` is `plain`, `mod` (Cmd, Ctrl off macOS) or
+`middle` (`auxclick` in place of `click`). It then waits up to three
+seconds for the note to change or a tab to open. After `classify`,
+`followLink` and `clickScrollLink` settle, the
 driver saves the active editor if it differs from the note on disk, since
 Textfresser writes into an open note through its editor, and settles once
 more. `openDictionaryReset` takes no path: it runs the "Reset dictionary from old
