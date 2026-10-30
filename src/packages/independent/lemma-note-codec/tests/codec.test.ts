@@ -482,3 +482,86 @@ describe("a lexical reflexive in the Valency Frame (texteater ADR 0052)", () => 
 		]);
 	});
 });
+
+describe("a Reading's Breakdown and Source (texteater ADR 0050)", () => {
+	const noun = (canonicalForm: string): Dumling.Lemma<"de"> => ({
+		canonicalForm,
+		coreFeatures: { gender: "Neut" },
+		family: "Lexeme",
+		kind: "NOUN",
+		language: "de",
+		unitKind: "Lemma",
+	});
+	const shadow = (family: string, kind: string, canonicalForm: string) =>
+		({ canonicalForm, family, kind, language: "de" }) as never;
+	const roundTrip = (
+		lemma: Dumling.Lemma<"de">,
+		knowledge: NonNullable<
+			LemmaRecords<"de">["readingEntries"][number]["knowledge"]
+		>,
+	) => {
+		const reading = {
+			emojiDescription: "🏭",
+			lemma,
+			unitKind: "Reading",
+		} as Dumling.Reading<"de">;
+		const records: LemmaRecords<"de"> = {
+			lemmaRecord: { lemma },
+			ownedSurfaceEntries: [],
+			pendingRelations: [],
+			readingEntries: [
+				{
+					attestationLinks: [],
+					attestedTranslations: [],
+					knowledge,
+					notes: "",
+					reading,
+				},
+			],
+		};
+		return valid(
+			parseReading(
+				Result.getOrThrow(serializeReadingNote(records, reading)),
+			).data,
+		).readingEntry.knowledge;
+	};
+
+	it("keeps both halves, each piece's Lemma or Unit Shadow target, and filler", () => {
+		const breakdown = {
+			constituents: [
+				{ letters: "Kohle", target: noun("Kohle") },
+				{
+					letters: "kraftwerk",
+					target: shadow("Lexeme", "NOUN", "Kraftwerk"),
+				},
+			],
+			morphemes: [
+				{ letters: "Kohl", target: shadow("Morpheme", "Root", "kohl") },
+				{ letters: "e" },
+				{
+					letters: "kraft",
+					target: shadow("Morpheme", "Root", "kraft"),
+				},
+				{ letters: "werk", target: shadow("Morpheme", "Root", "werk") },
+			],
+		};
+		expect(roundTrip(noun("Kohlekraftwerk"), { breakdown })).toEqual({
+			breakdown,
+		});
+	});
+
+	it("keeps a Source to a Lemma or a Unit Shadow", () => {
+		const laufen: Dumling.Lemma<"de"> = {
+			canonicalForm: "laufen",
+			coreFeatures: { hasSepPrefix: null },
+			family: "Lexeme",
+			kind: "VERB",
+			language: "de",
+			unitKind: "Lemma",
+		};
+		for (const target of [laufen, shadow("Lexeme", "VERB", "laufen")])
+			expect(roundTrip(noun("Laufen"), { source: { target } })).toEqual({
+				source: { target },
+			});
+	});
+});

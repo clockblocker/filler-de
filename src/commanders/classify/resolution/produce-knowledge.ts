@@ -4,17 +4,23 @@
  * comes back. Base text (transcription, definition, translations) lands as
  * each aspect finishes, so an interrupted run keeps what it already paid
  * for and the next encounter asks only for the rest; structural aspects
- * and relations land together at the end. It runs after the commit and the
- * links, never on their path, as an action of its own: its caller provides
- * it one dumgen build (`Dumgen.provide`).
+ * and relations land together at the end. A run that breaks the Reading
+ * down (`breakdownAskFor`) asks for its Source with the rest, then runs
+ * dumgen's segmenters on what the Source leaves (`knowledge-breakdown.ts`),
+ * and its Breakdown lands with the structural aspects. It runs after the
+ * commit and the links, never on their path, as an action of its own: its
+ * caller provides it one dumgen build (`Dumgen.provide`).
  */
 import { canonicalJson } from "common-utils";
 import { authoredReading, closedRoute } from "dumcorpus/inventories";
 import type { Jev, Luna } from "dumgen";
 import { readingIdentityKey, routeOf } from "dumling";
+import type * as Dumrel from "dumrel/types";
 import { Effect } from "effect";
 import type { DumgenOperations } from "../../../managers/dumgen";
+import { breakDownReading } from "./knowledge-breakdown";
 import {
+	breakdownAskFor,
 	isEmptyRequest,
 	knowledgeRequestFor,
 	PRODUCE_LEMMA_PARADIGM,
@@ -36,6 +42,14 @@ const BASE_TEXT_ASPECTS = new Set([
 	"translations",
 ]);
 
+/** What a run that asks `knowledge.produce` nothing has from it. */
+const NOTHING_PRODUCED = {
+	changes: [],
+	failures: [],
+	paradigmChanges: [],
+	pendingRelations: [],
+} as const;
+
 type KnowledgeFailureSummary = {
 	readonly aspect: string;
 	readonly leaf?: string;
@@ -55,7 +69,7 @@ export type KnowledgeOutcome =
 
 export type ProduceKnowledgeDeps = {
 	/** dumgen's `operations`, which a test stubs. */
-	readonly dumgen: Pick<DumgenOperations, "knowledge">;
+	readonly dumgen: Pick<DumgenOperations, "knowledge" | "segment">;
 	readonly store: ResolutionStore;
 	readonly translationLanguages: readonly TranslationLanguage[];
 	readonly publishRelations?: boolean;
@@ -80,7 +94,11 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 	]);
 	const key = readingIdentityKey(reading);
 	const knowledge = location?.entry.knowledge;
-	const request = knowledgeRequestFor({
+	const breakdown = breakdownAskFor({
+		reading,
+		...(knowledge ? { knowledge } : {}),
+	});
+	const masked = knowledgeRequestFor({
 		origin: job.origin,
 		publishRelations,
 		reading,
@@ -95,7 +113,12 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		},
 		translationLanguages: deps.translationLanguages,
 	});
-	if (isEmptyRequest(request)) return { _tag: "Covered" };
+	// The Source comes first, with the rest of the Knowledge (ADR 0050).
+	const request: Dumrel.KnowledgeRequestMask = breakdown?.source
+		? { ...masked, source: null }
+		: masked;
+	if (isEmptyRequest(request) && breakdown === undefined)
+		return { _tag: "Covered" };
 
 	const published = new Set<string>();
 	const publishBaseText = (changes: readonly GermanKnowledgeChange[]) =>
@@ -137,17 +160,32 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 						: { stored: note.paradigm }),
 				})
 			: undefined;
-	const produced = yield* deps.dumgen.knowledge.produce({
-		attestation: job.attestation,
-		language: "de",
-		onContribution: publishBaseText,
-		origin: job.origin,
-		...(paradigm === undefined ? {} : { paradigm }),
-		reading,
-		request,
-		sentence: job.sentence,
-	});
-	const changes = produced.changes.filter(
+	const produced = isEmptyRequest(request)
+		? NOTHING_PRODUCED
+		: yield* deps.dumgen.knowledge.produce({
+				attestation: job.attestation,
+				language: "de",
+				onContribution: publishBaseText,
+				origin: job.origin,
+				...(paradigm === undefined ? {} : { paradigm }),
+				reading,
+				request,
+				sentence: job.sentence,
+			});
+	const brokenDown =
+		breakdown === undefined
+			? { changes: produced.changes, failures: [] }
+			: yield* breakDownReading(
+					{ segment: deps.dumgen.segment, store: deps.store },
+					{
+						produced,
+						reading,
+						sentence: job.sentence.segments
+							.map(({ text }) => text)
+							.join(""),
+					},
+				);
+	const changes = brokenDown.changes.filter(
 		(change) =>
 			!published.has(canonicalJson(change)) &&
 			(publishRelations || change.aspect !== "semanticRelations"),
@@ -163,10 +201,17 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		_tag: "Published",
 		changes: published.size + changes.length,
 		dropped: final.dropped,
-		failures: produced.failures.flatMap(({ aspect, code, leaf }) =>
-			code === "CatalogMiss"
-				? []
-				: [{ aspect, code, ...(leaf === undefined ? {} : { leaf }) }],
+		failures: [...produced.failures, ...brokenDown.failures].flatMap(
+			({ aspect, code, leaf }) =>
+				code === "CatalogMiss"
+					? []
+					: [
+							{
+								aspect,
+								code,
+								...(leaf === undefined ? {} : { leaf }),
+							},
+						],
 		),
 	};
 });

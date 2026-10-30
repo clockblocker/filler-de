@@ -181,19 +181,58 @@ type KnowledgeStub = (
 		readonly target: { readonly language: "de" };
 	})[];
 	readonly paradigmChanges?: readonly Dumrel.ParadigmChange[];
+	/** Aspects that produced nothing usable, such as an Unresolved Source. */
+	readonly failures?: readonly KnowledgeFailure[];
 };
 
+type KnowledgeFailure = Effect.Success<
+	ReturnType<DumgenOperations["knowledge"]["produce"]>
+>["failures"][number];
+type Segmenters = DumgenOperations["segment"];
+type BreakdownInput = Parameters<Segmenters["inConstituents"]>[0];
+type ConstituentsStub = (
+	input: BreakdownInput,
+) => ReturnType<Segmenters["inConstituents"]>;
+type MorphemesStub = (input: BreakdownInput) => ReturnType<Segmenters["inMorphemes"]>;
+
+/** A Unit Shadow, as the segmenters link a piece to one. */
+export const shadow = (
+	family: string,
+	kind: string,
+	canonicalForm: string,
+): Dumrel.UnitShadow =>
+	({ canonicalForm, family, kind, language: "de" }) as Dumrel.UnitShadow;
+
 /**
- * A dumgen whose resolve and Knowledge operations answer from stubs and
- * record their inputs; segmentation and translation are never called.
+ * The segmenters' answers unless a test scripts them: no Constituents, and
+ * a bottom word as one Root, so every Reading stores a Breakdown.
+ */
+const noConstituents: ConstituentsStub = () =>
+	Effect.succeed({ kind: "NoConstituents" });
+const oneRoot: MorphemesStub = ({ reading }) =>
+	Effect.succeed([
+		{
+			letters: reading.lemma.canonicalForm,
+			target: shadow("Morpheme", "Root", reading.lemma.canonicalForm.toLowerCase()),
+		},
+	]);
+
+/**
+ * A dumgen whose resolve, Knowledge and Breakdown operations answer from
+ * stubs and record their inputs; `segment.inUnits` and translation are
+ * never called.
  */
 export function stubDumgen(stubs: {
 	grammar: GrammarStub;
 	reading: ReadingStub;
 	knowledge?: KnowledgeStub;
+	inConstituents?: ConstituentsStub;
+	inMorphemes?: MorphemesStub;
 }) {
 	const calls = {
 		grammar: [] as ResolveGrammarInput[],
+		inConstituents: [] as BreakdownInput[],
+		inMorphemes: [] as BreakdownInput[],
 		knowledge: [] as Parameters<DumgenOperations["knowledge"]["produce"]>[0][],
 		reading: [] as ResolveReadingInput[],
 	};
@@ -210,7 +249,7 @@ export function stubDumgen(stubs: {
 						yield* input.onContribution?.([change]) ?? Effect.void;
 					return {
 						changes: produced.changes,
-						failures: [],
+						failures: produced.failures ?? [],
 						paradigmChanges: produced.paradigmChanges ?? [],
 						pendingRelations: produced.pendingRelations ?? [],
 					};
@@ -230,8 +269,16 @@ export function stubDumgen(stubs: {
 				}),
 		},
 		segment: {
-			inConstituents: unused,
-			inMorphemes: unused,
+			inConstituents: (input) =>
+				Effect.suspend(() => {
+					calls.inConstituents.push(input);
+					return (stubs.inConstituents ?? noConstituents)(input);
+				}),
+			inMorphemes: (input) =>
+				Effect.suspend(() => {
+					calls.inMorphemes.push(input);
+					return (stubs.inMorphemes ?? oneRoot)(input);
+				}),
 			inUnits: unused,
 		},
 		translate: { sentence: unused },

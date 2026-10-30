@@ -163,7 +163,7 @@ Visible Blocks, in canonical order (see Layout):
 | `inflection_embed` | `![[<lemma note>#^<block id>\|<Canonical Form>]]`: the Lemma note's table of this Reading's Licence Group |
 | `tags` | Tags from the tags hook |
 
-Principal parts (`plural`, `conjugationClass`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) left Reading Knowledge for the Lemma Paradigm (texteater#1226). A Block whose field is absent or empty is left out, and a new dumrel Knowledge aspect fails to compile until a Block shows it. The Breakdown model's `breakdown` and `source` (texteater ADR 0050) show in no Block yet: Classify asks for neither, and a note keeps a stored one in its metadata.
+Principal parts (`plural`, `conjugationClass`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) left Reading Knowledge for the Lemma Paradigm (texteater#1226). A Block whose field is absent or empty is left out, and a new dumrel Knowledge aspect fails to compile until a Block shows it. The Breakdown model's `breakdown` and `source` (texteater ADR 0050) show in no Block yet: Classify's Knowledge run asks for them (#266), and a note keeps them in its metadata until #268 renders them.
 
 ### Dropped
 

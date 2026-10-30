@@ -178,7 +178,7 @@ const KNOWLEDGE_BLOCKS = {
 
 /**
  * Aspects of the Breakdown model (texteater ADR 0050, ADR 0051) no Block
- * shows yet: the plugin asks for neither, and the note keeps a stored one
+ * shows yet: Classify's Knowledge run asks for them, and the note keeps them
  * in its metadata. The Breakdown rendering adds their Blocks.
  */
 type UnshownAspects = "breakdown" | "source";
