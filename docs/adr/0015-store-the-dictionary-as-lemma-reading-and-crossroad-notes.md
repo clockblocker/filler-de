@@ -103,6 +103,13 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **Undo.** The detector ignores undo and redo, so undoing a rewrite leaves the bare link the user wrapped.
 - **Placement is not pinned.** No test checks Obsidian's undocumented resolution order; the rewrite makes it matter only for links the plugin did not see typed, such as those the Dictionary reset left and the bare links to a healed stray.
 
+### Refinements from Breakdown links (#267)
+
+- **Stored, and reversible.** The store moves a Breakdown piece's or a Source's target between its Unit Shadow and the one stored Lemma the Shadow names, in the same commit as the Lemma's creation or removal, as the Lemma upgrade moves a relation. A new Breakdown is settled as it is published.
+- **The Shadow is kept in the Lemma.** dumrel stores one target, a Lemma or a Shadow, and the producers write only Shadows. A Lemma target's Shadow is `unitShadowOf` that Lemma, which names the same Lemmas as the Shadow it resolved, so re-evaluation reads the Shadow alone and a link moves back when der See joins die See or its Lemma is removed. Nothing beside the target is stored.
+- **No Source points back.** A Source never moves to a Lemma one of whose stored Readings names its owner as its own Source (texteater #1279); it stays on its Shadow.
+- **Fan-out.** A commit moves the links of at most 200 owning Lemmas, as tf-demo's `MAX_MOVED_OWNERS`, and they share that cap with the morphemes lines it re-renders. The owners over it stay out of the commit's re-renders, with the lines that walk them, and move in commits of their own after it, so no note is written twice or with half its links moved. The index keeps each Shadow key's owning Readings, and the morphemes walk reads their Lemmas from it. Every rebuild settles every link, as it re-evaluates relations, and a Lemma whose note is there but unreadable keeps its links.
+
 ## Considered Options
 
 - **One note per Lemma with every Reading as a block** (ADR-0012). Rejected: a Reading's Knowledge, attestations and notes outgrow a shared note, and a link to a sense needs a block ID instead of a note.

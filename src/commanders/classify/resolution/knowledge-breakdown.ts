@@ -9,8 +9,9 @@
  * and a single-word Lexeme it finds none for is a bottom word, which
  * `segment.inMorphemes` splits.
  *
- * Each piece is stored as the segmenter returns it, a Lemma or a Unit
- * Shadow, so nothing is generated for a part the learner hasn't met. A
+ * Each piece is stored as the segmenter returns it, linked to a Unit
+ * Shadow, so nothing is generated for a part the learner hasn't met; the
+ * store moves the link to the part's Lemma once that is stored (#267). A
  * failed segmenter is a failure of its part, never the run's error: the
  * rest of the Knowledge is still published, and the next Classify of the
  * Reading asks again (`breakdownAskFor`). A step that finished with nothing
@@ -20,9 +21,13 @@
  * (`breakdownSettled`), and later occurrences ask no more.
  */
 
+import {
+	namesLemma,
+	pointsBack,
+	type StoredBase,
+} from "@textfresser/dictionary";
 import type { BreakdownSettled } from "@textfresser/lemma-note-codec";
 import type { Jev } from "dumgen";
-import { canonicalFormKey, lemmaIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { parseReadingKnowledge } from "dumrel";
 import type * as Dumrel from "dumrel/types";
@@ -120,26 +125,6 @@ const isSingleWordLexeme = (lemma: Dumling.Lemma<"de">) =>
 /** A link target: a Lemma carries its `unitKind`, a Unit Shadow none. */
 type LinkTarget = Dumrel.UnitShadow | Dumling.Lemma<"de">;
 
-const isLemma = (target: LinkTarget): target is Dumling.Lemma<"de"> =>
-	"unitKind" in target;
-
-/**
- * Whether a link target names `lemma`: a Lemma by identity, a Unit Shadow
- * by route and Canonical Form without letter case, as dumdict's
- * `shadowMatchesLemma` compares them.
- */
-function namesLemma(target: LinkTarget, lemma: Dumling.Lemma<"de">): boolean {
-	if (isLemma(target))
-		return lemmaIdentityKey(target) === lemmaIdentityKey(lemma);
-	return (
-		target.language === lemma.language &&
-		target.family === lemma.family &&
-		target.kind === lemma.kind &&
-		canonicalFormKey(target.canonicalForm, lemma.language) ===
-			canonicalFormKey(lemma.canonicalForm, lemma.language)
-	);
-}
-
 /** The target a Source-setting change links to; a Retract has none. */
 export function sourceTargetOf(
 	change: GermanKnowledgeChange,
@@ -148,39 +133,6 @@ export function sourceTargetOf(
 		return undefined;
 	const { target } = change.value;
 	return Predicate.isObject(target) ? (target as LinkTarget) : undefined;
-}
-
-/** A stored Lemma with its stored Readings' Knowledge, as a Source's base. */
-export type StoredBase = {
-	readonly lemma: Dumling.Lemma<"de">;
-	readonly readings: readonly {
-		readonly knowledge?: { readonly source?: { readonly target: unknown } };
-	}[];
-};
-
-/**
- * Whether a Source to `target` points back (texteater #1279): a stored
- * Reading of a Lemma it names already names `owner` as its own Source.
- * The first stored direction wins. A base still pending has no stored
- * Readings, so it never conflicts.
- */
-export function pointsBack(
-	owner: Dumling.Lemma<"de">,
-	target: LinkTarget,
-	bases: readonly StoredBase[],
-): boolean {
-	if (target.language !== owner.language) return false;
-	return bases.some(
-		({ lemma, readings }) =>
-			namesLemma(target, lemma) &&
-			readings.some(({ knowledge }) => {
-				const named = knowledge?.source?.target;
-				return (
-					Predicate.isObject(named) &&
-					namesLemma(named as LinkTarget, owner)
-				);
-			}),
-	);
 }
 
 /** The stored Lemmas a Source's target may name, with their Readings, from one view. */

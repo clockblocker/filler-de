@@ -45,6 +45,13 @@ import {
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import { Cause, Clock, Data, Effect, Fiber, Result, Semaphore } from "effect";
+import {
+	MAX_MOVED_OWNERS,
+	moveOwnerLinks,
+	resolverOver,
+	settledData,
+	shadowKeysChangedBy,
+} from "./breakdown-links";
 import { contentHash } from "./content-hash";
 import {
 	CrossroadNoteMetadata,
@@ -308,7 +315,10 @@ export type DumdictVaultStore = {
 	 * if that fails too is a `DictionaryWriteError` returned, with the index
 	 * rebuilt. Every rebuild re-evaluates the stored Shadows the files'
 	 * Lemmas no longer fit, so links converge. A commit that adds or removes
-	 * Lemmas is followed by that re-evaluation too, as its own commit.
+	 * Lemmas is followed by that re-evaluation too, as its own commit. The
+	 * Breakdown and Source links that wait on a Lemma it adds or removes
+	 * move in the commit itself, for up to 200 owning Lemmas, and the
+	 * rest in commits of their own after it (#267).
 	 */
 	readonly commitChanges: (
 		request: CommitChangesRequest<"de"> | DumdictPlan<"de">,
@@ -541,6 +551,24 @@ type Deferred = {
 
 /** What a commit means to leave: each touched Lemma's records, or none. */
 type Intended = ReadonlyMap<string, NoteData | undefined>;
+
+/**
+ * The Breakdown and Source links a commit moves (#267): how many owning
+ * Lemmas it moves them in, which share the cap on its re-renders, and the
+ * owners left over that cap, by Lemma and by the Shadow keys they wait on,
+ * which stay out of its re-renders and move after it.
+ */
+type MovedLinks = {
+	readonly moved: number;
+	readonly deferred: ReadonlySet<string>;
+	readonly leftOver: ReadonlySet<string>;
+};
+
+const NO_MOVED_LINKS: MovedLinks = {
+	deferred: new Set(),
+	leftOver: new Set(),
+	moved: 0,
+};
 
 /** Whether a namespace holds the same value in two contents. */
 function sameMetadata<T>(
@@ -1727,7 +1755,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * Crossroads of every spelling it touches. Created paths are checked
 	 * against each other and every indexed path for collisions.
 	 */
-	const planCommit = Effect.fnUntraced(function* (intended: Intended) {
+	const planCommit = Effect.fnUntraced(function* (
+		intended: Intended,
+		links: MovedLinks = NO_MOVED_LINKS,
+	) {
 		const view = index;
 		const after = previewOf(view, intended);
 		const { failed, options: render } = renderOptionsFor(
@@ -1735,7 +1766,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			projections,
 			metadataFormat(),
 		);
-		const fan = fanOutOf(view, after, intended.keys());
+		const fan = fanOutOf(view, after, intended.keys(), links);
 		const toCrossroad = new Map<string, string[]>();
 		const skip = new Set<string>();
 		const writes: PlannedWrite[] = [];
@@ -2157,14 +2188,70 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		});
 
 	/**
+	 * Whether some file still holds a Lemma no stored record names, or the
+	 * last scan could not read every folder: its links stay, as its claims
+	 * do in `converge`.
+	 */
+	const heldByFiles = (lemma: Dumling.Lemma<"de">): boolean =>
+		scanIssues.length > 0 || index.holdsAnyNoteOf(lemma);
+
+	/**
+	 * Moves the Breakdown and Source links that no longer fit the stored
+	 * Lemmas (#267, `moveOwnerLinks`), as commits of their own of at most
+	 * {@link MAX_MOVED_OWNERS} owning Lemmas each, from the index as each
+	 * finds it. A chunk that does not commit is logged, and the owners
+	 * after it still move, as `converge` goes on past a chunk it cannot
+	 * plan. `shadowKeys` narrows it to the links waiting on those Shadows.
+	 * It never fails.
+	 */
+	const convergeLinks = (
+		shadowKeys: ReadonlySet<string> | undefined,
+		depth: number,
+	): Effect.Effect<void> =>
+		Effect.gen(function* () {
+			// Each owner is tried once, so the loop ends however chunks fail.
+			const tried = new Set<string>();
+			for (;;) {
+				const view = index;
+				const owners = moveOwnerLinks({
+					resolver: resolverOver(view, heldByFiles),
+					shadowKeys: shadowKeys ?? view.linkShadowKeys(),
+					skipReadings: tried,
+					view,
+				});
+				if (owners.intended.size === 0) return;
+				for (const key of owners.readings) tried.add(key);
+				const result = yield* Effect.result(
+					commitIntended(owners.intended, owners.bases, depth + 1, {
+						deferred: owners.deferred,
+						leftOver: new Set(),
+						moved: owners.intended.size,
+					}),
+				);
+				if (
+					result._tag === "Failure" ||
+					result.success.status !== "committed"
+				)
+					yield* Effect.logWarning(
+						`Dictionary could not move the Breakdown links of ${owners.readings.size} Readings; it goes on with the rest`,
+						result._tag === "Failure"
+							? result.failure
+							: result.success,
+					);
+			}
+		});
+
+	/**
 	 * Moves the claims on Lemmas the files no longer hold and re-evaluates
 	 * the Shadows they leave (`reevaluateShadows`), and retries every stored
 	 * Shadow relation whose resolution the Lemmas no longer fit
 	 * (`cleanupRelations`, which re-evaluates the records it names), as
 	 * commits of their own, from slices loaded now. It is what makes links
-	 * converge after a removal, a hand edit or a failed commit. `scope`
-	 * narrows it to the Shadows of Lemmas a change added or removed;
-	 * `removed` names Lemmas removed by a plan. It never fails.
+	 * converge after a removal, a hand edit or a failed commit. Then it
+	 * moves the Breakdown and Source links the same Lemmas no longer fit
+	 * (`convergeLinks`). `scope` narrows it to the Shadows of Lemmas a
+	 * change added or removed; `removed` names Lemmas removed by a plan. It
+	 * never fails.
 	 */
 	const converge = (
 		scope: {
@@ -2235,6 +2322,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					depth,
 				);
 			}
+			yield* convergeLinks(scope.shadowKeys, depth);
 		}).pipe(
 			Effect.catchCause((cause) =>
 				Effect.logError(
@@ -2356,14 +2444,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		touched: ReadonlySet<string>,
 		changedPaths: ReadonlySet<string>,
 	) {
-		const fan = fanOutOf(before, index, touched);
-		const own = [...touched].filter((key) => index.lemmaData(key));
-		yield* rerender(
-			new Set([...fan.lemmas, ...own]),
-			fan.formKeys,
-			changedPaths,
-		);
-		yield* rerenderMorphemeOverflow(fan.overflow);
 		const removed: Dumling.Lemma<"de">[] = [];
 		const shadowKeys = new Set<string>();
 		for (const key of touched) {
@@ -2374,6 +2454,24 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			shadowKeys.add(shadowKeyOf(lemma));
 			if (was && !is) removed.push(was);
 		}
+		// The owners whose links the change moves are written once, by
+		// `converge` below, never re-rendered here first (#267).
+		const { deferred } = moveOwnerLinks({
+			cap: 0,
+			resolver: resolverOver(index, heldByFiles),
+			shadowKeys,
+			view: index,
+		});
+		const fan = fanOutOf(before, index, touched, { deferred });
+		const own = [...touched].filter(
+			(key) => index.lemmaData(key) && !deferred.has(key),
+		);
+		yield* rerender(
+			new Set([...fan.lemmas, ...own]),
+			fan.formKeys,
+			changedPaths,
+		);
+		yield* rerenderMorphemeOverflow(fan.overflow);
 		if (shadowKeys.size > 0) yield* converge({ removed, shadowKeys });
 	});
 
@@ -2800,8 +2898,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		/** Each touched Lemma's records as the commit read them. */
 		bases: Intended,
 		depth: number,
+		/** The Breakdown links the commit moves, and those it leaves over its cap. */
+		links: MovedLinks = NO_MOVED_LINKS,
 	): Effect.fn.Return<CommitChangesResult, DictionaryCommitError> {
-		const planned = yield* Effect.result(planCommit(intended));
+		const { leftOver } = links;
+		const planned = yield* Effect.result(planCommit(intended, links));
 		if (planned._tag === "Failure") {
 			if (planned.failure._tag !== "StaleRead")
 				return yield* planned.failure;
@@ -2835,7 +2936,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		 * and re-rendered; an edit found there moves the revision past the
 		 * commit's. A commit that removed Lemmas is then followed by the
 		 * re-evaluation their removal asks for (texteater#1257), from a slice
-		 * loaded now; dumdict re-evaluates a Lemma's creation itself.
+		 * loaded now; dumdict re-evaluates a Lemma's creation itself. The
+		 * Breakdown links the commit left over its cap move after it.
 		 */
 		const done = (executed: Extract<Executed, { _tag: "Done" }>) =>
 			Effect.gen(function* () {
@@ -2858,7 +2960,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* rerender(late.lemmaKeys, late.formKeys);
 				}
 				yield* rerenderMorphemeOverflow(overflow);
-				if (depth >= MAX_FOLLOW_UP_DEPTH) return committed;
+				if (depth >= MAX_FOLLOW_UP_DEPTH) {
+					if (leftOver.size > 0)
+						yield* Effect.logWarning(
+							"Dictionary left Breakdown links over the cap for the next settle: the commit is too deep to follow up",
+							[...leftOver],
+						);
+					return committed;
+				}
 				const removed: Dumling.Lemma<"de">[] = [];
 				for (const [lemmaKey, data] of intended) {
 					const was = before.lemmaData(lemmaKey)?.lemmaRecord.lemma;
@@ -2872,6 +2981,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						},
 						depth,
 					);
+				if (leftOver.size > 0) yield* convergeLinks(leftOver, depth);
 				yield* repairShadowedRefs(false, depth);
 				return committed;
 			});
@@ -2914,7 +3024,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				"Dictionary did not finish a stopped commit: another writer changed its notes meanwhile",
 			);
 		if (rebuilt && untouched) {
-			const again = yield* Effect.result(planCommit(intended));
+			const again = yield* Effect.result(planCommit(intended, links));
 			if (again._tag === "Success") {
 				for (const path of again.success.deferred.paths)
 					deferred.paths.add(path);
@@ -2947,6 +3057,56 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			skipped: first.skipped.map(({ path }) => path),
 			transient: first.transient,
 		});
+	});
+
+	/**
+	 * A commit's records with the Breakdown and Source links it moves
+	 * (#267, ADR-0015 "The Lemma upgrade"), against the Lemmas it leaves:
+	 * every link of the Readings it writes, a new Breakdown included, and,
+	 * when it adds or removes a Lemma, the links of the stored Readings that
+	 * wait on that Lemma's Shadow, up to {@link MAX_MOVED_OWNERS} of them.
+	 * Their Lemmas join the commit, so their notes are written with it.
+	 * The Readings over the cap are reported and move after it.
+	 */
+	const withMovedLinks = Effect.fnUntraced(function* (
+		intended: Intended,
+		bases: Intended,
+	) {
+		const view = index;
+		const resolver = resolverOver(
+			view,
+			(lemma) => !intended.has(lemmaKeyOf(lemma)) && heldByFiles(lemma),
+			intended,
+		);
+		const nextIntended = new Map(intended);
+		const nextBases = new Map(bases);
+		for (const [lemmaKey, data] of intended) {
+			const settled = data && settledData(data, resolver);
+			if (settled) nextIntended.set(lemmaKey, settled);
+		}
+		const owners = moveOwnerLinks({
+			exclude: new Set(intended.keys()),
+			resolver,
+			shadowKeys: shadowKeysChangedBy(view, intended),
+			view,
+		});
+		for (const [lemmaKey, data] of owners.intended) {
+			nextIntended.set(lemmaKey, data);
+			nextBases.set(lemmaKey, owners.bases.get(lemmaKey));
+		}
+		if (owners.leftOver.size > 0)
+			yield* Effect.logWarning(
+				`Dictionary moves the Breakdown links of ${owners.moved - owners.readings.size} more Readings after the commit`,
+			);
+		return {
+			bases: nextBases as Intended,
+			intended: nextIntended as Intended,
+			links: {
+				deferred: owners.deferred,
+				leftOver: owners.leftOver,
+				moved: owners.intended.size,
+			} satisfies MovedLinks,
+		};
 	});
 
 	function commitUnderLock(
@@ -2991,7 +3151,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const bases: Intended = new Map(
 				staged.notes.map(({ base, lemmaKey }) => [lemmaKey, base]),
 			);
-			return yield* commitIntended(intended, bases, depth);
+			const linked = yield* withMovedLinks(intended, bases);
+			return yield* commitIntended(
+				linked.intended,
+				linked.bases,
+				depth,
+				linked.links,
+			);
 		});
 	}
 

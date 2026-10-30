@@ -16,6 +16,7 @@ export {
 	type MetadataFormat,
 	noteMetadataHelper,
 } from "./internal/note-metadata";
+export { namesLemma, pointsBack, type StoredBase } from "./link-targets";
 export {
 	type CachedNote,
 	createMemoryNoteCache,

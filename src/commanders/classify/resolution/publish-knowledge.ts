@@ -10,7 +10,7 @@
  * with the last part.
  */
 
-import { Transaction } from "@textfresser/dictionary";
+import { pointsBack, Transaction } from "@textfresser/dictionary";
 import {
 	checkApplyGeneratedKnowledgeRequest,
 	createDumdictPlanner,
@@ -23,11 +23,7 @@ import {
 	MAX_COMMIT_ATTEMPTS,
 	planOf,
 } from "./commit-occurrence";
-import {
-	pointsBack,
-	sourceTargetOf,
-	storedBasesOf,
-} from "./knowledge-breakdown";
+import { sourceTargetOf, storedBasesOf } from "./knowledge-breakdown";
 import {
 	DictionaryCommitFailed,
 	type GermanKnowledgeChange,

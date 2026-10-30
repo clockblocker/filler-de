@@ -506,7 +506,8 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 			const store = await stored();
 			await publish(store, LAUFEN_READING, toLauf);
 			await publish(store, LAUF_READING, toLaufen);
-			expect((await storedOf(store, laufen)).source).toEqual(toLauf.value);
+			// Lauf is stored, so the kept Source links its Lemma (#267).
+			expect((await storedOf(store, laufen)).source).toEqual({ target: lauf });
 			expect((await storedOf(store, lauf)).source).toBeUndefined();
 		});
 
@@ -514,7 +515,7 @@ describe("a Reading's Breakdown in its Knowledge run", () => {
 			const store = await stored();
 			await publish(store, LAUF_READING, toLaufen);
 			await publish(store, LAUFEN_READING, toLauf);
-			expect((await storedOf(store, lauf)).source).toEqual(toLaufen.value);
+			expect((await storedOf(store, lauf)).source).toEqual({ target: laufen });
 			expect((await storedOf(store, laufen)).source).toBeUndefined();
 		});
 	});

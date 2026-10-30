@@ -183,6 +183,8 @@ export const MAX_MORPHEME_READERS = 200;
 function morphemeReaders(
 	views: readonly NoteIndex[],
 	starts: Iterable<string>,
+	/** Lemmas the walk neither lists nor reads up through. */
+	skip: ReadonlySet<string>,
 ): string[] {
 	const readers: string[] = [];
 	const seen = new Set<string>();
@@ -196,7 +198,7 @@ function morphemeReaders(
 		for (const shadow of frontier)
 			for (const view of views)
 				for (const reader of view.breakdownReadersOf(shadow)) {
-					if (seen.has(reader)) continue;
+					if (seen.has(reader) || skip.has(reader)) continue;
 					seen.add(reader);
 					readers.push(reader);
 					const lemma = views
@@ -221,9 +223,15 @@ function morphemeReaders(
  * - when a Lemma's Breakdowns or Sources change, or it comes or goes, which
  *   moves where an inherited link of its Shadow resolves, the notes whose
  *   morphemes lines read it, up the walk, at most
- *   {@link MAX_MORPHEME_READERS}; `overflow` holds the rest, for the store
- *   to re-render after the change;
+ *   {@link MAX_MORPHEME_READERS} less `options.moved`, the owners whose
+ *   links the change moves, so one cap bounds the notes it writes;
+ *   `overflow` holds the rest, for the store to re-render after the change;
  * - the Crossroads of every spelling the Lemmas or their Surfaces have.
+ *
+ * The Lemmas in `options.deferred`, owners whose links move after the
+ * change (#267), are left out, and so are the notes whose morphemes lines
+ * read them: the follow-up that moves them writes each once, never one
+ * with half its links moved.
  *
  * It answers more than may change; a re-render that changes nothing writes
  * nothing.
@@ -232,6 +240,10 @@ export function fanOutOf(
 	before: NoteIndex,
 	after: NoteIndex,
 	touched: Iterable<string>,
+	options: {
+		readonly deferred?: ReadonlySet<string>;
+		readonly moved?: number;
+	} = {},
 ): {
 	readonly lemmas: Set<string>;
 	readonly formKeys: Set<string>;
@@ -268,15 +280,17 @@ export function fanOutOf(
 				);
 		}
 	}
-	for (const key of own) lemmas.delete(key);
-	const readers = morphemeReaders([before, after], walked).filter(
+	const deferred = options.deferred ?? new Set<string>();
+	for (const key of [...own, ...deferred]) lemmas.delete(key);
+	const readers = morphemeReaders([before, after], walked, deferred).filter(
 		(key) => !own.has(key) && !lemmas.has(key) && after.lemmaData(key),
 	);
-	for (const key of readers.slice(0, MAX_MORPHEME_READERS)) lemmas.add(key);
+	const budget = Math.max(0, MAX_MORPHEME_READERS - (options.moved ?? 0));
+	for (const key of readers.slice(0, budget)) lemmas.add(key);
 	return {
 		formKeys,
 		lemmas: new Set([...lemmas].filter((key) => after.lemmaData(key))),
-		overflow: readers.slice(MAX_MORPHEME_READERS),
+		overflow: readers.slice(budget),
 	};
 }
 
