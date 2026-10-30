@@ -214,7 +214,7 @@ export function serializeLemmaNote<L extends Dumling.Language>(
 			block: "formations",
 			lines: [
 				...(index === 0 ? sectionTitle("formations", titles) : []),
-				line,
+				renderingLines(line).join(" "),
 			],
 		});
 

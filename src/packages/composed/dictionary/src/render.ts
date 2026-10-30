@@ -18,7 +18,6 @@ import {
 import { canonicalJson } from "common-utils";
 import { resolveShadow, spellingTarget } from "dumdict";
 import type * as Dumling from "dumling/types";
-import { projectSources } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { type CrossroadContent, listsNothing, rendersAs } from "./crossroad";
 import type { WriteOptions } from "./internal/dictionary-notes";
@@ -125,28 +124,12 @@ const namesOfTarget = (target: Dumrel.LinkTarget): LinkNamed<"de"> =>
 			};
 
 /**
- * The Source edges dumrel projects from one Reading's stored Source
- * (`projectSources`), alone, so a Reading it rejects drops only itself.
- */
-function sourceTargetsOf(
-	reading: Dumling.Reading<"de">,
-	source: Dumrel.Source,
-): Dumrel.LinkTarget[] {
-	const projected = projectSources([
-		{ knowledge: { source }, reading } as Dumrel.ReadingWithKnowledge,
-	]);
-	if (!projected.success) return [];
-	return projected.value.flatMap((edge) =>
-		edge.relation === "source" ? [edge.target as Dumrel.LinkTarget] : [],
-	);
-}
-
-/**
  * A Lemma's Formations (texteater ADR 0050, #269): the stored Readings
  * whose Constituents or Source link to this Lemma's note, read from the
  * index's Shadow key -> owning Readings (#267). A link counts where the
- * owner's own note sends it, by the same resolver: its Lemma target, or
- * its Shadow while that names this Lemma alone. While the Shadow names
+ * owner's own note sends it, by the same resolver and from the same stored
+ * target its Constituents or Source line links: its Lemma target, or its
+ * Shadow while that names this Lemma alone. While the Shadow names
  * two Lemmas, the formation links the Crossroad, and neither Lemma note
  * lists it. Morphemes never count: they are a walk, not a formation.
  */
@@ -181,10 +164,7 @@ function formationsOf(
 							via: "constituents",
 						},
 					];
-				if (
-					source !== undefined &&
-					sourceTargetsOf(entry.reading, source).some(lands)
-				)
+				if (source !== undefined && lands(source.target))
 					return [{ reading: entry.reading, via: "source" }];
 				return [];
 			});

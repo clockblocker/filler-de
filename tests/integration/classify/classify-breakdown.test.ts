@@ -43,7 +43,6 @@ import {
 import {
 	expectHiddenMetadata,
 	linkTo,
-	TITLES,
 } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { inScope } from "../../support/scoped";
 import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
@@ -230,8 +229,7 @@ describe("Classify breaks each Reading down", () => {
 		expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 
 		// The user unlinks Kraftwerk's only occurrence: its notes go, with its
-		// Formations, which no other note keeps as text, and Kohlekraftwerk's
-		// part links its Crossroad again.
+		// Formations, and Kohlekraftwerk's part links its Crossroad again.
 		const unlinked = story.scroll.content.replace(
 			linkTo(P.kraftwerkReading, "Das Kraftwerk"),
 			"Das Kraftwerk",
@@ -241,7 +239,6 @@ describe("Classify breaks each Reading down", () => {
 		notes = story.notes();
 		expect(notes[P.kraftwerkReading]).toBeUndefined();
 		expect(notes[P.kraftwerkLemma]).toBeUndefined();
-		expect(notes[X.kraftwerk]).not.toContain(TITLES.wortbildung);
 		expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 		expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 	});

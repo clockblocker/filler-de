@@ -290,6 +290,19 @@ describe("the Formations section of a Lemma note", () => {
 		]);
 	});
 
+	it("escapes `%%` as every rendering does, so no line opens a comment", () => {
+		const body = render(kohle, [
+			built(noun("Kohle%%werk", "Neut"), "🏭", [
+				{ letters: "Kohle", target: kohle },
+				{ letters: "%%werk", target: shadow("Werk", "NOUN") },
+			]),
+		]);
+		expect(formationsSection(body)).toEqual([
+			TITLE,
+			"Komposita: [[Kohle%\u200b%werk]]",
+		]);
+	});
+
 	it(`lists at most ${MAX_FORMATIONS}, and folds the rest`, () => {
 		const name = (at: number) =>
 			`Z${String.fromCharCode(97 + Math.floor(at / 26))}${String.fromCharCode(97 + (at % 26))}kohle`;

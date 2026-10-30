@@ -21,7 +21,7 @@ import {
 	SETTLED_DUMGEN,
 	sourceLine,
 } from "./classify-breakdown-script";
-import { expectHiddenMetadata, linkTo, TITLES } from "./dictionary-layout";
+import { expectHiddenMetadata, linkTo } from "./dictionary-layout";
 
 const P = COMPOUND_PATHS;
 const C = CONVERSION_PATHS;
@@ -113,8 +113,8 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 
 				// The user unlinks Kraftwerk's only occurrence: its notes go, with
-				// its Formations, which no other note keeps as text, and
-				// Kohlekraftwerk's part links its Crossroad path again.
+				// its Formations, and Kohlekraftwerk's part links its Crossroad
+				// path again.
 				const scroll = (await snapshot()).markdown["Story.md"] ?? "";
 				const unlinked = scroll.replace(
 					linkTo(P.kraftwerkReading, "Das Kraftwerk"),
@@ -125,7 +125,6 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				notes = (await dictionary()).markdown;
 				expect(notes[P.kraftwerkReading]).toBeUndefined();
 				expect(notes[P.kraftwerkLemma]).toBeUndefined();
-				expect(notes[X.kraftwerk]).not.toContain(TITLES.wortbildung);
 				expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 				expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 			},

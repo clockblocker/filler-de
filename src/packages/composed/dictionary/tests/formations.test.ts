@@ -13,7 +13,7 @@ import { noteMetadataHelper } from "../src/internal/note-metadata";
 import { lemmaKeyOf } from "../src/keys";
 import { NoteIndex } from "../src/note-index";
 import { classifyFile } from "../src/notes";
-import { fanOutOf, MAX_FAN_OUT_NOTES } from "../src/render";
+import { fanOutOf, MAX_FAN_OUT_NOTES, renderOptionsFor } from "../src/render";
 import type { FakeVault } from "./support/fake-vault";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
@@ -278,6 +278,51 @@ function indexOf(vault: FakeVault): NoteIndex {
 			index.set(path, classifyFile(path, vault.content(path) ?? ""));
 	return index;
 }
+
+describe("a Source counts as its owner's Source line links it", () => {
+	test("even one dumrel's projectSources rejects, such as a Verbal meaning on a noun", async () => {
+		const lauf = noun("Lauf", "Masc");
+		const laufReading = sense(lauf, "🏃");
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWithReading(laufen, "🏃"));
+		await seed(
+			store,
+			withKnowledge(laufReading, {
+				source: { target: shadow("laufen", "VERB") },
+			}),
+		);
+		const index = indexOf(vault);
+		const path = readingPath(laufReading);
+		const entry = index.entry(path);
+		if (entry?.kind !== "reading") throw new Error("Lauf is not stored");
+		const { readingEntry: stored } = entry.data;
+		const source = stored.knowledge?.source;
+		if (source === undefined) throw new Error("Lauf has no Source");
+		// A Participle Meaning only an adjective takes: the owner's note
+		// still links laufen, so laufen lists it.
+		index.set(path, {
+			...entry,
+			data: {
+				...entry.data,
+				readingEntry: {
+					...stored,
+					knowledge: {
+						...stored.knowledge,
+						source: { ...source, meaning: "Verbal" },
+					},
+				},
+			},
+		} as typeof entry);
+		const { formations } = renderOptionsFor(
+			index,
+			undefined,
+			"Hidden",
+		).options;
+		expect(formations?.(laufen)).toEqual([
+			{ reading: laufReading, via: "source" },
+		]);
+	});
+});
 
 describe("the fan-out", () => {
 	test("re-renders the bases a changed Breakdown names, within the commit's one cap", async () => {
