@@ -404,9 +404,10 @@ const syncretismData: LemmaRecords<De> = {
 	readingEntries: [
 		readingEntry(reading(ihmSyncretism, "👤"), {
 			knowledge: {
-				// Reading target mode: an exact Reading of another Lemma.
+				// Reading target mode: an exact Reading of another Lemma, whose
+				// `♂️` dumdict stores without its variation selector.
 				semanticRelations: {
-					synonym: [reading(ihmMasc, "👨")],
+					synonym: [reading(ihmMasc, "♂️")],
 					targetKind: "reading",
 				},
 				translations: {

@@ -25,6 +25,7 @@ import {
 	type DictionaryCommitError,
 	type DictionaryTransactionConflict,
 	type DictionaryView,
+	planned,
 	type ScrollAlias,
 	storedRefFor,
 	Transaction,
@@ -105,6 +106,13 @@ const unchanged: OccurrenceCommitted = { _tag: "Committed", created: false };
 
 const failed = (message: string) => (cause: unknown) =>
 	new DictionaryCommitFailed({ cause, message });
+
+/**
+ * A planner call whose throw, on a slice dumdict refuses such as a claim on
+ * a quarantined Lemma, fails the commit typed.
+ */
+export const planOf = (plan: () => DumdictPlanOutcome<"de">) =>
+	Result.mapError(planned(plan), (error) => failed(error.message)(error));
 
 /**
  * A transaction's failure as resolution reports it: a conflict that
@@ -192,7 +200,9 @@ export function planRemoval(
 	const slice = view.loadOccurrenceSlice(
 		planner.occurrenceSliceRequest({ ref }),
 	);
-	const outcome = planner.removeOccurrence(slice, { ref });
+	const attempt = planOf(() => planner.removeOccurrence(slice, { ref }));
+	if (Result.isFailure(attempt)) return Result.fail(attempt.failure);
+	const outcome = attempt.success;
 	if (outcome.status === "conflict")
 		return Result.succeed(
 			Transaction.replan(outcome.message ?? outcome.code),
@@ -285,7 +295,9 @@ const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 				{ intent: "ensureOwnedSurface", request },
 				"ensureOwnedSurface",
 			);
-			outcome = planner.ensureOwnedSurface(context, request);
+			outcome = yield* planOf(() =>
+				planner.ensureOwnedSurface(context, request),
+			);
 		} else {
 			const request = { link, surface: input.surface };
 			const context = yield* loadContext(
@@ -293,7 +305,9 @@ const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 				{ intent: "recordOccurrence", request },
 				"recordOccurrence",
 			);
-			outcome = planner.recordOccurrence(context, request);
+			outcome = yield* planOf(() =>
+				planner.recordOccurrence(context, request),
+			);
 			if (
 				outcome.status === "rejected" &&
 				outcome.code === "occurrenceAttestedElsewhere"
@@ -347,7 +361,9 @@ const planNew = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 			{ intent: "addNewNote", request },
 			"addNewNote",
 		);
-		const outcome = planner.addNewNote(context, request);
+		const outcome = yield* planOf(() =>
+			planner.addNewNote(context, request),
+		);
 		if (outcome.status === "conflict")
 			return Transaction.replan(outcome.message ?? outcome.code);
 		if (outcome.status === "rejected") {

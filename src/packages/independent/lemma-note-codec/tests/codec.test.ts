@@ -118,15 +118,26 @@ describe("round trips for every German Family", () => {
 		const ihm = familyFixtures.syncretism;
 		const [ihmEntry] = ihm.readingEntries;
 		if (!ihmEntry) throw new Error("fixture");
+		const relations = valid(
+			parseReading(
+				Result.getOrThrow(serializeReadingNote(ihm, ihmEntry.reading)),
+			).data,
+		).readingEntry.knowledge?.semanticRelations;
+		// As dumdict normalizes it: the target's `♂️` loses its variation
+		// selector.
+		expect(relations).toEqual(
+			readingNoteDataOf(ihm, ihmEntry.reading).readingEntry.knowledge
+				?.semanticRelations,
+		);
 		expect(
-			valid(
-				parseReading(
-					Result.getOrThrow(
-						serializeReadingNote(ihm, ihmEntry.reading),
-					),
-				).data,
-			).readingEntry.knowledge?.semanticRelations,
-		).toEqual(ihmEntry.knowledge?.semanticRelations);
+			relations?.targetKind === "reading"
+				? relations.synonym?.map((target) =>
+						"emojiDescription" in target
+							? target.emojiDescription
+							: undefined,
+					)
+				: undefined,
+		).toEqual(["♂"]);
 	});
 
 	it("keeps Mutter's pending relations, Attestation Links and owned Surface", () => {

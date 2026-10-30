@@ -137,8 +137,9 @@ describe("notes that hold no valid records come back as typed issues", () => {
 	});
 
 	it("a note written before the batteries moved reflexivity to the frame and translations to pieces", () => {
-		// filler-de #65 resets such notes; until then each reads as a typed
-		// issue and the note stays as it is.
+		// Nearly every note in an existing Worter/ is one of these: each
+		// reads as a typed issue and is quarantined as it is, until the
+		// Dictionary reset (filler-de #65) rewrites it.
 		const reflexive: Dumling.Lemma<"de"> = {
 			canonicalForm: "schämen",
 			coreFeatures: { hasSepPrefix: null, lexicallyReflexive: "Acc" },
@@ -149,6 +150,15 @@ describe("notes that hold no valid records come back as typed issues", () => {
 		} as unknown as Dumling.Lemma<"de">;
 		expect(
 			issueTags(parseLemma({ ...lemma.metadata, lemma: reflexive }).data),
+		).toEqual(["InvalidRecord"]);
+		// Every VERB note stored the feature, null on a plain verb.
+		const plain = {
+			...reflexive,
+			canonicalForm: "gehen",
+			coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+		};
+		expect(
+			issueTags(parseLemma({ ...lemma.metadata, lemma: plain }).data),
 		).toEqual(["InvalidRecord"]);
 		expect(
 			issueTags(

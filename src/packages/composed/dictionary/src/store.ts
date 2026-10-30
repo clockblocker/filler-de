@@ -54,6 +54,7 @@ import {
 import {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
+	DictionaryPlanError,
 	DictionaryRefRewriteError,
 	DictionaryRequestError,
 	DictionaryRoundTripError,
@@ -109,6 +110,7 @@ import {
 	sameEntry,
 	unreadableEntry,
 } from "./notes";
+import { planned } from "./plan";
 import {
 	crossroadContentOf,
 	crossroadPathOf,
@@ -2087,7 +2089,15 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				);
 				return;
 			}
-			const outcome = plan(slice.success);
+			const attempt = planned(() => plan(slice.success));
+			if (Result.isFailure(attempt)) {
+				yield* Effect.logWarning(
+					"Dictionary could not plan a Shadow re-evaluation",
+					attempt.failure,
+				);
+				return;
+			}
+			const outcome = attempt.success;
 			if (outcome.status !== "planned") {
 				yield* Effect.logWarning(
 					"Dictionary could not re-evaluate Shadows",
@@ -2433,10 +2443,25 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* rebuild();
 					yield* settle;
 				}
-				const planned = plan(viewOf(index, revision()));
-				if (Result.isFailure(planned))
-					return yield* Effect.fail(planned.failure);
-				const step = planned.success;
+				// A plan that throws, as dumdict's planner does on a slice
+				// that breaks its contract, fails typed instead of as a defect.
+				const attempt: Result.Result<
+					Transaction<A>,
+					E | DictionaryPlanError
+				> = Result.flatMap(
+					Result.try({
+						catch: (cause) =>
+							new DictionaryPlanError({
+								cause,
+								message: `The dictionary could not plan: ${cause instanceof Error ? cause.message : String(cause)}`,
+							}),
+						try: () => plan(viewOf(index, revision())),
+					}),
+					(result) => result,
+				);
+				if (Result.isFailure(attempt))
+					return yield* Effect.fail(attempt.failure);
+				const step = attempt.success;
 				if (step._tag === "Stop")
 					return { _tag: "Done", value: step.value } as const;
 				if (step._tag === "Replan")

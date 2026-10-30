@@ -2,6 +2,7 @@ export { CrossroadNoteMetadata } from "./crossroad";
 export {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
+	DictionaryPlanError,
 	DictionaryRefRewriteError,
 	DictionaryRequestError,
 	DictionaryRoundTripError,
@@ -22,6 +23,7 @@ export {
 } from "./note-cache";
 export type { ReadingLocation, RelationEdge } from "./note-index";
 export type { QuarantineReason } from "./notes";
+export { planned } from "./plan";
 export type { NoteProjections } from "./render";
 export {
 	type ScrollAlias,
