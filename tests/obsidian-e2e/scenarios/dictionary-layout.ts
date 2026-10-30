@@ -21,6 +21,7 @@ export const TITLES = {
 	note: title("kontexte", "Note"),
 	tags: title("tags", "Tags"),
 	uebersetzung: title("translations", "Übersetzung"),
+	wortbildung: title("formations", "Wortbildung"),
 } as const;
 
 /** Which metadata namespace each kind of dictionary note keeps its data under. */

@@ -11,6 +11,8 @@ import {
 	CONVERSION_STORY,
 	constituentsLine,
 	expectMorphemeSection,
+	formationLine,
+	formationLines,
 	morphemeLines,
 	morphemesLine,
 	PART_CROSSROADS,
@@ -19,7 +21,7 @@ import {
 	SETTLED_DUMGEN,
 	sourceLine,
 } from "./classify-breakdown-script";
-import { expectHiddenMetadata, linkTo } from "./dictionary-layout";
+import { expectHiddenMetadata, linkTo, TITLES } from "./dictionary-layout";
 
 const P = COMPOUND_PATHS;
 const C = CONVERSION_PATHS;
@@ -55,6 +57,7 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				];
 				expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 				expect(notes[X.kraftwerk]).toBeUndefined();
+				expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 
 				// Kraftwerk next: it is broken down in turn, and Kohlekraftwerk's
 				// part moves to its Lemma note in the same commit.
@@ -80,6 +83,15 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 					constituentsLine([X.kohle, "Kohle"], [P.kraftwerkLemma, "Kraftwerk"]),
 				];
 				expectMorphemeSection(notes[P.kohlekraftwerkReading], stored);
+				// Kraftwerk's Lemma note lists the word built on it (#269),
+				// linking its Reading note.
+				const formations = [
+					formationLine("Komposita", [
+						P.kohlekraftwerkReading,
+						"Kohlekraftwerk",
+					]),
+				];
+				expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 				const asked = breakdownRequests((await status()).dumgenRequests);
 				expect(asked["jev:breakdown-analysis"]).toBe(2);
 
@@ -96,12 +108,12 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				expect(breakdownRequests((await status()).dumgenRequests)).toEqual(
 					asked,
 				);
-				expectMorphemeSection(
-					(await dictionary()).markdown[P.kohlekraftwerkReading],
-					stored,
-				);
+				notes = (await dictionary()).markdown;
+				expectMorphemeSection(notes[P.kohlekraftwerkReading], stored);
+				expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 
-				// The user unlinks Kraftwerk's only occurrence: its notes go, and
+				// The user unlinks Kraftwerk's only occurrence: its notes go, with
+				// its Formations, which no other note keeps as text, and
 				// Kohlekraftwerk's part links its Crossroad path again.
 				const scroll = (await snapshot()).markdown["Story.md"] ?? "";
 				const unlinked = scroll.replace(
@@ -113,6 +125,8 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				notes = (await dictionary()).markdown;
 				expect(notes[P.kraftwerkReading]).toBeUndefined();
 				expect(notes[P.kraftwerkLemma]).toBeUndefined();
+				expect(notes[X.kraftwerk]).not.toContain(TITLES.wortbildung);
+				expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 				expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 			},
 		);
@@ -178,6 +192,10 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				expectMorphemeSection(notes[C.laufReading], [
 					morphemesLine([X.lauf, "Lauf"]),
 					sourceLine(C.laufenLemma, "laufen"),
+				]);
+				// laufen's Lemma note lists Lauf as built from it (#269).
+				expect(formationLines(notes[C.laufenLemma])).toEqual([
+					formationLine("Grundform von", [C.laufReading, "Lauf"]),
 				]);
 			},
 		);

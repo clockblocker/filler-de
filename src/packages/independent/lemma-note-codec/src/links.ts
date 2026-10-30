@@ -32,7 +32,9 @@ export type LinkRole =
 	/** An inflection table's form spelled as its own Lemma: `N: die [[Mutter]], die Mütter`. */
 	| "inflection"
 	/** A Breakdown piece or a Source: a Lemma, or a Unit Shadow while pending (ADR 0050). */
-	| "breakdown";
+	| "breakdown"
+	/** A Lemma note's Formation: the exact Reading whose Constituents or Source name the Lemma. */
+	| "formation";
 
 /** What the note's data names. */
 export type LinkNamed<L extends Dumling.Language = Dumling.Language> =

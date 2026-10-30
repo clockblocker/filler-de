@@ -125,7 +125,7 @@ import {
 	type DisplacedCrossroad,
 	displacedCrossroads,
 	fanOutOf,
-	MAX_MORPHEME_READERS,
+	MAX_FAN_OUT_NOTES,
 	type NoteProjections,
 	renderOptionsFor,
 	staleCrossroads,
@@ -1962,21 +1962,22 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * renderings until the next one.
 	 */
 	/**
-	 * Re-renders the notes whose morphemes lines a change moved beyond what
-	 * one commit re-renders (`MAX_MORPHEME_READERS`), after it, in chunks of
-	 * that size, as a common part's Breakdown can move hundreds.
+	 * Re-renders the notes whose morphemes lines or Formations a change
+	 * moved beyond what one commit re-renders (`MAX_FAN_OUT_NOTES`), after
+	 * it, in chunks of that size, as a common part's Breakdown can move
+	 * hundreds.
 	 */
-	const rerenderMorphemeOverflow = Effect.fnUntraced(function* (
+	const rerenderFanOutOverflow = Effect.fnUntraced(function* (
 		overflow: readonly string[],
 	) {
 		if (overflow.length === 0) return;
 		yield* Effect.logInfo(
-			"Dictionary re-renders the morphemes lines a change moved beyond its cap, after it",
+			"Dictionary re-renders the morphemes lines and Formations a change moved beyond its cap, after it",
 			{ notes: overflow.length },
 		);
-		for (let at = 0; at < overflow.length; at += MAX_MORPHEME_READERS)
+		for (let at = 0; at < overflow.length; at += MAX_FAN_OUT_NOTES)
 			yield* rerender(
-				new Set(overflow.slice(at, at + MAX_MORPHEME_READERS)),
+				new Set(overflow.slice(at, at + MAX_FAN_OUT_NOTES)),
 				new Set(),
 			);
 	});
@@ -2471,7 +2472,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			fan.formKeys,
 			changedPaths,
 		);
-		yield* rerenderMorphemeOverflow(fan.overflow);
+		yield* rerenderFanOutOverflow(fan.overflow);
 		if (shadowKeys.size > 0) yield* converge({ removed, shadowKeys });
 	});
 
@@ -2959,7 +2960,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* refresh(late.paths);
 					yield* rerender(late.lemmaKeys, late.formKeys);
 				}
-				yield* rerenderMorphemeOverflow(overflow);
+				yield* rerenderFanOutOverflow(overflow);
 				if (depth >= MAX_FOLLOW_UP_DEPTH) {
 					if (leftOver.size > 0)
 						yield* Effect.logWarning(

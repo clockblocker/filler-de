@@ -242,6 +242,26 @@ export function morphemeLines(
 	return lines.slice(start + 1, end < 0 ? undefined : end);
 }
 
+/**
+ * The lines of a Lemma note's Formations (#269), the words built on it,
+ * after its "Wortbildung" title: none when the note shows none.
+ */
+export function formationLines(note: string | undefined): readonly string[] {
+	const lines = visible(note).split("\n");
+	const start = lines.indexOf(TITLES.wortbildung);
+	if (start < 0) return [];
+	const rest = lines.slice(start + 1);
+	const end = rest.findIndex((line) => line === "" || TITLE_LINE.test(line));
+	return end < 0 ? rest : rest.slice(0, end);
+}
+
+/** One group's line of Formations: its label, then each Reading note's link. */
+export const formationLine = (
+	label: string,
+	...readings: readonly (readonly [path: string, shown: string])[]
+) =>
+	`${label}: ${readings.map(([path, shown]) => linkTo(path, shown)).join(", ")}`;
+
 /** The morphemes line: an empty hover anchor, then each morpheme's link. */
 export const morphemesLine = (
 	...pieces: readonly (readonly [path: string, shown: string])[]

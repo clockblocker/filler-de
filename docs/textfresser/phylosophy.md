@@ -157,6 +157,7 @@ Semantic meaning is primary. Markdown string shape is a rendering detail.
 4. A Lemma target links to its Lemma note. A Shadow target, a part not stored yet, links to its spelling's Crossroad note path with an alias.
 5. Once a part's Lemma is stored, the store re-points its Shadow to that Lemma in the same commit, if it is the only stored Lemma the Shadow matches (dumdict's `shadowMatchesLemma`). The link moves back to the Shadow when that Lemma is removed or a second matching Lemma is stored, as a relation's Lemma upgrade does (ADR-0015).
 6. A morpheme is a Lemma like any other (`-ung`, `ent-`), so its link lands in `Worter`, never in `Library`.
+7. The inverse is computed, never stored: a Lemma note lists its Formations, the Readings whose Constituents or Source link to it (`kaufen` lists `einkaufen`, `Kauf`), each linking its Reading note, since its sense is known. A link still on an ambiguous Shadow lists on no Lemma note.
 
 See texteater [ADR 0050](https://github.com/clockblocker/texteater/blob/main/docs/adr/0050-break-a-reading-down-into-its-constituents.md) (Constituents, Sources, targets) and [ADR 0051](https://github.com/clockblocker/texteater/blob/main/docs/adr/0051-copy-school-morphemic-analysis-into-a-readings-morphemes.md) (the Morphemic Breakdown).
 
