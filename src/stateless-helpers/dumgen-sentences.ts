@@ -1,7 +1,7 @@
 /**
  * The plugin's one sentence splitter: dumgen's `splitText` (ADR 0014). The
- * `^N` block formatter groups the Sentences it finds, and Classify finds
- * the Sentences a selection touches with it, so a block never cuts a
+ * `^N` block formatter makes each Sentence it finds a block, and Classify
+ * finds the Sentences a selection touches with it, so a block never cuts a
  * Sentence that Classify later segments.
  *
  * dumgen returns Sentences as trimmed strings. It drops only whitespace,

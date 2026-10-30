@@ -37,7 +37,7 @@ function isolateStandaloneLines(content: string): string {
 /**
  * Stage 2: Sentence Segmenter
  * Splits with dumgen's `splitText`, the plugin's only sentence splitter
- * (ADR 0014), so every `^N` block groups whole dumgen Sentences. Each
+ * (ADR 0014), so every `^N` block is one whole dumgen Sentence. Each
  * token's text runs from its Sentence's first character to the next
  * Sentence's, trailing whitespace included, so the tokens put together
  * give the content back from the first Sentence on.

@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join, parse } from "path";
 import { segmentContent } from "../src/commanders/librarian/pages/segmenter";
-import { splitStrInBlocks } from "../src/commanders/librarian/pages/segmenter/block-marker/split-str-in-blocks";
+import { splitStrInSentenceBlocks } from "../src/commanders/librarian/pages/segmenter/block-marker/split-str-in-sentence-blocks";
 import { DEFAULT_LANGUAGE_CONFIG } from "../src/commanders/librarian/pages/segmenter/language-config";
 import { DEFAULT_SEGMENTATION_CONFIG } from "../src/commanders/librarian/pages/types";
 
@@ -42,7 +42,7 @@ function run() {
 		const content = stripGoBackLinks(rawContent);
 
 		// Split in blocks
-		const blockResult = splitStrInBlocks(content);
+		const blockResult = splitStrInSentenceBlocks(content);
 		writeFileSync(join(blocksDir, file), blockResult.markedText);
 		console.log(`[blocks] ${name}: ${blockResult.blockCount} blocks`);
 
@@ -62,7 +62,7 @@ function run() {
 		for (const page of pageResult.pages) {
 			const pageFile = `page_${String(page.pageIndex + 1).padStart(3, "0")}.md`;
 			// Also add block markers to each page
-			const pageWithBlocks = splitStrInBlocks(page.content);
+			const pageWithBlocks = splitStrInSentenceBlocks(page.content);
 			writeFileSync(join(pageOutDir, pageFile), pageWithBlocks.markedText);
 		}
 		console.log(

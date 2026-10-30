@@ -76,7 +76,7 @@ Each action has a placement setting in `TextEaterSettings`:
 | Action | Setting Key | Values |
 |--------|-------------|--------|
 | Translate | `translatePlacement` | "selection" / "bottom" / "shortcut-only" |
-| Split in Blocks | `splitInBlocksPlacement` | "selection" / "bottom" / "shortcut-only" |
+| Split in Sentence Blocks | `splitInBlocksPlacement` | "selection" / "bottom" / "shortcut-only" |
 | Explain Grammar | `explainGrammarPlacement` | "selection" / "bottom" / "shortcut-only" |
 | Generate | `generatePlacement` | "selection" / "bottom" / "shortcut-only" |
 

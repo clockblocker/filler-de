@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { withObsidianScenario } from "../harness";
 
 describe("Obsidian E2E - Librarian commands", () => {
-	it("splits the active editor selection into stable blocks", async () => {
-		const selectedText = "Dies ist ein einfacher Satz.";
+	it("splits the active editor selection into sentence blocks, one Sentence each", async () => {
+		const selectedText = "Dies ist ein einfacher Satz. Kurz.";
 		await withObsidianScenario(
 			{
 				fixture: [
@@ -22,7 +22,10 @@ describe("Obsidian E2E - Librarian commands", () => {
 				});
 
 				const vault = await snapshot();
-				expect(vault.markdown["Story.md"]).toContain(`${selectedText} ^0`);
+				// A short Sentence gets a block of its own too.
+				expect(vault.markdown["Story.md"]).toContain(
+					"Dies ist ein einfacher Satz. ^0\n\nKurz. ^1",
+				);
 			},
 		);
 	});

@@ -225,6 +225,70 @@ const refsOf = async (store: DumdictVaultStore, lemma: Dumling.Lemma<"de">) =>
 		({ attestationLinks }) => attestationLinks.map(({ ref }) => ref),
 	);
 
+/** Classify over `content`, two instances of "Er fängt heute an.", anfangen resolving. */
+async function classifyRepeated(content: string) {
+	const stub = stubDumgen({
+		grammar: (input) =>
+			input.unit.route !== "Unresolved" && input.unit.route.kind === "VERB"
+				? {
+						_tag: "Resolved",
+						attestation: attestationOf(anfangen, "fängt an", ["fängt", "an"], {
+							expletiveEvidence: null,
+							valencyEvidence: [],
+						}),
+					}
+				: { _tag: "Unresolved" },
+		reading: () => ({ _tag: "New", emojiDescription: "🏁" }),
+	});
+	const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
+	const cache = memorySegmentationCache();
+	const segmenter = fakeDumgen({
+		jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
+		luna: () => Promise.reject(new Error("segmentation asked Luna")),
+	});
+	const resolver = dumgenUnitResolver({
+		dumgen: stub.dumgen,
+		knowledge: harness.queue,
+		scroll: harness.scroll,
+		store: Effect.succeed(harness.store),
+	});
+	const outcome = await run(
+		classifySelection({
+			content,
+			scrollPath: SCROLL,
+			selection: selectionOf(content, content.trim()),
+		}).pipe(
+			Effect.provide(
+				Layer.mergeAll(
+					Layer.succeed(SegmentationCache, cache),
+					Layer.succeed(UnitResolver, resolver),
+					Layer.succeed(ClassifySegmenter, {
+						segmenterVersion: "test-segmenter",
+					}),
+					segmenter,
+				),
+			),
+		),
+	);
+	await run(harness.queue.whenIdle);
+	const verb = outcome.resolutions.find(({ _tag }) => _tag === "Resolved");
+	if (verb?._tag !== "Resolved") throw new Error("anfangen did not resolve");
+	const link = (shown: string) => linkTo(verb.readingPath, shown);
+	const linked = `Er ${link("fängt")} heute ${link("an")}.`;
+	const first = outcome.plan.units.find(
+		({ instance, unit: { route } }) =>
+			instance === 0 && route !== "Unresolved" && route.kind === "VERB",
+	);
+	if (!first) throw new Error("no first instance of anfangen");
+	const { edit } = observerOver({
+		cache,
+		scroll: () => harness.scroll.content,
+		store: harness.store,
+		vault: harness.vault,
+	});
+	return { edit, first, harness, link, linked, stub };
+}
+
 describe("unlink observer", () => {
 	it("removes an occurrence whose link the user deleted, and the Reading with its last one", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
@@ -757,57 +821,41 @@ describe("unlink observer", () => {
 		expect(await refsOf(harness.store, see)).toHaveLength(0);
 	});
 
-	it("tells a repeated Sentence's instances apart by their recomputed occurrence keys", async () => {
-		const content = "Er fängt heute an. Er fängt heute an.\n";
-		const stub = stubDumgen({
-			grammar: (input) =>
-				input.unit.route !== "Unresolved" && input.unit.route.kind === "VERB"
-					? {
-							_tag: "Resolved",
-							attestation: attestationOf(anfangen, "fängt an", ["fängt", "an"], {
-								expletiveEvidence: null,
-								valencyEvidence: [],
-							}),
-						}
-					: { _tag: "Unresolved" },
-			reading: () => ({ _tag: "New", emojiDescription: "🏁" }),
-		});
-		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
-		const cache = memorySegmentationCache();
-		const segmenter = fakeDumgen({
-			jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
-			luna: () => Promise.reject(new Error("segmentation asked Luna")),
-		});
-		const resolver = dumgenUnitResolver({
-			dumgen: stub.dumgen,
-			knowledge: harness.queue,
-			scroll: harness.scroll,
-			store: Effect.succeed(harness.store),
-		});
-		const outcome = await run(
-			classifySelection({
-				content,
-				scrollPath: SCROLL,
-				selection: selectionOf(content, content.trim()),
-			}).pipe(
-				Effect.provide(
-					Layer.mergeAll(
-						Layer.succeed(SegmentationCache, cache),
-						Layer.succeed(UnitResolver, resolver),
-						Layer.succeed(ClassifySegmenter, {
-							segmenterVersion: "test-segmenter",
-						}),
-						segmenter,
-					),
-				),
-			),
+	it("tells a repeated Sentence's instances apart by the blocks Classify cut them into", async () => {
+		const { edit, first, harness, link, linked, stub } = await classifyRepeated(
+			"Er fängt heute an. Er fängt heute an.\n",
 		);
-		await run(harness.queue.whenIdle);
-		const verb = outcome.resolutions.find(({ _tag }) => _tag === "Resolved");
-		if (verb?._tag !== "Resolved") throw new Error("anfangen did not resolve");
-		const link = (shown: string) => linkTo(verb.readingPath, shown);
-		const linked = `Er ${link("fängt")} heute ${link("an")}.`;
-		expect(harness.scroll.content).toBe(`${linked} ${linked} ^0\n`);
+		// The paragraph was cut: each instance has a block of its own.
+		expect(harness.scroll.content).toBe(`${linked} ^0\n\n${linked} ^1\n`);
+		// Each instance is an occurrence of its own, judged once for both.
+		const refs = await refsOf(harness.store, anfangen);
+		expect(refs).toHaveLength(2);
+		expect(new Set(refs).size).toBe(2);
+		expect(refs).toContain(`![[Story#^0|^${occurrenceKeyOf(first.ref, 0)}]]`);
+		expect(refs.some((ref) => ref.startsWith("![[Story#^1|"))).toBe(true);
+		expect(stub.calls.grammar).toHaveLength(3);
+		expect(stub.calls.reading).toHaveLength(1);
+
+		// An edit to the first instance's Sentence while the second loses its
+		// links: the second's block links nothing, so only the second goes.
+		await edit(() => {
+			harness.scroll.content = `Er ${link("fängt")} morgen ${link("an")}. ^0\n\nEr fängt heute an. ^1\n`;
+		});
+		const kept = [`![[Story#^0|^${occurrenceKeyOf(first.ref, 0)}]]`];
+		expect(await refsOf(harness.store, anfangen)).toEqual(kept);
+		await edit(() => {
+			harness.scroll.content = `${linked} ^0\n\nEr fängt heute an. ^1\n`;
+		});
+		expect(await refsOf(harness.store, anfangen)).toEqual(kept);
+	});
+
+	it("tells a repeated Sentence's instances in one block apart by their recomputed occurrence keys", async () => {
+		// A list item, which Classify never cuts into sentence blocks, so
+		// both instances share one block.
+		const { edit, first, harness, link, linked, stub } = await classifyRepeated(
+			"- Er fängt heute an. Er fängt heute an.\n",
+		);
+		expect(harness.scroll.content).toBe(`- ${linked} ${linked} ^0\n`);
 		// Each instance is an occurrence of its own, judged once for both.
 		const refs = await refsOf(harness.store, anfangen);
 		expect(refs).toHaveLength(2);
@@ -815,27 +863,16 @@ describe("unlink observer", () => {
 		expect(stub.calls.grammar).toHaveLength(3);
 		expect(stub.calls.reading).toHaveLength(1);
 
-		const { edit } = observerOver({
-			cache,
-			scroll: () => harness.scroll.content,
-			store: harness.store,
-			vault: harness.vault,
-		});
 		// An edit to the first instance's Sentence: its key cannot be told,
 		// so nothing goes.
 		await edit(() => {
-			harness.scroll.content = `Er ${link("fängt")} morgen ${link("an")}. Er fängt heute an. ^0\n`;
+			harness.scroll.content = `- Er ${link("fängt")} morgen ${link("an")}. Er fängt heute an. ^0\n`;
 		});
 		expect(await refsOf(harness.store, anfangen)).toEqual(refs);
 		// The second instance's links go, the first's stay: only the second goes.
 		await edit(() => {
-			harness.scroll.content = `${linked} Er fängt heute an. ^0\n`;
+			harness.scroll.content = `- ${linked} Er fängt heute an. ^0\n`;
 		});
-		const first = outcome.plan.units.find(
-			({ instance, unit: { route } }) =>
-				instance === 0 && route !== "Unresolved" && route.kind === "VERB",
-		);
-		if (!first) throw new Error("no first instance of anfangen");
 		expect(await refsOf(harness.store, anfangen)).toEqual([
 			`![[Story#^0|^${occurrenceKeyOf(first.ref, 0)}]]`,
 		]);

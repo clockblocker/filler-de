@@ -1,7 +1,7 @@
 /**
  * Decoration Stripper
  *
- * Strips markdown decorations (italics, bold, etc.) before sentence segmentation,
+ * Strips markdown decorations (italics, bold, `_` and `__` too, etc.) before sentence segmentation,
  * then restores them to each resulting sentence individually.
  *
  * Problem: When text like "*Sentence one. Sentence two.*" is segmented,
@@ -23,8 +23,9 @@ const DECORATION_MARKERS = ["***", "**", "*", "~~", "=="] as const;
  * Heal unclosed decorations like Obsidian does.
  * Obsidian treats `*text` the same as `*text*` when the decoration is unclosed.
  *
- * Processes line by line: if a line starts with a decoration marker but doesn't
- * end with it, the closing marker is appended.
+ * Processes line by line: if a line starts with a decoration marker that
+ * the line never closes, the closing marker is appended. A line that opens
+ * and closes it, such as `*Kursiv* und normal.`, is left as it is.
  *
  * @param text - Input text
  * @returns Text with unclosed decorations healed
@@ -38,16 +39,27 @@ export function healUnclosedDecorations(text: string): string {
 
 			// Check each decoration marker (longest first to avoid partial matches)
 			for (const marker of DECORATION_MARKERS) {
-				if (trimmed.startsWith(marker) && !trimmed.endsWith(marker)) {
-					// Line starts with marker but doesn't end with it
-					// Add closing marker (preserve trailing whitespace from original line)
-					const trailingWs = line.match(/\s*$/)?.[0] ?? "";
-					return line.trimEnd() + marker + trailingWs;
-				}
+				if (!trimmed.startsWith(marker)) continue;
+				if (trimmed.endsWith(marker)) return line;
+				// An even count closes every marker the line opens.
+				if (markerCount(trimmed, marker) % 2 === 0) return line;
+				// Add closing marker (preserve trailing whitespace from original line)
+				const trailingWs = line.match(/\s*$/)?.[0] ?? "";
+				return line.trimEnd() + marker + trailingWs;
 			}
 			return line;
 		})
 		.join("\n");
+}
+
+/** How often `marker` stands on its own in `line`: `*` never counts the stars of `**`. */
+function markerCount(line: string, marker: string): number {
+	const pattern = DECORATION_PATTERNS.find(
+		(candidate) => candidate.marker === marker,
+	)?.openPattern;
+	return pattern
+		? (line.match(new RegExp(pattern.source, pattern.flags)) ?? []).length
+		: 0;
 }
 
 /**
@@ -96,7 +108,24 @@ const DECORATION_PATTERNS: { marker: string; openPattern: RegExp }[] = [
 	{ marker: "~~", openPattern: /(?<!~)~~(?!~)/g },
 	// Highlight: ==
 	{ marker: "==", openPattern: /(?<!=)==(?!=)/g },
+	// Underscore emphasis: ___, __, _, never inside a word (snake_case)
+	{ marker: "___", openPattern: underscoreRun(3) },
+	{ marker: "__", openPattern: underscoreRun(2) },
+	{ marker: "_", openPattern: underscoreRun(1) },
 ];
+
+/**
+ * A run of exactly `length` underscores that may open or close emphasis:
+ * one with a letter or digit on both sides is inside a word, as in
+ * `snake_case`, and emphasizes nothing.
+ */
+function underscoreRun(length: number): RegExp {
+	const run = `_{${length}}`;
+	return new RegExp(
+		`(?<![_\\p{L}\\p{N}])${run}(?!_)|(?<!_)${run}(?![_\\p{L}\\p{N}])`,
+		"gu",
+	);
+}
 
 /**
  * Check if content contains sentence-ending punctuation that would cause
@@ -130,7 +159,7 @@ function findDecorationSpans(text: string): DecorationSpan[] {
 
 	for (const { marker, openPattern } of DECORATION_PATTERNS) {
 		// Find all occurrences of this marker
-		const regex = new RegExp(openPattern.source, "g");
+		const regex = new RegExp(openPattern.source, openPattern.flags);
 		const positions: number[] = [];
 
 		let match = regex.exec(text);

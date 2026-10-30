@@ -14,7 +14,9 @@
  *    New the store refuses as stale is judged again, at most
  *    `MAX_STALE_REJUDGES` times.
  * 4. One compare-and-swap write links every piece of every resolved unit
- *    to its Reading note and adds the block IDs the refs name.
+ *    to its Reading note. The block IDs the refs name were added before
+ *    anything committed; a paragraph of several Sentences was first cut
+ *    into sentence blocks, so each ref names its occurrence's Sentence.
  * 5. Each resolved Reading's Knowledge runs in the background.
  *
  * Resolution is idempotent per occurrence: a second run over the same
@@ -44,13 +46,12 @@ import type { ScrollFiles } from "./scroll-files";
 import {
 	attestationRefOf,
 	type LinkedScroll,
-	linkUnitsInScroll,
+	linkMinted,
 	type MintedBlockIds,
 	mintBlockIds,
 	occurrenceKeyOf,
 	sourceBlocksOf,
 	type UnitLinkEdit,
-	withAppended,
 } from "./scroll-links";
 
 /** How often a unit judges its Reading again after its New was refused as stale. */
@@ -378,16 +379,18 @@ export function dumgenUnitResolver(
 					plan.units.map(firstOf),
 				);
 				// Blocks get their IDs before anything commits, so every
-				// Attestation Ref names a block the Scroll holds.
-				const mintAts = plan.units.flatMap((planned) => {
+				// Attestation Ref names a block the Scroll holds. A paragraph
+				// of several Sentences is cut into sentence blocks first, so
+				// each occurrence's ID names its own Sentence.
+				const unidentified = plan.units.flatMap((planned) => {
 					const block = blocks.get(firstOf(planned));
 					return planned.unit.route !== "Unresolved" &&
 						block?._tag === "Unidentified"
-						? [block.mintAt]
+						? [firstOf(planned)]
 						: [];
 				});
 				const minted: MintedBlockIds = Option.getOrElse(
-					mintAts.length === 0
+					unidentified.length === 0
 						? Option.none<MintedBlockIds>()
 						: yield* processScroll(
 								deps.scroll,
@@ -395,7 +398,7 @@ export function dumgenUnitResolver(
 								(current) =>
 									mintBlockIds({
 										current,
-										mintAts,
+										offsets: unidentified,
 										snapshot: plan.content,
 									}),
 							).pipe(
@@ -409,9 +412,10 @@ export function dumgenUnitResolver(
 								),
 							),
 					() => ({
-						appended: [],
 						content: plan.content,
+						edits: [],
 						ids: new Map(),
+						relocations: [],
 					}),
 				);
 				const refOf = (planned: PlannedUnit): RefOf => {
@@ -420,7 +424,7 @@ export function dumgenUnitResolver(
 						block?._tag === "Identified"
 							? block.id
 							: block?._tag === "Unidentified"
-								? minted.ids.get(block.mintAt)
+								? minted.ids.get(firstOf(planned))
 								: undefined;
 					return id === undefined
 						? undefined
@@ -490,9 +494,8 @@ export function dumgenUnitResolver(
 					outcome._tag === "Resolved" ? [outcome.unit] : [],
 				);
 				// Links map from the snapshot as the mint write left it.
-				const snapshot = withAppended(plan.content, minted.appended);
 				const edits: UnitLinkEdit[] = resolved.map((unit) => ({
-					occurrences: unit.planned.occurrences.map(snapshot.move),
+					occurrences: unit.planned.occurrences,
 					ref: unit.planned.ref,
 					target: { readingPath: unit.readingPath },
 				}));
@@ -503,10 +506,11 @@ export function dumgenUnitResolver(
 								deps.scroll,
 								plan.scrollPath,
 								(current) =>
-									linkUnitsInScroll({
+									linkMinted({
 										current,
 										edits,
-										snapshot: snapshot.content,
+										minted,
+										snapshot: plan.content,
 										...(plan.userLinks === undefined
 											? {}
 											: { userLinks: plan.userLinks }),

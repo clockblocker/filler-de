@@ -114,7 +114,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 								? "turn the page"
 								: kind === CommandKind.SplitToPages
 									? "split it into pages"
-									: "split it in blocks",
+									: "split it into sentence blocks",
 						),
 					),
 				);

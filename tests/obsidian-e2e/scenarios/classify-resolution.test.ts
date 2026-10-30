@@ -7,7 +7,10 @@ import {
 	FIRST_SELECTION,
 	LEMMA_PATHS,
 	SECOND_SELECTION,
+	SENTENCE_BLOCKS_SELECTION,
+	SENTENCE_BLOCKS_STORY,
 	STORY,
+	sentenceBlocksStory,
 } from "./classify-resolution-script";
 import { expectInOrder, linkTo, TITLES, visible } from "./dictionary-layout";
 
@@ -124,6 +127,73 @@ describe("Obsidian E2E - Classify resolution", () => {
 				expect(await knowledgeCalls()).toEqual(before);
 				expect((await snapshot()).markdown["Story.md"]).toContain(
 					`${linkTo(hund.readingPath, "Der Hund")} schläft. ^1`,
+				);
+			},
+		);
+	});
+
+	it("cuts a pasted paragraph of several Sentences into sentence blocks, so each Attestation embeds its own Sentence", async () => {
+		await withObsidianScenario(
+			{
+				dumgen: CLASSIFY_RESOLUTION_DUMGEN,
+				fixture: [{ content: SENTENCE_BLOCKS_STORY, path: "Story.md" }],
+				id: "classify-sentence-blocks",
+				resetDictionary: true,
+			},
+			async ({ act, dictionary, snapshot, status }) => {
+				const healed = (await snapshot()).markdown["Story.md"] ?? "";
+				expect(healed).toContain(SENTENCE_BLOCKS_STORY);
+
+				await act({
+					kind: "runClassify",
+					path: "Story.md",
+					selection: SENTENCE_BLOCKS_SELECTION,
+				});
+				const hund = (await status()).classify?.resolved?.[0];
+				if (!hund || !("readingPath" in hund))
+					throw new Error("Der Hund did not resolve");
+				expect(hund.linked).toBe(1);
+
+				// One block per Sentence, the short ones too; nothing else changed.
+				expect((await snapshot()).markdown["Story.md"]).toBe(
+					healed.replace(
+						SENTENCE_BLOCKS_STORY,
+						sentenceBlocksStory(linkTo(hund.readingPath, "Der Hund")),
+					),
+				);
+				// The Attestation embeds Der Hund's own Sentence, in ^1.
+				const note = (await dictionary()).markdown[hund.readingPath];
+				expect(note).toMatch(KONTEXT_1);
+				expect(note).not.toMatch(KONTEXT_0);
+
+				// The user unlinks Der Hund: its block links nothing, so it goes.
+				const cut = (await snapshot()).markdown["Story.md"] ?? "";
+				const unlinked = cut.replace(
+					linkTo(hund.readingPath, "Der Hund"),
+					"Der Hund",
+				);
+				await act({ content: unlinked, kind: "modifyFile", path: "Story.md" });
+				expect(
+					(await dictionary()).markdown[hund.readingPath],
+				).toBeUndefined();
+
+				// Classify again: the blocks keep their IDs, nothing is cut again.
+				await act({
+					kind: "runClassify",
+					path: "Story.md",
+					selection: SENTENCE_BLOCKS_SELECTION,
+				});
+				const again = (await status()).classify?.resolved?.[0];
+				if (!again || !("readingPath" in again))
+					throw new Error("Der Hund did not resolve again");
+				expect((await snapshot()).markdown["Story.md"]).toBe(
+					healed.replace(
+						SENTENCE_BLOCKS_STORY,
+						sentenceBlocksStory(linkTo(again.readingPath, "Der Hund")),
+					),
+				);
+				expect((await dictionary()).markdown[again.readingPath]).toMatch(
+					KONTEXT_1,
 				);
 			},
 		);

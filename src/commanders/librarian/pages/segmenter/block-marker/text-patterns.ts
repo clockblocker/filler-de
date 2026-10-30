@@ -4,8 +4,6 @@
  * Text detection utilities and pattern constants for block marking.
  */
 
-import type { AnnotatedSentence } from "../../types";
-
 /**
  * Lone asterisks/underscores from italics/bold spanning sentences.
  * Pattern: `*`, `**`, `_`, `__`, `***`, `___`
@@ -64,47 +62,5 @@ export function isCodeBlock(text: string): boolean {
 	return (
 		CODE_BLOCK_PLACEHOLDER_PATTERN.test(trimmed) ||
 		FENCED_CODE_BLOCK_PATTERN.test(trimmed)
-	);
-}
-
-/**
- * Check if sentence is a short speech intro (ends with ":" and ≤threshold words).
- */
-export function isShortSpeechIntro(
-	sentence: AnnotatedSentence,
-	threshold: number,
-): boolean {
-	const text = sentence.text.trim();
-	return text.endsWith(":") && countWords(text) <= threshold;
-}
-
-/**
- * Count words in text.
- */
-export function countWords(text: string): number {
-	const trimmed = text.trim();
-	if (trimmed.length === 0) return 0;
-	return trimmed.split(/\s+/).length;
-}
-
-/**
- * URL placeholder pattern from markdown-protector.
- * Format: \uFFFC + URL + number + \uFFFC (e.g., "\uFFFCURL0\uFFFC")
- */
-const URL_PLACEHOLDER_PATTERN = /^\uFFFCURL\d+\uFFFC$/;
-
-/**
- * Check if text is a standalone URL line.
- * A standalone URL is a line that contains only a URL (http/https) or a URL placeholder.
- * These should get their own block markers rather than being merged with adjacent content.
- */
-export function isStandaloneUrl(text: string): boolean {
-	const trimmed = text.trim();
-	// Match either:
-	// 1. Real URL: http:// or https:// followed by non-whitespace
-	// 2. URL placeholder: \uFFFCURLn\uFFFC (from markdown-protector)
-	return (
-		/^https?:\/\/\S+$/.test(trimmed) ||
-		URL_PLACEHOLDER_PATTERN.test(trimmed)
 	);
 }

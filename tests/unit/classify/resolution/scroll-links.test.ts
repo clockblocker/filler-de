@@ -3,11 +3,13 @@ import type * as Dumling from "dumling/types";
 import { knowledgeRequestFor } from "../../../../src/commanders/classify/resolution/knowledge-request";
 import {
 	attestationRefOf,
+	linkMinted,
 	linkUnitsInScroll,
 	mintBlockIds,
 	sourceBlocksOf,
-	withAppended,
+	withEdits,
 } from "../../../../src/commanders/classify/resolution/scroll-links";
+import { scrollSentences } from "../../../../src/commanders/classify/scroll-sentences";
 
 const target = {
 	readingPath: "Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See.md",
@@ -55,19 +57,19 @@ describe("mintBlockIds", () => {
 		const current = "Der See ist tief und kalt\n\nNext ^3\n";
 		const minted = mintBlockIds({
 			current,
-			mintAts: [snapshot.indexOf("\n")],
+			offsets: [snapshot.indexOf("\n")],
 			snapshot,
 		});
 		expect(minted.content).toBe("Der See ist tief und kalt ^4\n\nNext ^3\n");
 		expect([...minted.ids.values()]).toEqual(["4"]);
-		expect(minted.appended).toEqual([]);
+		expect(minted.edits).toEqual([]);
 	});
 
 	it("keeps an ID a block gained meanwhile", () => {
 		const snapshot = "Der See ist tief.\n";
 		const minted = mintBlockIds({
 			current: "Der See ist tief. ^9\n",
-			mintAts: [snapshot.indexOf("\n")],
+			offsets: [snapshot.indexOf("\n")],
 			snapshot,
 		});
 		expect(minted.content).toBe("Der See ist tief. ^9\n");
@@ -78,10 +80,10 @@ describe("mintBlockIds", () => {
 		const snapshot = "Der See ist tief.\n\nDie See ist rau.\n";
 		const minted = mintBlockIds({
 			current: snapshot,
-			mintAts: [snapshot.indexOf("\n"), snapshot.lastIndexOf("\n")],
+			offsets: [snapshot.indexOf("\n"), snapshot.lastIndexOf("\n")],
 			snapshot,
 		});
-		const moved = withAppended(snapshot, minted.appended);
+		const moved = withEdits(snapshot, minted.edits);
 		expect(moved.content).toBe(minted.content);
 		const rau = at(snapshot, "rau");
 		expect(moved.content.slice(moved.move(rau).from, moved.move(rau).to)).toBe(
@@ -98,7 +100,7 @@ describe("mintBlockIds after the user typed", () => {
 		] as const) {
 			const minted = mintBlockIds({
 				current,
-				mintAts: [snapshot.indexOf("tief.") + 5],
+				offsets: [snapshot.indexOf("tief.") + 5],
 				snapshot,
 			});
 			expect(minted.content).toBe(current.replace("tief.", "tief. ^0"));
@@ -109,8 +111,8 @@ describe("mintBlockIds after the user typed", () => {
 		const snapshot = "Der Hund bellt.\n\nDie Katze schläft.\n\nDer See ist tief.\n";
 		const current = `Notiz.\n\n${snapshot}`;
 		const ends = [...snapshot.matchAll(/\.\n/gu)].map(({ index }) => index + 1);
-		const minted = mintBlockIds({ current, mintAts: ends, snapshot });
-		const moved = withAppended(snapshot, minted.appended);
+		const minted = mintBlockIds({ current, offsets: ends, snapshot });
+		const moved = withEdits(snapshot, minted.edits);
 		const words = ["Hund", "Katze", "See"].map((word) => at(snapshot, word));
 		const linked = linkUnitsInScroll({
 			current: minted.content,
@@ -137,6 +139,242 @@ describe("mintBlockIds after the user typed", () => {
 			{ _tag: "Unidentified", mintAt: content.indexOf("zwei") + 4 },
 			{ _tag: "Unidentified", mintAt: content.indexOf("2^10") + 4 },
 		]);
+	});
+});
+
+describe("mintBlockIds cutting a paragraph into sentence blocks", () => {
+	/** Mints for `words` of `snapshot`, unchanged meanwhile, and links each word. */
+	function mintAndLink(snapshot: string, words: readonly string[], current = snapshot) {
+		const occurrences = words.map((word) => at(snapshot, word));
+		const minted = mintBlockIds({
+			current,
+			offsets: occurrences.map(({ from }) => from),
+			snapshot,
+		});
+		const moved = withEdits(snapshot, minted.edits);
+		const linked = linkUnitsInScroll({
+			current: minted.content,
+			edits: occurrences.map((occurrence) => ({
+				occurrences: [moved.move(occurrence)],
+				ref,
+				target,
+			})),
+			snapshot: moved.content,
+		});
+		const ids = occurrences.map(({ from }) => minted.ids.get(from));
+		return { ids, linked, minted, moved };
+	}
+
+	it("gives each Sentence of a paragraph a block and an ID of its own", () => {
+		const snapshot =
+			"Ja. Der See ist tief. Das Wasser ist kalt! Wer schwimmt?\n\nNext ^3\n";
+		const { ids, linked, minted, moved } = mintAndLink(snapshot, ["See", "Wasser", "Wer"]);
+		expect(minted.content).toBe(
+			"Ja. ^4\n\nDer See ist tief. ^5\n\nDas Wasser ist kalt! ^6\n\nWer schwimmt? ^7\n\nNext ^3\n",
+		);
+		expect(ids).toEqual(["5", "6", "7"]);
+		// The cut also goes into the snapshot the links map from.
+		expect(moved.content).toBe(minted.content);
+		expect(linked.linked).toEqual([1, 1, 1]);
+		expect(linked.content).toContain(`Der ${LINK} ist tief. ^5\n`);
+	});
+
+	it("keeps the links, footnotes and emphasis a paragraph already holds", () => {
+		const user = "[[Fahrer|der Fahrer]]";
+		const own = "[[Worter/de/Lexeme/VERB/f/fah/fahre/🚗 fahren|fährt]]";
+		const snapshot = `Heute ${own} ${user} los.[^1] *Er fährt schnell. Der See ist tief.* Siehe [hier. Dort](https://x.de/a.b).\n`;
+		const { ids, minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			`Heute ${own} ${user} los.[^1] ^0\n\n*Er fährt schnell.* ^1\n\n*Der See ist tief.* ^2\n\nSiehe [hier. Dort](https://x.de/a.b). ^3\n`,
+		);
+		expect(ids).toEqual(["2"]);
+	});
+
+	it("keeps verse and hard breaks inside the Sentences they break", () => {
+		const snapshot = "Rose rot,\nVeilchen blau.\nDer See ist tief,  \nund du auch.\n";
+		const { ids, minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"Rose rot,\nVeilchen blau. ^0\n\nDer See ist tief,  \nund du auch. ^1\n",
+		);
+		expect(ids).toEqual(["1"]);
+	});
+
+	it("leaves a block that already has an ID whole, however many Sentences it holds", () => {
+		const snapshot = "Der See ist tief. Das Wasser ist kalt. ^3\n\nEin Hund. Ein Boot.\n";
+		const blocks = sourceBlocksOf(snapshot, [snapshot.indexOf("See")]);
+		expect([...blocks.values()]).toEqual([{ _tag: "Identified", id: "3" }]);
+		const { ids, minted } = mintAndLink(snapshot, ["See", "Boot"]);
+		expect(minted.content).toBe(
+			"Der See ist tief. Das Wasser ist kalt. ^3\n\nEin Hund. ^4\n\nEin Boot. ^5\n",
+		);
+		// Only the unidentified block was asked for: the caller takes ^3 from the block.
+		expect(ids).toEqual([undefined, "5"]);
+	});
+
+	it("gives a single-Sentence block one ID at its end, as before", () => {
+		const snapshot = "Der See ist tief.\n";
+		const { ids, minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe("Der See ist tief. ^0\n");
+		expect(ids).toEqual(["0"]);
+	});
+
+	it("cuts the paragraph where the user's typing elsewhere moved it", () => {
+		const snapshot = "Der See ist tief. Das Wasser ist kalt.\n";
+		const current = `Neu oben.\n\n${snapshot}\nNeu unten.\n`;
+		const { ids, linked } = mintAndLink(snapshot, ["See", "Wasser"], current);
+		expect(ids).toEqual(["0", "1"]);
+		expect(linked.content).toBe(
+			`Neu oben.\n\nDer ${LINK} ist tief. ^0\n\nDas ${LINK.replace("|See]]", "|Wasser]]")} ist kalt. ^1\n\nNeu unten.\n`,
+		);
+		// Typing that runs on from the paragraph changes it: one ID, as before.
+		const joined = `${snapshot}Neu unten.\n`;
+		expect(mintAndLink(snapshot, ["See"], joined).minted.content).toBe(
+			`${joined.trimEnd()} ^0\n`,
+		);
+	});
+
+	it("never cuts a paragraph the user is typing in: it gets one ID, as before", () => {
+		const snapshot = "Der See ist tief. Das Wasser\nist kalt.\n";
+		const current = "Der See ist sehr tief. Das Wasser\nist kalt.\n";
+		const { ids, minted } = mintAndLink(snapshot, ["See"], current);
+		expect(minted.content).toBe("Der See ist sehr tief. Das Wasser\nist kalt. ^0\n");
+		expect(ids).toEqual(["0"]);
+		expect(minted.edits).toEqual([
+			{ from: snapshot.indexOf("kalt.") + 5, text: " ^0", to: snapshot.indexOf("kalt.") + 5 },
+		]);
+	});
+
+	it("never cuts list items, quotes, headings or footnote definitions", () => {
+		const snapshot =
+			"- Der See ist tief. Das Wasser ist kalt.\n\n> Der See ist tief. Das Wasser ist kalt.\n\n[^1]: Der See ist tief. Das Wasser ist kalt.\n";
+		const offsets = [...snapshot.matchAll(/See/gu)].map(({ index }) => index);
+		const minted = mintBlockIds({ current: snapshot, offsets, snapshot });
+		expect(minted.content).toBe(
+			"- Der See ist tief. Das Wasser ist kalt. ^0\n\n> Der See ist tief. Das Wasser ist kalt. ^1\n\n[^1]: Der See ist tief. Das Wasser ist kalt. ^2\n",
+		);
+	});
+
+	it("closes and opens `_` and `__` emphasis again at a cut, and never cuts inside inline code", () => {
+		const snapshot =
+			"_Der See ist tief. Das Wasser ist kalt._ Er kam. __Sie ging. Er lief.__ Ein `Hund. Ein` Boot. Ende hier.\n";
+		const { minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"_Der See ist tief._ ^0\n\n_Das Wasser ist kalt._ ^1\n\nEr kam. ^2\n\n__Sie ging.__ ^3\n\n__Er lief.__ ^4\n\nEin `Hund. Ein` Boot. ^5\n\nEnde hier. ^6\n",
+		);
+		// Classify reads the same Sentences after the cut as before it.
+		const texts = (content: string) =>
+			scrollSentences(content).sentences.map(({ text }) => text);
+		expect(texts(minted.content)).toEqual(texts(snapshot));
+	});
+
+	it("cuts only between Classify's Sentences, where the formatter would cut inside one", () => {
+		// The formatter ends a Sentence after `*Halt!*`; Classify reads one.
+		const snapshot = "Er rief: *Halt!* und der See lief. Sie blieb.\n";
+		const { ids, minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"Er rief: *Halt!* und der See lief. ^0\n\nSie blieb. ^1\n",
+		);
+		expect(ids).toEqual(["0"]);
+	});
+
+	it("refuses a cut after which Classify would read other Sentences: one ID, as before", () => {
+		const snapshot = "Der See *ist tief. Das Wasser* ist kalt. Ende.\n";
+		const { minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(`${snapshot.trimEnd()} ^0\n`);
+	});
+
+	it("keeps the file's CRLF line endings", () => {
+		const snapshot = "Der See ist tief. Das Wasser ist kalt.\r\nEs regnet.\r\n";
+		const { minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"Der See ist tief. ^0\r\n\r\nDas Wasser ist kalt. ^1\r\n\r\nEs regnet. ^2\r\n",
+		);
+	});
+});
+
+describe("mintBlockIds in overlapping runs over one snapshot", () => {
+	const snapshot = "Er kam. Der See ist tief. Wir bleiben.\n\nDer Hund schläft. Er träumt.\n";
+	const cut = "Er kam. ^0\n\nDer See ist tief. ^1\n\nWir bleiben. ^2\n\n";
+
+	/** Run B mints for `word` of `read` and links it, after run A's write left `current`. */
+	function runB(current: string, word: string, read = snapshot, from = read.indexOf(word)) {
+		const occurrence = { from, to: from + word.length };
+		const minted = mintBlockIds({ current, offsets: [occurrence.from], snapshot: read });
+		const linked = linkMinted({
+			current: minted.content,
+			edits: [{ occurrences: [occurrence], ref, target }],
+			minted,
+			snapshot: read,
+		});
+		return { id: minted.ids.get(occurrence.from), linked, minted };
+	}
+
+	it("takes the blocks another run cut from the same paragraph, and links into them", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		expect(a.content).toBe(`${cut}Der Hund schläft. Er träumt.\n`);
+		const b = runB(a.content, "See");
+		expect(b.id).toBe("1");
+		expect(b.minted.content).toBe(a.content);
+		expect(b.linked.linked).toEqual([1]);
+		expect(b.linked.skipped).toEqual([]);
+		expect(b.linked.content).toContain(`Der ${LINK} ist tief. ^1\n`);
+	});
+
+	it("finds its Sentence's block by its text once the other run's links landed too, and links into it", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		const own = "[[Worter/de/Lexeme/VERB/k/kom/komme/🚶 kommen|kam]]";
+		const linkedByA = a.content.replace("Er kam.", `Er ${own}.`);
+		const b = runB(linkedByA, "See");
+		expect(b.id).toBe("1");
+		expect(b.minted.content).toBe(linkedByA);
+		// The ref it commits is linked, so no unlink check removes it.
+		expect(b.linked.linked).toEqual([1]);
+		expect(b.linked.skipped).toEqual([]);
+		expect(b.linked.content).toBe(linkedByA.replace("Der See", `Der ${LINK}`));
+	});
+
+	it("leaves an occurrence unattested when its Sentence is no longer as it read it", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		const tief = "[[Worter/de/Lexeme/ADJ/t/tie/tief/🕳 tief|tief]]";
+		const linkedByA = a.content.replace("ist tief.", `ist ${tief}.`);
+		const b = runB(linkedByA, "See");
+		// No ref without a link: the unit commits without an Attestation.
+		expect(b.id).toBeUndefined();
+		expect(b.minted.content).toBe(linkedByA);
+		expect(b.linked.linked).toEqual([0]);
+	});
+
+	it("never takes an earlier cut of a refrain for the copy the user is typing in", () => {
+		const refrain = `${cut}Er kam. Der See ist tief. Wir bleiben.\n`;
+		const second = refrain.lastIndexOf("See");
+		// Typing before the second copy: no block of its own is found, and
+		// the first copy's cut, which the snapshot held, is not taken.
+		const before = refrain.replace(/Er kam\. Der/u, "Neu. Er kam. Der");
+		const b = runB(before, "See", refrain, second);
+		expect(b.id).toBeUndefined();
+		expect(b.minted.content).toBe(before);
+		expect(b.linked.content.startsWith(cut)).toBe(true);
+		// Editing the second copy's Sentence: the one Sentence left with its
+		// text is the first copy's, which the snapshot held too.
+		const edited = refrain.replace(/ist tief\. Wir bleiben\.\n$/u, "ist sehr tief. Wir bleiben.\n");
+		const d = runB(edited, "See", refrain, second);
+		expect(d.id).toBeUndefined();
+		expect(d.minted.content).toBe(edited);
+		expect(d.linked.content.startsWith(cut)).toBe(true);
+		// Typing after it: the copy gets an ID of its own, as before.
+		const after = `${refrain.trimEnd()} Neu.\n`;
+		const c = runB(after, "See", refrain, second);
+		expect(c.id).toBe("3");
+		expect(c.minted.content).toBe(`${after.trimEnd()} ^3\n`);
+		expect(c.linked.content.startsWith(cut)).toBe(true);
+	});
+
+	it("cuts its own paragraph when the other run cut another one", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		const b = runB(a.content, "Hund");
+		expect(b.id).toBe("3");
+		expect(b.minted.content).toBe(`${cut}Der Hund schläft. ^3\n\nEr träumt. ^4\n`);
+		expect(b.linked.linked).toEqual([1]);
 	});
 });
 

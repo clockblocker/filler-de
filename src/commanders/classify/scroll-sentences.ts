@@ -147,7 +147,23 @@ function sourceRangeOf(
 /** The Scroll's Sentences in reading order, located in the editor's offsets. */
 export function scrollSentences(content: string): ScrollSentences {
 	const body = scrollBodyRange(content);
-	const projection = projectScrollMarkdown(content, body.from, body.to);
+	return sentencesIn(content, body.from, body.to);
+}
+
+/**
+ * The Sentences Classify reads in a stretch of Markdown, such as one
+ * paragraph, taken as a whole: no frontmatter or go-back link is skipped.
+ */
+export function markdownSentences(markdown: string): ScrollSentences {
+	return sentencesIn(markdown, 0, markdown.length);
+}
+
+function sentencesIn(
+	content: string,
+	from: number,
+	to: number,
+): ScrollSentences {
+	const projection = projectScrollMarkdown(content, from, to);
 	const texts = scrollsOf(
 		extractedTextFromMarkdown(projection.text).contents,
 	).flatMap((scroll) =>

@@ -17,9 +17,9 @@ import {
 } from "./block-marker/heading-extraction";
 import {
 	formatBlocksWithMarkers,
-	splitStrInBlocksWithIntermediate,
+	splitStrInSentenceBlocksWithIntermediate,
 	stripBlockMarkers,
-} from "./block-marker/split-str-in-blocks";
+} from "./block-marker/split-str-in-sentence-blocks";
 import {
 	DEFAULT_LANGUAGE_CONFIG,
 	type LanguageConfig,
@@ -113,11 +113,11 @@ export function segmentContent(
  * Unified segmentation that produces pages WITH block markers.
  *
  * This is the optimized pipeline that:
- * 1. Runs splitStrInBlocksWithIntermediate once to get blocks
+ * 1. Runs splitStrInSentenceBlocksWithIntermediate once to get blocks
  * 2. Groups blocks into pages
  * 3. Formats each page with block markers
  *
- * Unlike segmentContent + splitStrInBlocks per page, this runs O(N) instead of O(N × pages).
+ * Unlike segmentContent + splitStrInSentenceBlocks per page, this runs O(N) instead of O(N × pages).
  *
  * @param content - The markdown content to segment
  * @param sourceBasenameInfo - Parsed basename info (coreName + suffixParts)
@@ -137,7 +137,7 @@ export function segmentContentWithBlockMarkers(
 	// Check if content is too short to split
 	if (withoutMarkers.length < config.minContentSizeChars) {
 		// For too-short content, still apply block markers
-		const { markedText } = splitStrInBlocksWithIntermediate(
+		const { markedText } = splitStrInSentenceBlocksWithIntermediate(
 			withoutMarkers,
 			0,
 		);
@@ -156,7 +156,7 @@ export function segmentContentWithBlockMarkers(
 	}
 
 	// Run unified pipeline: blocks → pages → marked pages
-	const { blocks, formatContext } = splitStrInBlocksWithIntermediate(
+	const { blocks, formatContext } = splitStrInSentenceBlocksWithIntermediate(
 		withoutMarkers,
 		0,
 	);

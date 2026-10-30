@@ -37,7 +37,8 @@ The Librarian's user commands also have desktop owners:
 Classify on a selection (#63) is owned by `classify-selection.test.ts`: the
 `UnitRef`s handed to the resolver port, a discontinuous unit's pieces, the
 Segmentation Cache hit, an edit invalidating only its own Sentence, and the
-block ID Classify gives the unit's block before it resolves anything. Its
+block IDs Classify gives the unit's paragraph, cut into sentence blocks,
+before it resolves anything. Its
 dumgen answers from a scripted jev, so no provider is reached; the same
 story runs in process in `tests/unit/classify/classify-commander.test.ts`.
 
@@ -53,7 +54,10 @@ shows its sections, its "Deine Kontexte" embeds with their `|^<key>`
 aliases and an embed of its table. Its scripted jev and Luna, and those
 layout assertions, live in `classify-resolution-script.ts`, and
 `tests/integration/classify/classify-resolution.test.ts` runs the same story
-in process; the resolver's other cases are unit tests under
+in process. Its `classify-sentence-blocks` scenario, run in process by the
+same twin, owns the cut a paragraph of several Sentences without IDs gets
+before Classify mints: one sentence block per Sentence, so the Attestation
+embeds its own Sentence, and an unlink and a second Classify after the cut. The resolver's other cases are unit tests under
 `tests/unit/classify/resolution/`. `dictionary-layout.ts` holds the layout
 helpers every classifying scenario shares.
 

@@ -134,6 +134,27 @@ describe("dumgenUnitResolver", () => {
 		expect(harness.notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
 	});
 
+	it("cuts a paragraph of several Sentences into sentence blocks, so the ref embeds its own Sentence", async () => {
+		const content = "Es regnet heute sehr. Der See ist tief. Wir bleiben.\n";
+		const { dumgen } = stubDumgen({
+			grammar: seeGrammar,
+			reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
+		});
+		const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
+		const [resolution] = await harness.resolve(
+			planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+		);
+		if (resolution?._tag !== "Resolved") throw new Error("See did not resolve");
+		expect(resolution.linked).toBe(1);
+		expect(harness.scroll.content).toBe(
+			`Es regnet heute sehr. ^0\n\nDer ${readingLink(SEE_READING_PATH, "See")} ist tief. ^1\n\nWir bleiben. ^2\n`,
+		);
+		const note = await run(harness.store.lemmaNote(see));
+		expect(note?.readings[0]?.attestationLinks.map(({ ref }) => ref)).toEqual([
+			expect.stringMatching(/^!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]$/u),
+		]);
+	});
+
 	it("asks for the Lemma Paradigm unless disabled, and stores the Paradigm Changes it gets", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist blau. ^1\n";
 		const lake = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
