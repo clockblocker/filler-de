@@ -90,7 +90,7 @@ export function serviceCommands(
 		{
 			editor: true,
 			id: "split-selection-in-blocks",
-			name: "Split selected text in blocks",
+			name: "Split selected text into sentence blocks",
 			// With no selection, it tags the cursor's line and copies its embed.
 			run: vam.getSelectionInfo().pipe(
 				Effect.option,

@@ -8,7 +8,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
 import { goToNextPageCommand } from "../../../src/commanders/librarian/commands/navigate-pages";
-import { splitInBlocksCommand } from "../../../src/commanders/librarian/commands/split-in-blocks";
+import { splitInSentenceBlocksCommand } from "../../../src/commanders/librarian/commands/split-in-sentence-blocks";
 import { splitToPagesCommand } from "../../../src/commanders/librarian/commands/split-to-pages";
 import type { LibrarianCommandInput } from "../../../src/commanders/librarian/commands/types";
 import type {
@@ -67,7 +67,7 @@ describe("Librarian Effect commands", () => {
 		});
 
 		const result = await Effect.runPromise(
-			splitInBlocksCommand(input).pipe(Effect.result),
+			splitInSentenceBlocksCommand(input).pipe(Effect.result),
 		);
 
 		expect(Result.isFailure(result)).toBe(true);
@@ -94,7 +94,7 @@ describe("Librarian Effect commands", () => {
 		expect(opened).toEqual([NEXT_PATH]);
 	});
 
-	it("dispatches block splitting and notifies from inside the Effect", async () => {
+	it("dispatches sentence block splitting and notifies from inside the Effect", async () => {
 		const notifications: string[] = [];
 		const dispatches: Array<readonly { kind: string }[]> = [];
 		const input = makeInput({
@@ -108,11 +108,11 @@ describe("Librarian Effect commands", () => {
 			},
 		});
 
-		await Effect.runPromise(splitInBlocksCommand(input));
+		await Effect.runPromise(splitInSentenceBlocksCommand(input));
 
 		expect(dispatches).toHaveLength(1);
 		expect(dispatches[0]?.[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
-		expect(notifications).toEqual(["Split into 1 blocks"]);
+		expect(notifications).toEqual(["Split into 2 sentence blocks"]);
 	});
 
 	it("maps Effect VAM dispatch failures into CommandError", async () => {
@@ -134,7 +134,7 @@ describe("Librarian Effect commands", () => {
 		});
 
 		const result = await Effect.runPromise(
-			splitInBlocksCommand(input).pipe(Effect.result),
+			splitInSentenceBlocksCommand(input).pipe(Effect.result),
 		);
 
 		expect(Result.isFailure(result)).toBe(true);

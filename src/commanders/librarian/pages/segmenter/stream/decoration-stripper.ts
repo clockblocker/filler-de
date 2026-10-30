@@ -23,8 +23,9 @@ const DECORATION_MARKERS = ["***", "**", "*", "~~", "=="] as const;
  * Heal unclosed decorations like Obsidian does.
  * Obsidian treats `*text` the same as `*text*` when the decoration is unclosed.
  *
- * Processes line by line: if a line starts with a decoration marker but doesn't
- * end with it, the closing marker is appended.
+ * Processes line by line: if a line starts with a decoration marker that
+ * the line never closes, the closing marker is appended. A line that opens
+ * and closes it, such as `*Kursiv* und normal.`, is left as it is.
  *
  * @param text - Input text
  * @returns Text with unclosed decorations healed
@@ -38,16 +39,27 @@ export function healUnclosedDecorations(text: string): string {
 
 			// Check each decoration marker (longest first to avoid partial matches)
 			for (const marker of DECORATION_MARKERS) {
-				if (trimmed.startsWith(marker) && !trimmed.endsWith(marker)) {
-					// Line starts with marker but doesn't end with it
-					// Add closing marker (preserve trailing whitespace from original line)
-					const trailingWs = line.match(/\s*$/)?.[0] ?? "";
-					return line.trimEnd() + marker + trailingWs;
-				}
+				if (!trimmed.startsWith(marker)) continue;
+				if (trimmed.endsWith(marker)) return line;
+				// An even count closes every marker the line opens.
+				if (markerCount(trimmed, marker) % 2 === 0) return line;
+				// Add closing marker (preserve trailing whitespace from original line)
+				const trailingWs = line.match(/\s*$/)?.[0] ?? "";
+				return line.trimEnd() + marker + trailingWs;
 			}
 			return line;
 		})
 		.join("\n");
+}
+
+/** How often `marker` stands on its own in `line`: `*` never counts the stars of `**`. */
+function markerCount(line: string, marker: string): number {
+	const pattern = DECORATION_PATTERNS.find(
+		(candidate) => candidate.marker === marker,
+	)?.openPattern;
+	return pattern
+		? (line.match(new RegExp(pattern.source, "g")) ?? []).length
+		: 0;
 }
 
 /**

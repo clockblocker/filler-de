@@ -5,16 +5,17 @@ import {
 import { Effect } from "effect";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { type CommandError, CommandErrorKind } from "../errors";
-import { splitStrInBlocks } from "../pages/segmenter/block-marker/split-str-in-blocks";
+import { splitStrInSentenceBlocks } from "../pages/segmenter/block-marker/split-str-in-sentence-blocks";
 import type { LibrarianCommandFn } from "./types";
 
 /**
- * Splits selected text into blocks with Obsidian block markers (^N).
- * Finds highest existing block ID in file and continues numbering from there.
- * Dispatches ProcessMdFile action for replacement.
+ * Splits selected text into sentence blocks, one Sentence each, with
+ * Obsidian block markers (^N). Finds highest existing block ID in file and
+ * continues numbering from there. Dispatches ProcessMdFile action for
+ * replacement.
  */
-export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
-	"Librarian.splitInBlocksCommand",
+export const splitInSentenceBlocksCommand: LibrarianCommandFn = Effect.fn(
+	"Librarian.splitInSentenceBlocksCommand",
 )(function* (input): Effect.fn.Return<void, CommandError> {
 	const { commandContext, librarianState } = input;
 	const { vam, notify } = librarianState;
@@ -30,7 +31,7 @@ export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
 	);
 	const startIndex = highestBlockNumber + 1;
 
-	const { markedText, blockCount } = splitStrInBlocks(
+	const { markedText, blockCount } = splitStrInSentenceBlocks(
 		selection.text,
 		startIndex,
 	);
@@ -52,5 +53,9 @@ export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
 			Effect.sync(() => notify(`Error: ${error.reason}`)),
 		),
 	);
-	yield* Effect.sync(() => notify(`Split into ${blockCount} blocks`));
+	yield* Effect.sync(() =>
+		notify(
+			`Split into ${blockCount} sentence block${blockCount === 1 ? "" : "s"}`,
+		),
+	);
 });

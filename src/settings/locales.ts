@@ -59,7 +59,7 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	// Action labels
 	actionLabels: {
 		Classify: "Classify",
-		SplitInBlocks: "Split in Blocks",
+		SplitInBlocks: "Split in Sentence Blocks",
 		TranslateSelection: "Translate",
 	},
 	actionPlacementDesc: (label: string) => `Where to show the ${label} action`,
@@ -127,7 +127,7 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	// Action labels
 	actionLabels: {
 		Classify: "Классифицировать",
-		SplitInBlocks: "Разбить на блоки",
+		SplitInBlocks: "Разбить на предложения",
 		TranslateSelection: "Перевести",
 	},
 	actionPlacementDesc: (label: string) => `Где показывать действие ${label}`,

@@ -7,7 +7,7 @@
  */
 
 import type { SegmentationConfig } from "../../types";
-import type { Block } from "../block-marker/block-grouping";
+import type { Block } from "../block-marker/sentence-blocks";
 
 /**
  * A group of blocks to be formatted as a single page.
@@ -51,7 +51,7 @@ function shouldBreakPageForBlock(
  * Groups blocks into pages respecting size limits.
  * Blocks are atomic units - they never break across pages.
  *
- * @param blocks - Blocks from splitStrInBlocksWithIntermediate
+ * @param blocks - Blocks from splitStrInSentenceBlocksWithIntermediate
  * @param config - Segmentation configuration
  * @returns Array of block groups, one per page
  */

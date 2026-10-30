@@ -1,7 +1,7 @@
 /**
  * Block Formatting
  *
- * Formats blocks with markers and restores protected content.
+ * Formats sentence blocks with markers and restores protected content.
  */
 
 import {
@@ -10,7 +10,6 @@ import {
 } from "../../../../../stateless-helpers/offset-mapper";
 import type { ProtectedContent } from "../stream/markdown-protector";
 import { restoreProtectedContent } from "../stream/markdown-protector";
-import type { Block } from "./block-grouping";
 import type { ExtractedHeading } from "./heading-extraction";
 import {
 	buildBlockTextWithHeadings,
@@ -19,31 +18,7 @@ import {
 	type HeadingInsertionContext,
 	type HorizontalRuleInfo,
 } from "./heading-insertion";
-
-/**
- * Merge adjacent decorations within a block.
- * When multiple decorated sentences end up in the same block, merge them:
- * `*text1* *text2*` → `*text1 text2*`
- *
- * Handles all decoration types: *, **, ***, ~~, ==
- */
-function mergeAdjacentDecorations(text: string): string {
-	return (
-		text
-			// Must match longer markers first to avoid partial replacements
-			// Bold+italic: *** + whitespace + ***
-			.replace(/\*\*\*\s+\*\*\*/g, " ")
-			// Bold: ** + whitespace + **
-			.replace(/\*\*\s+\*\*/g, " ")
-			// Italic: * + whitespace + * (but not ** or ***)
-			// Use negative lookbehind/lookahead to avoid matching ** or ***
-			.replace(/(?<!\*)\*(?!\*)\s+(?<!\*)\*(?!\*)/g, " ")
-			// Strikethrough: ~~ + whitespace + ~~
-			.replace(/~~\s+~~/g, " ")
-			// Highlight: == + whitespace + ==
-			.replace(/==\s+==/g, " ")
-	);
-}
+import type { Block } from "./sentence-blocks";
 
 /**
  * Context for formatting blocks with headings, horizontal rules, and code blocks.
@@ -58,7 +33,8 @@ export type FormatContext = {
 };
 
 /**
- * Format blocks into marked text with block IDs.
+ * Format sentence blocks into marked text with block IDs: each Sentence,
+ * then ` ^N`, with a blank line before the next one.
  * Preserves paragraph spacing by adding extra blank lines between paragraph-crossing blocks.
  * Reinserts headings before their corresponding content.
  * Reinserts horizontal rules and code blocks between blocks (without block markers).
@@ -101,16 +77,14 @@ export function formatBlocksWithMarkers(
 		const block = blocks[i];
 		if (!block) continue;
 
-		// Build block text with headings, HRs, and code blocks inserted for each sentence
-		const rawBlockText = buildBlockTextWithHeadings(
-			block.sentences,
+		// Build block text with headings, HRs, and code blocks inserted before the sentence
+		const blockText = buildBlockTextWithHeadings(
+			[block.sentence],
 			insertionContext,
 			headingsSet,
 			hrsSet,
 			codeBlocksSet,
 		).trim();
-		// Merge adjacent decorations: *a* *b* → *a b*
-		const blockText = mergeAdjacentDecorations(rawBlockText);
 		const blockId = startIndex + i;
 		const markedBlock = `${blockText} ^${blockId}`;
 
@@ -120,8 +94,7 @@ export function formatBlocksWithMarkers(
 		}
 
 		// Check if this block starts a new paragraph
-		const firstSentence = block.sentences[0];
-		const startsNewParagraph = firstSentence?.startsNewParagraph ?? false;
+		const startsNewParagraph = block.sentence.startsNewParagraph;
 
 		if (startsNewParagraph) {
 			// Extra blank lines for paragraph boundary (3 blank lines = 4 newlines)
@@ -149,7 +122,7 @@ export function formatBlocksWithMarkers(
 }
 
 /**
- * Restore protected markdown content within sentence texts in blocks.
+ * Restore protected markdown content within each block's sentence.
  * Also adjusts sourceOffset to map from stripped-space to filtered-space,
  * so that the heading offset map works correctly.
  *
@@ -175,24 +148,24 @@ export function restoreBlocksContent(
 	const protectedToFiltered =
 		offsetMapperHelper.createReplacementMap(replacedItems);
 
-	return blocks.map((block) => ({
-		...block,
-		sentences: block.sentences.map((s) => {
-			const restoredText = restoreProtectedContent(
-				s.text,
-				protectedItems,
-			);
-			// Convert: stripped → protected → filtered
-			const protectedOffset = strippedToProtected
-				? strippedToProtected(s.sourceOffset)
-				: s.sourceOffset;
-			const filteredOffset = protectedToFiltered(protectedOffset);
-			return {
-				...s,
+	return blocks.map(({ sentence }) => {
+		const restoredText = restoreProtectedContent(
+			sentence.text,
+			protectedItems,
+		);
+		// Convert: stripped → protected → filtered
+		const protectedOffset = strippedToProtected
+			? strippedToProtected(sentence.sourceOffset)
+			: sentence.sourceOffset;
+		const filteredOffset = protectedToFiltered(protectedOffset);
+		return {
+			charCount: restoredText.length,
+			sentence: {
+				...sentence,
 				charCount: restoredText.length,
 				sourceOffset: filteredOffset,
 				text: restoredText,
-			};
-		}),
-	}));
+			},
+		};
+	});
 }

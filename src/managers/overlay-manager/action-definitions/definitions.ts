@@ -23,7 +23,7 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 	},
 	[CommandKind.SplitInBlocks]: {
 		id: CommandKind.SplitInBlocks,
-		label: "Split in Blocks",
+		label: "Split in Sentence Blocks",
 		requiresSelection: true,
 		selectablePlacements: [
 			OverlayPlacement.AboveSelection,

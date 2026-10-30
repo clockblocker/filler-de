@@ -178,7 +178,7 @@ the file-batch record, reconciliation outcome, and navigation result.
 | Command | Result |
 | --- | --- |
 | `SplitToPages` | Split one Scroll into a Section of page Scrolls through one queued, audited Library intention. |
-| `SplitInBlocks` | Add stable Obsidian block IDs. Each block groups whole Sentences of dumgen's `splitText`, the plugin's only sentence splitter (ADR-0014). |
+| `SplitInBlocks` | Split the selection into sentence blocks with stable Obsidian block IDs: each block is one whole Sentence of dumgen's `splitText`, the plugin's only sentence splitter (ADR-0014), short ones included. `SplitToPages` and Classify cut with the same function (`splitStrInSentenceBlocks`). |
 | `GoToNextPage` | Open the next Scroll in Library display order. |
 | `GoToPrevPage` | Open the previous Scroll in Library display order. |
 

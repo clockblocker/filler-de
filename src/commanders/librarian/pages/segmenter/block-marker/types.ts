@@ -11,26 +11,20 @@ import { DEFAULT_LANGUAGE_CONFIG } from "../language-config";
  * Configuration for block marking.
  */
 export type BlockMarkerConfig = {
-	/** Max words to consider a sentence "short" (default 4) */
-	shortSentenceWords: number;
-	/** Max words for merged block (default 30) */
-	maxMergedWords: number;
 	/** Language config for segmentation */
 	languageConfig: LanguageConfig;
 };
 
 export const DEFAULT_BLOCK_MARKER_CONFIG: BlockMarkerConfig = {
 	languageConfig: DEFAULT_LANGUAGE_CONFIG,
-	maxMergedWords: 30,
-	shortSentenceWords: 4,
 };
 
 /**
- * Result of block splitting.
+ * Result of splitting text into sentence blocks.
  */
 export type BlockSplitResult = {
-	/** Text with block markers appended */
+	/** Text with a block marker after each Sentence */
 	markedText: string;
-	/** Number of blocks created */
+	/** Number of blocks created, one per Sentence */
 	blockCount: number;
 };

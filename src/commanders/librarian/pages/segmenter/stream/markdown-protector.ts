@@ -14,6 +14,7 @@
  * - Horizontal rules (---, ***, ___)
  * - Wikilinks ([[...]])
  * - Markdown links ([text](url))
+ * - Footnote references ([^1]), which would otherwise split after `[`
  */
 
 /**
@@ -72,6 +73,8 @@ const PATTERNS: { regex: RegExp; tag: string }[] = [
 	{ regex: /\[\[[^\]]+\]\]/g, tag: "WL" },
 	// Markdown links: [text](url) - non-greedy
 	{ regex: /\[[^\]]+\]\([^)]+\)/g, tag: "ML" },
+	// Footnote references: [^1], [^note]
+	{ regex: /\[\^[^\]\s]+\]/g, tag: "FN" },
 ];
 
 /**

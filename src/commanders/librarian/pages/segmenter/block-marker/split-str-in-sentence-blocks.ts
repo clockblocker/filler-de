@@ -1,8 +1,10 @@
 /**
  * Block Marker - Orchestrator
  *
- * Splits text into blocks with Obsidian block markers (` ^N`).
- * This is the main entry point that chains the pipeline stages.
+ * Splits text into sentence blocks, one Sentence each, with Obsidian block
+ * markers (` ^N`). This is the main entry point that chains the pipeline
+ * stages. "Split in sentence blocks", "Split file into pages" and Classify
+ * (before it gives a multi-Sentence paragraph its IDs) all split with it.
  */
 
 import {
@@ -24,16 +26,17 @@ import {
 	restoreBlocksContent,
 } from "./block-formatting";
 import {
-	detectParagraphsAfterFilter,
-	groupSentencesIntoBlocks,
-	mergeOrphanedMarkers,
-} from "./block-grouping";
-import {
 	extractHeadings,
 	filterHeadingsFromText,
 	headingRemovals,
 } from "./heading-extraction";
 import type { CodeBlockInfo, HorizontalRuleInfo } from "./heading-insertion";
+import {
+	attachLeadingClosers,
+	detectParagraphsAfterFilter,
+	mergeOrphanedMarkers,
+	sentenceBlocksOf,
+} from "./sentence-blocks";
 import { isCodeBlock, isHorizontalRule } from "./text-patterns";
 import {
 	type BlockMarkerConfig,
@@ -55,7 +58,7 @@ type BlockSplitResultWithIntermediate = {
 	/** Number of blocks created */
 	blockCount: number;
 	/** Intermediate block representation for page accumulation */
-	blocks: import("./block-grouping").Block[];
+	blocks: import("./sentence-blocks").Block[];
 	/** Context needed for formatting blocks with headings/HRs */
 	formatContext: FormatContext;
 };
@@ -69,25 +72,26 @@ export function stripBlockMarkers(text: string): string {
 }
 
 /**
- * Split text into blocks with Obsidian block markers.
- *
- * Rules:
- * - Direct speech stays in one block
- * - Short sentences (≤4 words) merge with next in same paragraph (else prev)
- * - Short speech intro (≤4 words + ":") merges with following quote
- * - Merged blocks cannot exceed 30 words
+ * Split text into sentence blocks with Obsidian block markers: every
+ * Sentence of dumgen's `splitText` becomes a block of its own, ended by
+ * ` ^N`, with a blank line before the next. No Sentence is grouped with
+ * another, however short, so a block's embed shows exactly one Sentence.
  *
  * @param text - Input text to split
  * @param startIndex - Starting block ID (default 0)
  * @param config - Configuration options
  * @returns Marked text and block count
  */
-export function splitStrInBlocks(
+export function splitStrInSentenceBlocks(
 	text: string,
 	startIndex = 0,
 	config: Partial<BlockMarkerConfig> = {},
 ): BlockSplitResult {
-	const result = splitStrInBlocksWithIntermediate(text, startIndex, config);
+	const result = splitStrInSentenceBlocksWithIntermediate(
+		text,
+		startIndex,
+		config,
+	);
 	return {
 		blockCount: result.blockCount,
 		markedText: result.markedText,
@@ -95,11 +99,11 @@ export function splitStrInBlocks(
 }
 
 /**
- * Split text into blocks with intermediate data for page accumulation.
+ * Split text into sentence blocks with intermediate data for page accumulation.
  *
  * This is the unified pipeline entry point that:
  * 1. Runs sentence segmentation once
- * 2. Groups into blocks
+ * 2. Makes each Sentence a block
  * 3. Returns both the formatted result AND intermediate blocks
  *
  * Use this when you need to further group blocks into pages.
@@ -109,7 +113,7 @@ export function splitStrInBlocks(
  * @param config - Configuration options
  * @returns Extended result with blocks and formatContext for page accumulation
  */
-export function splitStrInBlocksWithIntermediate(
+export function splitStrInSentenceBlocksWithIntermediate(
 	text: string,
 	startIndex = 0,
 	config: Partial<BlockMarkerConfig> = {},
@@ -199,8 +203,11 @@ export function splitStrInBlocksWithIntermediate(
 	// Re-detect paragraph boundaries after filtering
 	const withParagraphs = detectParagraphsAfterFilter(filtered, strippedText);
 
+	// A footnote reference or closing marker stays with the sentence it follows
+	const withClosers = attachLeadingClosers(withParagraphs);
+
 	// Merge orphaned markdown markers with previous sentence
-	const withOrphansMerged = mergeOrphanedMarkers(withParagraphs);
+	const withOrphansMerged = mergeOrphanedMarkers(withClosers);
 
 	// Restore decorations to each sentence individually
 	const withDecorations = restoreDecorations(
@@ -208,8 +215,8 @@ export function splitStrInBlocksWithIntermediate(
 		decorationSpans,
 	);
 
-	// Group sentences into blocks
-	const blocks = groupSentencesIntoBlocks(withDecorations, fullConfig);
+	// One block per sentence
+	const blocks = sentenceBlocksOf(withDecorations);
 
 	// Restore protected content in blocks BEFORE heading insertion
 	// Pass strippedToOriginalOffset to map: stripped → protected → filtered
