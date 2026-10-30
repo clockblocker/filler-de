@@ -21,6 +21,7 @@ import {
 	readingKeyOf,
 	shadowKeyOf,
 } from "./keys";
+import { linkShadowKeysOf } from "./link-targets";
 import type {
 	LemmaNoteEntry,
 	NoteData,
@@ -193,23 +194,6 @@ function knowledgeShadowKeys(entry: ReadingEntry<"de">): Set<string> {
 	return keys;
 }
 
-/**
- * The Shadow keys a Reading's Breakdown pieces and Source name, Lemma and
- * Unit Shadow targets alike: what its morphemes line's walk reads, and what
- * its links resolve by.
- */
-function breakdownShadowKeys(entry: ReadingEntry<"de">): Set<string> {
-	const keys = new Set<string>();
-	const { breakdown, source } = entry.knowledge ?? {};
-	for (const { target } of [
-		...(breakdown?.constituents ?? []),
-		...(breakdown?.morphemes ?? []),
-		...(source === undefined ? [] : [source]),
-	])
-		if (target !== undefined) keys.add(shadowKeyOf(target));
-	return keys;
-}
-
 /** A Lemma's notes as the index holds them. */
 type Aggregate = {
 	readonly lemmaKey: string;
@@ -306,8 +290,11 @@ export class NoteIndex {
 	private surfaceLinks = new Map<string, Set<string>>();
 	/** Shadow key → keys of the Lemmas whose notes link by it (morphemes, prepositions). */
 	private dependents = new Map<string, Set<string>>();
-	/** Shadow key → keys of the Lemmas whose Breakdowns or Sources name it. */
-	private breakdownReaders = new Map<string, Set<string>>();
+	/**
+	 * Shadow key → keys of the Readings whose Breakdown pieces or Source
+	 * link by it, as a Shadow or as the Lemma it resolved to (#267).
+	 */
+	private linkOwners = new Map<string, Set<string>>();
 
 	clone(): NoteIndex {
 		const next = new NoteIndex();
@@ -328,7 +315,7 @@ export class NoteIndex {
 		next.refs = cloneMaps(this.refs);
 		next.surfaceLinks = cloneSets(this.surfaceLinks);
 		next.dependents = cloneSets(this.dependents);
-		next.breakdownReaders = cloneSets(this.breakdownReaders);
+		next.linkOwners = cloneSets(this.linkOwners);
 		return next;
 	}
 
@@ -492,8 +479,8 @@ export class NoteIndex {
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				addTo(this.dependents, key, lemmaKey);
-			for (const key of breakdownShadowKeys(entry))
-				addTo(this.breakdownReaders, key, lemmaKey);
+			for (const key of linkShadowKeysOf(entry))
+				addTo(this.linkOwners, key, readingKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.set(entry.id, { entry, lemmaKey });
@@ -533,8 +520,8 @@ export class NoteIndex {
 			}
 			for (const key of knowledgeShadowKeys(entry))
 				removeFrom(this.dependents, key, lemmaKey);
-			for (const key of breakdownShadowKeys(entry))
-				removeFrom(this.breakdownReaders, key, lemmaKey);
+			for (const key of linkShadowKeysOf(entry))
+				removeFrom(this.linkOwners, key, readingKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.delete(entry.id);
@@ -644,11 +631,31 @@ export class NoteIndex {
 		return [...(this.dependents.get(shadowKey) ?? [])].sort(byCodeUnit);
 	}
 
-	/** Keys of the Lemmas whose Breakdowns or Sources name this Shadow key, Lemma targets included. */
+	/**
+	 * Keys of the Readings whose Breakdown pieces or Source link by this
+	 * Shadow key, whether they target the Shadow or a Lemma it names, sorted.
+	 */
+	linkOwnersOf(shadowKey: string): readonly string[] {
+		return [...(this.linkOwners.get(shadowKey) ?? [])].sort(byCodeUnit);
+	}
+
+	/**
+	 * Keys of the Lemmas whose Breakdowns or Sources name this Shadow key,
+	 * Lemma targets included, sorted: the owners of {@link linkOwnersOf},
+	 * by Lemma, which the morphemes line's walk reads up (#268).
+	 */
 	breakdownReadersOf(shadowKey: string): readonly string[] {
-		return [...(this.breakdownReaders.get(shadowKey) ?? [])].sort(
-			byCodeUnit,
-		);
+		const lemmas = new Set<string>();
+		for (const readingKey of this.linkOwners.get(shadowKey) ?? []) {
+			const owner = this.readings.get(readingKey)?.lemmaKey;
+			if (owner !== undefined) lemmas.add(owner);
+		}
+		return [...lemmas].sort(byCodeUnit);
+	}
+
+	/** Every Shadow key some Breakdown piece or Source links by, sorted. */
+	linkShadowKeys(): string[] {
+		return [...this.linkOwners.keys()].sort(byCodeUnit);
 	}
 
 	pendingRecord(
