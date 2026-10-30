@@ -4,10 +4,13 @@
  * as `[[Worter/…/🚀 anfangen|fängt]] … [[Worter/…/🚀 anfangen|an]]`, so its
  * parts are the links of one paragraph with the same target. Links carry
  * nothing of the occurrence, so two occurrences of one Reading in a
- * paragraph read as one unit.
+ * paragraph read as one unit. A Reading note's Morpheme section links
+ * Lemmas, not occurrences: its links are no parts, and the morpheme hover
+ * has them (`morpheme-hover`).
  */
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { wikilinkHelper } from "@textfresser/note-addressing";
+import { withoutMorphemeSection } from "../morpheme-hover/morphemes-line";
 
 /** A half-open range of offsets. */
 export type PartRange = {
@@ -22,11 +25,11 @@ export const isUnitLinkTarget = (target: string): boolean =>
 /**
  * The shown text of every `Worter/` wikilink in `text` with the target of
  * the one `offset` lies in, in order; none when `offset` lies in no such
- * link. Embeds are no parts.
+ * link. Embeds and the links of a Morpheme section are no parts.
  */
 export function unitPartsAt(text: string, offset: number): PartRange[] {
 	const links = wikilinkHelper
-		.parseWithRanges(text)
+		.parseWithRanges(withoutMorphemeSection(text))
 		.filter(
 			({ start, target }) =>
 				text[start - 1] !== "!" && isUnitLinkTarget(target),

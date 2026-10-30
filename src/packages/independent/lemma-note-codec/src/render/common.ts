@@ -65,6 +65,13 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
 	">": "&gt;",
 };
 
+/** The class every section's title line has. */
+export const SECTION_TITLE_CLASS = "note_block_title";
+
+/** The class that tells `kind`'s title line from the others'. */
+export const sectionTitleClass = (kind: SectionKind): string =>
+	`${SECTION_TITLE_CLASS}_${SECTION_CLASSES[kind]}`;
+
 /**
  * A section's title line, `<span class="note_block_title …">…</span>`, or
  * none for an empty title.
@@ -77,7 +84,7 @@ export function sectionTitle(
 	if (title.length === 0) return [];
 	const text = title.replace(/[&<>]/gu, (char) => HTML_ESCAPES[char] ?? char);
 	return [
-		`<span class="note_block_title note_block_title_${SECTION_CLASSES[kind]}">${text}</span>`,
+		`<span class="${SECTION_TITLE_CLASS} ${sectionTitleClass(kind)}">${text}</span>`,
 	];
 }
 

@@ -162,8 +162,10 @@ export { MORPHEMES_LINE_CLASS } from "./render/breakdown";
 export {
 	articleOf,
 	DEFAULT_TITLES,
+	SECTION_TITLE_CLASS,
 	type SectionKind,
 	type SemanticRelationProjection,
+	sectionTitleClass,
 } from "./render/common";
 export {
 	NoteSerializeError,

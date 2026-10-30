@@ -44,6 +44,7 @@ import {
 	watchProtectedPaths,
 } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "../managers/overlay-manager";
+import { markMorphemes } from "../managers/overlay-manager/morpheme-hover/morpheme-hover";
 import { listenForOverlay } from "../managers/overlay-manager/overlay-listeners";
 import { listenForUnitHover } from "../managers/overlay-manager/unit-hover/unit-hover";
 import type { PluginServices } from "../runtime/plugin-live";
@@ -336,8 +337,8 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 	);
 
 /**
- * The overlay: toolbars, edge zones and the context menu, as plain DOM, and
- * the highlight of a hovered unit's parts.
+ * The overlay: toolbars, edge zones and the context menu, as plain DOM, the
+ * highlight of a hovered unit's parts, and the reveal of a hovered morpheme.
  */
 export const OverlayLive = (
 	deps: PluginServicesDeps & {
@@ -375,6 +376,7 @@ export const OverlayLive = (
 			// Released before the overlay is destroyed: newest first.
 			yield* listenForOverlay(overlay);
 			yield* listenForUnitHover(document);
+			yield* markMorphemes;
 			// The toolbars follow the settings' button placements.
 			yield* settings.changes.pipe(
 				Stream.map(placements),

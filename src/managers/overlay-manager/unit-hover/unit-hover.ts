@@ -14,6 +14,7 @@ import {
 import { Effect, Predicate } from "effect";
 import { DomSelectors } from "../../../utils/dom-selectors";
 import { PluginHost } from "../../obsidian/host/plugin-host";
+import { inRenderedMorphemeSection } from "../morpheme-hover/morphemes-line";
 import { isUnitLinkTarget, paragraphAt, unitPartsAt } from "./unit-parts";
 
 const UNIT_HOVER_CLASS = "tf-unit-hover";
@@ -111,23 +112,36 @@ const editorUnitHover = ViewPlugin.fromClass(EditorUnitHover, {
 	},
 });
 
+/** The rendered block a link stands in, as a paragraph holds its lines. */
+const RENDERED_BLOCK = "p, li, td, th, h1, h2, h3, h4, h5, h6";
+
+/** The block `link` stands in, if any. */
+const blockOf = (link: Element): Element | null =>
+	link.closest(RENDERED_BLOCK) ?? link.parentElement;
+
+/** Whether `link` is a unit's part: no link of a Morpheme section is. */
+function isRenderedPart(link: Element): boolean {
+	const target = link.getAttribute(DomSelectors.DATA_HREF);
+	if (!target || !isUnitLinkTarget(target)) return false;
+	const block = blockOf(link);
+	return !block || !inRenderedMorphemeSection(link, block);
+}
+
 /** Reading view's unit link `node` belongs to, if any. */
 function renderedLinkOf(node: EventTarget | null): Element | null {
 	const link = elementOf(node)?.closest(DomSelectors.INTERNAL_LINK);
-	const target = link?.getAttribute(DomSelectors.DATA_HREF);
-	return link && target && isUnitLinkTarget(target) ? link : null;
+	return link && isRenderedPart(link) ? link : null;
 }
-
-/** The rendered block a link stands in, as a paragraph holds its lines. */
-const RENDERED_BLOCK = "p, li, td, th, h1, h2, h3, h4, h5, h6";
 
 /** The rendered links of `link`'s unit: those of its block with its target. */
 function renderedPartsOf(link: Element): Element[] {
 	const target = link.getAttribute(DomSelectors.DATA_HREF);
-	const block = link.closest(RENDERED_BLOCK) ?? link.parentElement;
+	const block = blockOf(link);
 	if (!block) return [link];
 	return [...block.querySelectorAll(DomSelectors.INTERNAL_LINK)].filter(
-		(other) => other.getAttribute(DomSelectors.DATA_HREF) === target,
+		(other) =>
+			other.getAttribute(DomSelectors.DATA_HREF) === target &&
+			isRenderedPart(other),
 	);
 }
 

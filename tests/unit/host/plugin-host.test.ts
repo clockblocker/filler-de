@@ -283,3 +283,38 @@ describe("PluginHost.editorExtension", () => {
 		await host.runtime.dispose();
 	});
 });
+
+describe("PluginHost.markdownPostProcessor", () => {
+	it("registers one post-processor with Obsidian, which runs those whose scope is open", async () => {
+		const host = makeHost();
+		const preview = host.obsidian.openPreview();
+		const ran: string[] = [];
+		await host.inScope(
+			Effect.gen(function* () {
+				const plugin = yield* PluginHost;
+				yield* plugin.markdownPostProcessor(() => {
+					ran.push("first");
+				});
+				yield* plugin.markdownPostProcessor(() => {
+					throw new Error("a broken post-processor");
+				});
+				yield* plugin.markdownPostProcessor(() => {
+					ran.push("third");
+				});
+			}),
+		);
+		expect(host.obsidian.postProcessors).toHaveLength(1);
+		// Open Reading views render again, once, with the first.
+		expect(preview.rerendered).toBe(1);
+		const error = spyOn(console, "error").mockImplementation(() => {});
+		host.obsidian.postProcess({});
+		error.mockRestore();
+		// One that throws is logged, and stops none of the others.
+		expect(ran).toEqual(["first", "third"]);
+
+		await host.close();
+		host.obsidian.postProcess({});
+		expect(ran).toEqual(["first", "third"]);
+		await host.runtime.dispose();
+	});
+});

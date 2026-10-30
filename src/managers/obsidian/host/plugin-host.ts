@@ -1,6 +1,7 @@
 /**
  * What the plugin registers with Obsidian: palette commands, workspace and
- * DOM listeners, and editor extensions, each held in the caller's scope.
+ * DOM listeners, editor extensions and Markdown post-processors, each held
+ * in the caller's scope.
  *
  * Each registration is released once: by the scope that holds it, or by
  * Obsidian as the plugin unloads, whichever comes first. A listener is
@@ -10,10 +11,11 @@
  * registers that itself), so the scope removes it only while the plugin is
  * still loaded: a reloaded plugin's command of the same id stays.
  */
-import { Context, Effect, Layer, Scope, Tracer } from "effect";
+import { Context, Effect, Layer, Predicate, Scope, Tracer } from "effect";
 import type {
 	Editor,
 	MarkdownFileInfo,
+	MarkdownPostProcessor,
 	MarkdownView,
 	Menu,
 	Plugin,
@@ -52,6 +54,11 @@ export type WorkspaceEvents = {
 /** A CodeMirror extension, as Obsidian takes it. */
 export type EditorExtension = Parameters<Plugin["registerEditorExtension"]>[0];
 
+/** What a post-processor does to a section Reading view just rendered. */
+export type PostProcessor = (
+	...args: Parameters<MarkdownPostProcessor>
+) => void;
+
 type DomListener = {
 	<K extends keyof WindowEventMap>(
 		target: Window,
@@ -76,12 +83,16 @@ type DomListener = {
 /** The parts of Obsidian's `Plugin` the host registers through. */
 export type HostPlugin = Pick<
 	Plugin,
-	"addCommand" | "removeCommand" | "register" | "registerEditorExtension"
+	| "addCommand"
+	| "removeCommand"
+	| "register"
+	| "registerEditorExtension"
+	| "registerMarkdownPostProcessor"
 > & {
 	readonly app: {
 		readonly workspace: Pick<
 			Plugin["app"]["workspace"],
-			"on" | "offref" | "updateOptions"
+			"on" | "offref" | "updateOptions" | "iterateAllLeaves"
 		>;
 	};
 };
@@ -111,6 +122,15 @@ export class PluginHost extends Context.Service<
 		 */
 		readonly editorExtension: (
 			extension: EditorExtension,
+		) => Effect.Effect<void, never, Scope.Scope>;
+		/**
+		 * Runs `processor` on each section Reading view renders while the
+		 * scope is open. As with editor extensions, the plugin registers one
+		 * post-processor with Obsidian, once, that runs those held now; what
+		 * one throws is logged.
+		 */
+		readonly markdownPostProcessor: (
+			processor: PostProcessor,
 		) => Effect.Effect<void, never, Scope.Scope>;
 	}
 >()("textfresser/managers/obsidian/host/PluginHost") {
@@ -253,5 +273,47 @@ export const makePluginHost = Effect.fnUntraced(function* (plugin: HostPlugin) {
 			};
 		});
 
-	return PluginHost.of({ command, editorExtension, onDom, onWorkspace });
+	/** Renders every open Reading view again, from its Markdown. */
+	const rerenderPreviews = () =>
+		workspace.iterateAllLeaves((leaf) => {
+			// Duck-typed: a deferred leaf has no MarkdownView yet, and
+			// renders with the post-processors as it loads.
+			const preview = (leaf.view as { previewMode?: unknown })
+				.previewMode;
+			if (
+				Predicate.hasProperty(preview, "rerender") &&
+				Predicate.isFunction(preview.rerender)
+			)
+				preview.rerender(true);
+		});
+
+	const processors: PostProcessor[] = [];
+	let processorsRegistered = false;
+	const markdownPostProcessor = (processor: PostProcessor) =>
+		held(() => {
+			const first = !processorsRegistered;
+			if (first) {
+				processorsRegistered = true;
+				plugin.registerMarkdownPostProcessor((element, context) => {
+					for (const run of [...processors]) run(element, context);
+				});
+			}
+			const guardedProcessor = guarded("post-processor", processor);
+			processors.push(guardedProcessor);
+			// Reading views open as the plugin loads were rendered without
+			// it: render them again, once.
+			if (first) guarded("re-render", rerenderPreviews)();
+			return () => {
+				const at = processors.indexOf(guardedProcessor);
+				if (at !== -1) processors.splice(at, 1);
+			};
+		});
+
+	return PluginHost.of({
+		command,
+		editorExtension,
+		markdownPostProcessor,
+		onDom,
+		onWorkspace,
+	});
 });

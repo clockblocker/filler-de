@@ -21,10 +21,28 @@ export function fakeHostPlugin() {
 	const offrefs: string[] = [];
 	const onUnload: (() => void)[] = [];
 	const registeredExtensions: unknown[] = [];
+	const postProcessors: ((element: unknown, context: unknown) => void)[] =
+		[];
 	let optionUpdates = 0;
 	let unloaded = false;
 
+	/** The Reading views open now; each counts its full re-renders. */
+	const previews: { rerendered: number }[] = [];
 	const workspace = {
+		iterateAllLeaves: (callback: (leaf: unknown) => void) => {
+			for (const preview of previews)
+				callback({
+					view: {
+						previewMode: {
+							rerender: (full: boolean) => {
+								if (full) preview.rerendered++;
+							},
+						},
+					},
+				});
+			// A leaf of another view, and a deferred one, have no preview.
+			callback({ view: {} });
+		},
 		offref: (ref: EventRef) => {
 			const { callback, name } = ref as unknown as {
 				callback: Callback;
@@ -58,6 +76,17 @@ export function fakeHostPlugin() {
 		registerEditorExtension: (extension: unknown) => {
 			registeredExtensions.push(extension);
 		},
+		registerMarkdownPostProcessor: (
+			processor: (element: unknown, context: unknown) => void,
+		) => {
+			postProcessors.push(processor);
+			// As Obsidian's Plugin does: the post-processor goes on unload.
+			onUnload.push(() => {
+				const at = postProcessors.indexOf(processor);
+				if (at !== -1) postProcessors.splice(at, 1);
+			});
+			return processor;
+		},
 		removeCommand: (id: string) => {
 			removedCommands.push(id);
 			commands.delete(id);
@@ -69,8 +98,20 @@ export function fakeHostPlugin() {
 		/** The callbacks listening to `name` now. */
 		listening: (name: string) => [...(listeners.get(name) ?? [])],
 		offrefs,
+		/** Opens a Reading view, whose full re-renders it counts. */
+		openPreview: () => {
+			const preview = { rerendered: 0 };
+			previews.push(preview);
+			return preview;
+		},
 		optionUpdates: () => optionUpdates,
 		plugin,
+		/** Renders `element` as Reading view would: every post-processor runs. */
+		postProcess: (element: unknown) => {
+			for (const processor of postProcessors) processor(element, {});
+		},
+		/** The post-processors registered with Obsidian now. */
+		postProcessors,
 		registeredExtensions,
 		removedCommands,
 		/** Fires `name` as Obsidian's workspace would. */
