@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { markdownSentences } from "../../../../src/commanders/classify/scroll-sentences";
 import { splitStrInSentenceBlocks } from "../../../../src/commanders/librarian/pages/segmenter/block-marker/split-str-in-sentence-blocks";
 import {
 	ASCHENPUTTEL_FIRST_TWO_PARAGRAPHS,
@@ -73,7 +74,7 @@ describe("splitStrInSentenceBlocks", () => {
 	});
 
 	test("the sentence after an intro with its quote gets a block of its own", () => {
-		// dumgen's splitText reads "intro: quote" as one sentence
+		// the splitter reads "intro: quote" as one sentence
 		const text = `Einem reichen Manne wurde seine Frau krank und er sprach: „Ich liebe dich." Sie lächelte.`;
 		const result = splitStrInSentenceBlocks(text);
 
@@ -446,6 +447,96 @@ Plain text paragraph.
 				expect(result.markedText).not.toMatch(/\*Plain one/);
 				expect(result.markedText).not.toMatch(/Plain two\.\*/);
 			});
+		});
+	});
+
+	describe("cuts where Classify's Sentences end (#285)", () => {
+		/** The Sentences Classify reads in each block, the blocks' markers dropped. */
+		const sentencesPerBlock = (text: string) =>
+			splitStrInSentenceBlocks(text)
+				.markedText.split(/ \^\d+(?:\n|$)/u)
+				.filter((block) => block.trim() !== "")
+				.map((block) =>
+					markdownSentences(block).sentences.map(({ text: t }) => t),
+				);
+
+		test.each([
+			[
+				"usw. before a capital",
+				"Wir kauften Äpfel, Birnen usw. Dann gingen wir.",
+				"Wir kauften Äpfel, Birnen usw. ^0\n\nDann gingen wir. ^1",
+			],
+			[
+				"a URL that ends a Sentence",
+				"Siehe https://example.com/a.b. Dann weiter.",
+				"Siehe https://example.com/a.b. ^0\n\nDann weiter. ^1",
+			],
+			[
+				"numbered lines, each marker with its item",
+				"1. Er kam spät.\n2. Sie ging früh.",
+				"1. Er kam spät. ^0\n\n2. Sie ging früh. ^1",
+			],
+			[
+				"HTML entities",
+				"Er sagte &quot;Hallo&quot;. Sie ging &amp; kam.",
+				"Er sagte &quot;Hallo&quot;. ^0\n\nSie ging &amp; kam. ^1",
+			],
+		])("%s", (_, text, marked) => {
+			expect(splitStrInSentenceBlocks(text).markedText).toBe(marked);
+			// No block cuts a Sentence: each reads as whole Sentences of the text.
+			expect(sentencesPerBlock(text).flat()).toEqual(
+				markdownSentences(text).sentences.map(({ text: t }) => t),
+			);
+		});
+
+		test("a footnote definition gets no block and stays as written", () => {
+			expect(
+				splitStrInSentenceBlocks(
+					"Er kam.[^1] Sie ging.\n\n[^1]: Eine Fußnote. Mit zwei Sätzen.",
+				).markedText,
+			).toBe(
+				"Er kam.[^1] ^0\n\nSie ging. ^1\n\n[^1]: Eine Fußnote. Mit zwei Sätzen.",
+			);
+		});
+
+		test("emphasis that crosses a cut is closed and opened again where it runs", () => {
+			expect(
+				splitStrInSentenceBlocks("Der See *ist tief. Das Wasser* ist kalt.")
+					.markedText,
+			).toBe("Der See *ist tief.* ^0\n\n*Das Wasser* ist kalt. ^1");
+			expect(
+				splitStrInSentenceBlocks("==Achtung, er kam. Oh== sie ging.")
+					.markedText,
+			).toBe("==Achtung, er kam.== ^0\n\n==Oh== sie ging. ^1");
+		});
+
+		test("an embed and inline code are kept whole", () => {
+			expect(
+				splitStrInSentenceBlocks(
+					"![[Bild.png]]\n\nEr setzt `![[x#^1|^]]` ein. Dann ging er.",
+				).markedText,
+			).toBe(
+				"![[Bild.png]]\n\nEr setzt `![[x#^1|^]]` ein. ^0\n\nDann ging er. ^1",
+			);
+		});
+
+		test("headings, rules and code stay in place, in the source's order", () => {
+			const text =
+				"# Titel\n\n---\n## Teil\nEr kam.\n\n```\nCode. Mehr.\n```\n\nSie ging.";
+			expect(splitStrInSentenceBlocks(text).markedText).toBe(
+				"# Titel\n\n---\n## Teil\nEr kam. ^0\n\n\n\n```\nCode. Mehr.\n```\n\nSie ging. ^1",
+			);
+		});
+
+		test("a nested list item keeps its indentation", () => {
+			expect(
+				splitStrInSentenceBlocks("- Obst\n\t- Äpfel sind rot.").markedText,
+			).toBe("- Obst ^0\n\n\t- Äpfel sind rot. ^1");
+		});
+
+		test("text with no Sentence comes back as it is", () => {
+			const result = splitStrInSentenceBlocks("```\nCode.\n```\n");
+			expect(result).toEqual({ blockCount: 0, markedText: "```\nCode.\n```" });
 		});
 	});
 });

@@ -4,21 +4,6 @@
  * Shared types for the block marker module.
  */
 
-import type { LanguageConfig } from "../language-config";
-import { DEFAULT_LANGUAGE_CONFIG } from "../language-config";
-
-/**
- * Configuration for block marking.
- */
-export type BlockMarkerConfig = {
-	/** Language config for segmentation */
-	languageConfig: LanguageConfig;
-};
-
-export const DEFAULT_BLOCK_MARKER_CONFIG: BlockMarkerConfig = {
-	languageConfig: DEFAULT_LANGUAGE_CONFIG,
-};
-
 /**
  * Result of splitting text into sentence blocks.
  */

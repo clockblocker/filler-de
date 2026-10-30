@@ -1,8 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join, parse } from "path";
-import { segmentContent } from "../src/commanders/librarian/pages/segmenter";
+import { segmentContentWithBlockMarkers } from "../src/commanders/librarian/pages/segmenter";
 import { splitStrInSentenceBlocks } from "../src/commanders/librarian/pages/segmenter/block-marker/split-str-in-sentence-blocks";
-import { DEFAULT_LANGUAGE_CONFIG } from "../src/commanders/librarian/pages/segmenter/language-config";
 import { DEFAULT_SEGMENTATION_CONFIG } from "../src/commanders/librarian/pages/types";
 
 const INPUT_DIR = "tests/texts_to_split";
@@ -49,11 +48,10 @@ function run() {
 		// Split in pages
 		// NodeName is just a branded string - we pass raw string since validation
 		// depends on global state which isn't available in this standalone script
-		const pageResult = segmentContent(
+		const pageResult = segmentContentWithBlockMarkers(
 			content,
 			{ coreName: name as any, suffixParts: [] },
 			DEFAULT_SEGMENTATION_CONFIG,
-			DEFAULT_LANGUAGE_CONFIG,
 		);
 
 		const pageOutDir = join(pagesDir, name);
@@ -61,9 +59,7 @@ function run() {
 
 		for (const page of pageResult.pages) {
 			const pageFile = `page_${String(page.pageIndex + 1).padStart(3, "0")}.md`;
-			// Also add block markers to each page
-			const pageWithBlocks = splitStrInSentenceBlocks(page.content);
-			writeFileSync(join(pageOutDir, pageFile), pageWithBlocks.markedText);
+			writeFileSync(join(pageOutDir, pageFile), page.content);
 		}
 		console.log(
 			`[pages] ${name}: ${pageResult.pages.length} pages (tooShort: ${pageResult.tooShortToSplit})`,

@@ -13,7 +13,7 @@ import type { Block } from "../block-marker/sentence-blocks";
  * A group of blocks to be formatted as a single page.
  */
 type BlockPageGroup = {
-	blocks: Block[];
+	blocks: readonly Block[];
 	/** Total character count of all blocks */
 	charCount: number;
 };
@@ -56,7 +56,7 @@ function shouldBreakPageForBlock(
  * @returns Array of block groups, one per page
  */
 export function groupBlocksIntoPages(
-	blocks: Block[],
+	blocks: readonly Block[],
 	config: SegmentationConfig,
 ): BlockPageGroup[] {
 	if (blocks.length === 0) return [];

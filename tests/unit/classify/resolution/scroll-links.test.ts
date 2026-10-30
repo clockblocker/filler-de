@@ -268,7 +268,7 @@ describe("mintBlockIds cutting a paragraph into sentence blocks", () => {
 	});
 
 	it("cuts only between Classify's Sentences, where the formatter would cut inside one", () => {
-		// The formatter ends a Sentence after `*Halt!*`; Classify reads one.
+		// Classify reads one Sentence through `*Halt!*`, and so does the formatter.
 		const snapshot = "Er rief: *Halt!* und der See lief. Sie blieb.\n";
 		const { ids, minted } = mintAndLink(snapshot, ["See"]);
 		expect(minted.content).toBe(
@@ -277,10 +277,15 @@ describe("mintBlockIds cutting a paragraph into sentence blocks", () => {
 		expect(ids).toEqual(["0"]);
 	});
 
-	it("refuses a cut after which Classify would read other Sentences: one ID, as before", () => {
+	it("cuts through emphasis that crosses a Sentence boundary, and Classify reads the same Sentences after it", () => {
 		const snapshot = "Der See *ist tief. Das Wasser* ist kalt. Ende.\n";
 		const { minted } = mintAndLink(snapshot, ["See"]);
-		expect(minted.content).toBe(`${snapshot.trimEnd()} ^0\n`);
+		expect(minted.content).toBe(
+			"Der See *ist tief.* ^0\n\n*Das Wasser* ist kalt. ^1\n\nEnde. ^2\n",
+		);
+		const texts = (content: string) =>
+			scrollSentences(content).sentences.map(({ text }) => text);
+		expect(texts(minted.content)).toEqual(texts(snapshot));
 	});
 
 	it("keeps the file's CRLF line endings", () => {

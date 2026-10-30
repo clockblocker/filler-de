@@ -1,24 +1,10 @@
 /**
- * The plugin's one sentence splitter: dumgen's `splitText` (ADR 0014). The
- * `^N` block formatter makes each Sentence it finds a block, and Classify
- * finds the Sentences a selection touches with it, so a block never cuts a
- * Sentence that Classify later segments.
- *
- * dumgen returns Sentences as trimmed strings. It drops only whitespace,
- * joins a hard-wrapped line with a space and normalizes to NFC, so each
- * Sentence is located in its source by matching it cluster by cluster while
- * ignoring whitespace. `alignText` does that matching and also tolerates
- * source characters the target lacks, such as Markdown markup that dumgen's
- * Markdown reader dropped.
+ * Aligns a string with the source it was read from, cluster by cluster,
+ * ignoring whitespace and tolerating source characters the string lacks,
+ * such as Markdown markup a reader dropped. Classify places each Segment
+ * of a Segmented Sentence in the Scroll with it (`segmentSourceRanges`):
+ * dumgen gives Segments as text, with no offsets.
  */
-import { extractPastedText, splitScroll } from "dumgen";
-
-/** dumgen's paragraphs of plain text, each a list of trimmed Sentences. */
-export function splitPlainText(text: string): readonly (readonly string[])[] {
-	return splitScroll(extractPastedText(text)).paragraphs.map(
-		({ sentences }) => sentences,
-	);
-}
 
 /** Where a target string sits in its source: the source offsets per target code unit. */
 export type TextAlignment = {
@@ -117,30 +103,4 @@ export function alignText(
 	}
 	if (start === undefined) return;
 	return { end, ends, start, starts };
-}
-
-/** One Sentence and the source range of its first to its last non-whitespace character. */
-export type LocatedSentence = {
-	readonly text: string;
-	readonly start: number;
-	readonly end: number;
-};
-
-/**
- * Locates Sentences, in order, in the source they were split from. A
- * Sentence that cannot be found gets an empty range where the previous one
- * ended.
- */
-export function locateSentences(
-	source: string,
-	sentences: readonly string[],
-	from = 0,
-): LocatedSentence[] {
-	let position = from;
-	return sentences.map((text) => {
-		const alignment = alignText(source, text, position);
-		if (!alignment) return { end: position, start: position, text };
-		position = alignment.end;
-		return { end: alignment.end, start: alignment.start, text };
-	});
 }

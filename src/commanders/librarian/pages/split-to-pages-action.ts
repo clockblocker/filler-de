@@ -24,7 +24,7 @@ import {
 	makeSplitToPagesError,
 	type SplitToPagesError,
 } from "./error";
-import { segmentContent, segmentContentWithBlockMarkers } from "./segmenter";
+import { segmentContentWithBlockMarkers } from "./segmenter";
 import type { SegmentationConfig, SegmentationResult } from "./types";
 import { DEFAULT_SEGMENTATION_CONFIG } from "./types";
 
@@ -244,6 +244,10 @@ export function wouldSplitToMultiplePages(
 	if (Result.isFailure(basenameResult)) return false;
 
 	const cleanContent = goBackLinkHelper.strip(content);
-	const result = segmentContent(cleanContent, basenameResult.success, config);
+	const result = segmentContentWithBlockMarkers(
+		cleanContent,
+		basenameResult.success,
+		config,
+	);
 	return result.pages.length > 1;
 }
