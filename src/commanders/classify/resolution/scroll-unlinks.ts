@@ -1,28 +1,37 @@
 /**
  * Which recorded occurrences a Scroll no longer links (#116): the pure half
  * of the unlink observer. An occurrence's Attestation Link names its block
- * (`![[Story#^0|^1a2b3c4d]]`) and its Reading; its links in the Scroll are
- * the links in that block that Obsidian resolves to that Reading's note,
- * however they spell its path: `[[Worter/…]]` as Classify writes them, the
+ * (`![[Story#^0|^1a2b3c4d]]`) and its Reading; its Reading's links in the
+ * Scroll are the links Obsidian resolves to that Reading's note, however
+ * they spell its path: `[[Worter/…]]` as Classify writes them, the
  * shortest path or another case Obsidian's link updater may rewrite them
  * to, with a heading or block, or as an embed.
  *
- * It judges an occurrence unlinked only when nothing else explains the
- * Scroll it reads, and otherwise leaves the occurrence alone:
+ * It judges an occurrence unlinked only when no link to its Reading
+ * explains it, and a link explains a missing occurrence only when its key
+ * is recorded, or cannot be computed. A link's key is its occurrence key
+ * (`occurrenceKeyOf`), recomputed by the caller from the Sentence it
+ * stands in:
  *
- * - **Its block holds no link to its Reading.** Every occurrence of that
- *   Reading recorded in that block is unlinked.
- * - **The block still links the Reading, and records several occurrences of
- *   it.** Which ones are gone comes from each remaining link's occurrence
- *   key (`occurrenceKeyOf`), recomputed by the caller. Only when every
- *   remaining link has a key and every key is one the block records are
- *   the other occurrences unlinked.
+ * - **No link to its Reading.** When the Scroll holds none, every
+ *   occurrence of that Reading recorded in it is unlinked, with no key
+ *   computed.
+ * - **A link whose key is recorded** explains that occurrence, wherever it
+ *   stands: text that moved to another block, or lost its block's ID,
+ *   keeps its occurrence. So does a link in the occurrence's own block
+ *   whose Sentence is the same text at another instance, as when an
+ *   earlier copy of a repeated Sentence was deleted, unless its key is that
+ *   of another occurrence the block records.
+ * - **A link whose key cannot be computed**, as its Sentence was edited,
+ *   its segmentation is not cached or it covers no single unit, may be any
+ *   occurrence: it explains those of its Reading recorded in its block, or
+ *   every one in the Scroll when it stands in a block that records none,
+ *   or one without an ID.
+ * - **A link whose key is recorded nowhere** is an occurrence that was
+ *   never attested, such as one linked but never clicked (#281), and
+ *   explains nothing.
  * - **A block that is gone.** A paragraph cut to paste elsewhere, split
  *   into a page or never synced unlinks nothing.
- * - **Moved text.** A link to the Reading in a block that records none of
- *   its occurrences, or in a block without an ID, means the text moved or
- *   lost its ID: none of that Reading's occurrences in the Scroll is
- *   unlinked.
  * - **Links in flux.** A block holding a link Obsidian resolves to no note,
  *   such as one to a note the store just renamed while Obsidian has not
  *   rewritten the link yet, is left alone.
@@ -32,7 +41,13 @@
  */
 import { scrollBodyRange } from "../../../stateless-helpers/scroll-body-range";
 import type { SourceRange } from "../types";
-import { blockIdsOf, sourceBlocksOf, structureAround } from "./scroll-links";
+import type { KeyedOccurrence } from "./occurrence-keys";
+import {
+	blockIdsOf,
+	occurrenceKeyOf,
+	sourceBlocksOf,
+	structureAround,
+} from "./scroll-links";
 
 /** A wikilink or embed: group 1 an embed's `!`, group 2 its target, group 3 its alias. */
 const WIKILINK = /(!?)\[\[([^\]|\n]*)(?:\|([^\]\n]*))?\]\]/gu;
@@ -150,21 +165,75 @@ export type UnlinkedOccurrences = {
 	/** The refs of the occurrences the Scroll no longer links. */
 	readonly unlinked: readonly string[];
 	/**
-	 * Links whose occurrence keys would settle a block that records several
-	 * occurrences of their Reading, when `keys` lacks them.
+	 * Links whose occurrence keys would settle whether their Reading's
+	 * occurrences are still linked, when `keys` lacks them.
 	 */
 	readonly unkeyed: readonly ScrollLink[];
 };
+
+/**
+ * How many instances of a Sentence's text a link is matched at, in its
+ * occurrence's own block, besides its own.
+ */
+const MAX_INSTANCE = 256;
+
+/** Whether `key`'s unit, at some instance of its Sentence's text, has the occurrence key `occurrence`. */
+const atAnyInstance = (key: KeyedOccurrence, occurrence: string) => {
+	for (let instance = 0; instance < MAX_INSTANCE; instance++)
+		if (
+			instance !== key.instance &&
+			occurrenceKeyOf(key, instance) === occurrence
+		)
+			return true;
+	return false;
+};
+
+/**
+ * Whether `link`, keyed `key`, explains its Reading's recorded occurrence
+ * `occurrence` by its key, or by having none, of the Reading's recorded
+ * `occurrences` in the Scroll.
+ */
+function explains(
+	link: ScrollLink,
+	key: KeyedOccurrence | undefined,
+	occurrence: RecordedOccurrence,
+	occurrences: readonly RecordedOccurrence[],
+): boolean {
+	if (key !== undefined) return key.occurrence === occurrence.occurrence;
+	return link.block !== undefined &&
+		occurrences.some(({ blockId }) => blockId === link.block)
+		? occurrence.blockId === link.block
+		: true;
+}
+
+/**
+ * Whether `link`, keyed `key`, is `occurrence` in its own block at another
+ * instance of its Sentence's text. A link whose key one of the block's
+ * recorded `occurrences` carries is that one, and no other.
+ */
+const shiftedTo = (
+	link: ScrollLink,
+	key: KeyedOccurrence | undefined,
+	occurrence: RecordedOccurrence,
+	occurrences: readonly RecordedOccurrence[],
+) =>
+	key !== undefined &&
+	link.block === occurrence.blockId &&
+	!occurrences.some(
+		({ blockId, occurrence: recorded }) =>
+			blockId === link.block && recorded === key.occurrence,
+	) &&
+	atAnyInstance(key, occurrence.occurrence);
 
 export function unlinkedOccurrences(input: {
 	readonly content: string;
 	readonly links: readonly ScrollLink[];
 	readonly recorded: readonly RecordedOccurrence[];
 	/**
-	 * Each link's occurrence key by `linkKeyOf`, or undefined when it cannot
-	 * be recomputed, for the links a first call answered `unkeyed`.
+	 * Each link's occurrence by `linkKeyOf`, or undefined when its key
+	 * cannot be recomputed, for the links a first call answered `unkeyed`.
 	 */
-	readonly keys?: ReadonlyMap<number, string | undefined>;
+	readonly keys?: ReadonlyMap<number, KeyedOccurrence | undefined>;
 }): UnlinkedOccurrences {
 	const { keys, links, recorded } = input;
 	const unlinked: string[] = [];
@@ -182,51 +251,34 @@ export function unlinkedOccurrences(input: {
 			occurrence,
 		]);
 	for (const [readingPath, occurrences] of byReading) {
+		const judged = occurrences.filter(
+			({ blockId }) => present.has(blockId) && !inFlux.has(blockId),
+		);
+		if (judged.length === 0) continue;
 		const linked = links.filter(({ notePath }) => notePath === readingPath);
-		const blocks = new Set(occurrences.map(({ blockId }) => blockId));
 		if (
-			linked.some(
-				({ block }) => block === undefined || !blocks.has(block),
-			)
-		)
+			linked.length > 0 &&
+			(!keys || linked.some((link) => !keys.has(linkKeyOf(link))))
+		) {
+			unkeyed.push(...linked);
 			continue;
-		for (const block of blocks) {
-			if (!present.has(block) || inFlux.has(block)) continue;
-			const here = occurrences.filter(({ blockId }) => blockId === block);
-			const linkedHere = linked.filter((link) => link.block === block);
-			if (linkedHere.length === 0) {
-				unlinked.push(...here.map(({ ref }) => ref));
-				continue;
-			}
-			if (here.length === 1) continue;
-			if (
-				!keys ||
-				linkedHere.some((link) => !keys.has(linkKeyOf(link)))
-			) {
-				unkeyed.push(...linkedHere);
-				continue;
-			}
-			const kept = new Set<string>();
-			for (const link of linkedHere) {
-				const key = keys.get(linkKeyOf(link));
-				if (key !== undefined) kept.add(key);
-			}
-			const recordedKeys = new Set(
-				here.map(({ occurrence }) => occurrence),
-			);
-			if (
-				linkedHere.some(
-					(link) => keys.get(linkKeyOf(link)) === undefined,
-				) ||
-				[...kept].some((key) => !recordedKeys.has(key))
-			)
-				continue;
-			unlinked.push(
-				...here
-					.filter(({ occurrence }) => !kept.has(occurrence))
-					.map(({ ref }) => ref),
-			);
 		}
+		const keyed = linked.map(
+			(link) => [link, keys?.get(linkKeyOf(link))] as const,
+		);
+		unlinked.push(
+			...judged
+				.filter(
+					(occurrence) =>
+						!keyed.some(([link, key]) =>
+							explains(link, key, occurrence, occurrences),
+						) &&
+						!keyed.some(([link, key]) =>
+							shiftedTo(link, key, occurrence, occurrences),
+						),
+				)
+				.map(({ ref }) => ref),
+		);
 	}
 	return { unkeyed, unlinked };
 }

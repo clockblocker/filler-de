@@ -51,14 +51,19 @@ The fork starts at once, inside the event, so a program that never waits is appl
 | SelectAll | Cmd/Ctrl+A in source mode | yes | Select a note's body only; native when there is nothing to exclude |
 | WikilinkCompleted | `]]` typed, or a selection wrapped in `[[ ]]` | yes | Land a word on its Crossroad note, or a Library alias |
 | WikilinkClicked | internal link, no modifier | yes | Reopen a Reading note once its Knowledge lands |
+| WikilinkObserved | internal link, Cmd/Ctrl or middle button | yes | Observe only: nothing is prevented or applied; no handler yet |
 | SelectionChanged | mouseup / keyup / dragend | no: frequent | Toolbar visibility |
 | ActionElementClicked | `[data-action]` | no: its command is its own root | Toolbar buttons |
+
+## Link click offsets
+
+A link click tells where the link stands in its note's text, `offset`, inside its `[[…]]`. In Live Preview and source mode it is CodeMirror's `posAtDOM` of the link's element; a rendered line's index is no line of the note, as CodeMirror renders only the lines in view. In Reading view the layer's post-processor keeps each rendered section's context, and the click takes the link of `getSectionInfo`'s lines that stands where the clicked one does among the section's links, skipping embeds, code and comments. A link in an embed, a hover preview or another note's section has no offset (`events/click/wikilink-click/link-offset.ts`).
 
 ## Host
 
 `makeObsidianEventLayer(host)` is an Effect in a scope. `host` (`UserEventsHost`) gives:
 
-- `listen` and `editorExtension`, the plugin host's, held in the scope: closing it removes every listener and switches the extension off;
+- `listen`, `editorExtension` and `markdownPostProcessor`, the plugin host's, held in the scope: closing it removes every listener and switches the extension and the post-processor off;
 - `fork`, which runs a handled event's program on the runtime, counted as pending work, its failure logged at its edge;
 - `readSync`, for the selection a copy reads;
 - `vam`, for that selection and for where a completed link resolves;

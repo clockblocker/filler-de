@@ -1,7 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { Cause, Effect, Exit, Scope } from "effect";
-import type { App } from "obsidian";
+import type { App, MarkdownPostProcessorContext } from "obsidian";
 
 export const UserEventKind = {
 	ActionElementClicked: "actionElementClicked",
@@ -12,9 +12,28 @@ export const UserEventKind = {
 	SelectionChanged: "selectionChanged",
 	WikilinkClicked: "wikilinkClicked",
 	WikilinkCompleted: "wikilinkCompleted",
+	WikilinkObserved: "wikilinkObserved",
 } as const;
 
 export type UserEventKind = (typeof UserEventKind)[keyof typeof UserEventKind];
+
+/** A click on an internal link, as a handler is told it. */
+type WikilinkClick = {
+	blockContent: string;
+	/**
+	 * Where the clicked link stands in its note's text, as an offset inside
+	 * its `[[…]]`, or its `[…](…)`: in the editor, CodeMirror's position
+	 * of its element; in Reading view, the link of its section's source
+	 * that stands where it does among the section's links. Absent when it
+	 * cannot be told, as for a link in an embed or a hover preview.
+	 */
+	offset?: number;
+	sourcePath: string;
+	target: {
+		alias?: string;
+		basename: string;
+	};
+};
 
 type UserPayloadByKey = {
 	ActionElementClicked: {
@@ -51,14 +70,16 @@ type UserPayloadByKey = {
 		source: "mouse" | "keyboard" | "drag";
 		sourcePath?: string;
 	};
-	WikilinkClicked: {
-		blockContent: string;
+	WikilinkClicked: WikilinkClick & {
 		kind: typeof UserEventKind.WikilinkClicked;
-		sourcePath: string;
-		target: {
-			alias?: string;
-			basename: string;
-		};
+	};
+	/**
+	 * A link clicked with Cmd/Ctrl, or the middle button, which Obsidian
+	 * opens in a new tab or the like. Its handler only observes it: the
+	 * layer prevents nothing and applies nothing, whatever `handle` answers.
+	 */
+	WikilinkObserved: WikilinkClick & {
+		kind: typeof UserEventKind.WikilinkObserved;
 	};
 	WikilinkCompleted: {
 		/** Whether the link is an embed, `![[…]]`. */
@@ -179,6 +200,16 @@ export type UserEventsHost = {
 		type: K,
 		handler: (event: DocumentEventMap[K]) => void,
 		options?: AddEventListenerOptions,
+	) => Effect.Effect<void, never, Scope.Scope>;
+	/**
+	 * Runs `processor` on each section Reading view renders while the
+	 * scope is open (`PluginHost.markdownPostProcessor`).
+	 */
+	readonly markdownPostProcessor: (
+		processor: (
+			element: HTMLElement,
+			context: MarkdownPostProcessorContext,
+		) => void,
 	) => Effect.Effect<void, never, Scope.Scope>;
 	/** Puts `extension` into every editor while the scope is open. */
 	readonly editorExtension: (

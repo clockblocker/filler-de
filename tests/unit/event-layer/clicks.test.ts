@@ -4,6 +4,7 @@ import {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { Effect } from "effect";
+import { sectionLinkOffset } from "../../../src/packages/composed/obsidian-event-layer/src/events/click/wikilink-click/link-offset";
 import {
 	eventLayerOn,
 	FakeElement,
@@ -346,5 +347,235 @@ describe("action element clicks and selection changes", () => {
 		expect(new Set(events.forks.map(({ fork }) => fork.traced))).toEqual(
 			new Set([false]),
 		);
+	});
+});
+
+describe("wikilink click offsets", () => {
+	const STORY = "Library/Story.md";
+
+	/** A Live Preview link in the editor's only rendered line, which CodeMirror places at `at`. */
+	function editorLink(at: number, inEditor = true) {
+		const link = new FakeElement("SPAN", ["cm-hmd-internal-link"]);
+		link.textContent = "Fahrer";
+		const line = new FakeElement("DIV", ["cm-line"]).append(link);
+		const content = new FakeElement("DIV", ["cm-content"]).append(line);
+		const cm = {
+			contentDOM: { contains: (node: unknown) => inEditor && content.contains(node as FakeElement) },
+			posAtDOM: (node: unknown) => (node === link ? at : -1),
+		};
+		return { cm, link };
+	}
+
+	it("tells where an editor link stands from CodeMirror's position, not its rendered line", () => {
+		// The rendered line is the editor's first, but CodeMirror only
+		// renders the lines in view: the link is far below.
+		const { cm, link } = editorLink(1234);
+		const events = eventLayerOn(
+			fakeApp(STORY, { cm, lines: ["Der [[Worter/f/fah/fahre/fahrer|Fahrer]] fährt. ^0"] }),
+		);
+		const seen: PayloadFor<"WikilinkClicked">[] = [];
+		events.layer.setHandler(UserEventKind.WikilinkClicked, {
+			doesApply: () => true,
+			handle: (payload) =>
+				Effect.sync(() => {
+					seen.push(payload);
+					return { outcome: "handled" } as const;
+				}),
+		});
+		click(events, link);
+		expect(seen.map(({ offset, target }) => ({ offset, target }))).toEqual([
+			{ offset: 1234, target: { alias: "Fahrer", basename: "Worter/f/fah/fahre/fahrer" } },
+		]);
+
+		// A link of another editor than the active note's has none.
+		const elsewhere = editorLink(1234, false);
+		const other = eventLayerOn(
+			fakeApp(STORY, { cm: elsewhere.cm, lines: ["[[Worter/f/fah/fahre/fahrer|Fahrer]]"] }),
+		);
+		const told: (number | undefined)[] = [];
+		other.layer.setHandler(UserEventKind.WikilinkClicked, {
+			doesApply: () => true,
+			handle: (payload) =>
+				Effect.sync(() => {
+					told.push(payload.offset);
+					return { outcome: "handled" } as const;
+				}),
+		});
+		click(other, elsewhere.link);
+		expect(told).toEqual([undefined]);
+	});
+
+	const TEXT = [
+		"# Story",
+		"",
+		"Der `[[Code]]` [[Worter/m/man/mann/mann|Mann]] %%[[Kommentar]]%% ![[Bild.png]] [Web](https://x.de) und",
+		"der [[Worter/f/fah/fahre/fahrer|Fahrer]]. ^0",
+	].join("\n");
+
+	/** Reading view's section of `TEXT`'s lines 2 to 3, with its two links. */
+	function readingSection() {
+		const mann = new FakeElement("A", ["internal-link"]).setAttribute(
+			"data-href",
+			"Worter/m/man/mann/mann",
+		);
+		const fahrer = new FakeElement("A", ["internal-link"]).setAttribute(
+			"data-href",
+			"Worter/f/fah/fahre/fahrer",
+		);
+		fahrer.textContent = "Fahrer";
+		const embedded = new FakeElement("A", ["internal-link"]).setAttribute(
+			"data-href",
+			"Elsewhere",
+		);
+		const embed = new FakeElement("SPAN", ["internal-embed"]).append(embedded);
+		const section = new FakeElement("DIV").append(
+			new FakeElement("P").append(mann, embed, fahrer),
+		);
+		return { embedded, fahrer, section };
+	}
+
+	const clickedOffsets = (
+		events: ReturnType<typeof eventLayerOn>,
+		target: FakeElement,
+	) => {
+		const told: (number | undefined)[] = [];
+		events.layer.setHandler(UserEventKind.WikilinkClicked, {
+			doesApply: () => true,
+			handle: (payload) =>
+				Effect.sync(() => {
+					told.push(payload.offset);
+					return { outcome: "handled" } as const;
+				}),
+		});
+		click(events, target);
+		return told;
+	};
+
+	it("tells where a Reading view link stands from its section's lines and its place among the section's links", () => {
+		const events = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const { fahrer, section } = readingSection();
+		events.renderSection(section, { lineEnd: 3, lineStart: 2, sourcePath: STORY, text: TEXT });
+		const [offset] = clickedOffsets(events, fahrer);
+		expect(offset).toBe(TEXT.indexOf("[[Worter/f/fah") + 2);
+	});
+
+	it("tells nothing for a link in an embed, a section of another note, an unrendered section, or one whose source disagrees", () => {
+		const embedded = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const first = readingSection();
+		embedded.renderSection(first.section, { lineEnd: 3, lineStart: 2, sourcePath: STORY, text: TEXT });
+		expect(clickedOffsets(embedded, first.embedded)).toEqual([undefined]);
+
+		const foreign = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const second = readingSection();
+		foreign.renderSection(second.section, {
+			lineEnd: 3,
+			lineStart: 2,
+			sourcePath: "Library/Other.md",
+			text: TEXT,
+		});
+		expect(clickedOffsets(foreign, second.fahrer)).toEqual([undefined]);
+
+		const unrendered = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		expect(clickedOffsets(unrendered, readingSection().fahrer)).toEqual([undefined]);
+
+		const stale = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const third = readingSection();
+		stale.renderSection(third.section, {
+			lineEnd: 3,
+			lineStart: 2,
+			sourcePath: STORY,
+			text: TEXT.replace("Worter/f/fah/fahre/fahrer", "Worter/f/fah/fahre/fahrerin"),
+		});
+		expect(clickedOffsets(stale, third.fahrer)).toEqual([undefined]);
+	});
+});
+
+describe("sectionLinkOffset", () => {
+	it("counts the links Reading view renders as internal links, and only those", () => {
+		const text = [
+			"```",
+			"[[InCode]]",
+			"```",
+			"A `x [[Inline]] x` %%[[Hidden]]%% <!-- [[Html]] --> ![[Embed]] ![alt](pic.png) [web](https://x.de)",
+			"[[First|1]] [md](Notes/Second.md) [[Third\\|3]]",
+		].join("\n");
+		const offsets = [0, 1, 2, 3].map((index) => sectionLinkOffset(text, 0, 4, index));
+		expect(offsets).toEqual([
+			text.indexOf("[[First") + 2,
+			text.indexOf("[md]") + 1,
+			text.indexOf("[[Third") + 2,
+			undefined,
+		]);
+		expect(sectionLinkOffset(text, 0, 4, 0, "First")).toBe(offsets[0]);
+		expect(sectionLinkOffset(text, 0, 4, 2, "Third")).toBe(offsets[2]);
+		expect(sectionLinkOffset(text, 0, 4, 0, "Other")).toBeUndefined();
+		// Lines the note does not have.
+		expect(sectionLinkOffset(text, 3, 9, 0)).toBeUndefined();
+	});
+
+	it("reads only the section's own lines", () => {
+		const text = "[[A]]\n\n[[B]] [[C]]\n\n[[D]]";
+		expect(sectionLinkOffset(text, 2, 2, 1, "C")).toBe(text.indexOf("[[C]]") + 2);
+		expect(sectionLinkOffset(text, 2, 2, 2)).toBeUndefined();
+	});
+});
+
+describe("observed wikilink clicks", () => {
+	function observing() {
+		const events = eventLayerOn(fakeApp("Library/Story.md"));
+		const clicked: string[] = [];
+		const observed: PayloadFor<"WikilinkObserved">[] = [];
+		events.layer.setHandler(UserEventKind.WikilinkClicked, {
+			doesApply: () => true,
+			handle: (payload) =>
+				Effect.sync(() => {
+					clicked.push(payload.target.basename);
+					return { outcome: "handled" } as const;
+				}),
+		});
+		events.layer.setHandler(UserEventKind.WikilinkObserved, {
+			doesApply: () => true,
+			// Whatever it answers, Obsidian navigates.
+			handle: (payload) =>
+				Effect.sync(() => {
+					observed.push(payload);
+					return { outcome: "handled" } as const;
+				}),
+		});
+		return { clicked, events, observed };
+	}
+
+	it("tells a Cmd/Ctrl-click or a middle click to its handler, and leaves the navigation to Obsidian", () => {
+		for (const init of [{ metaKey: true }, { ctrlKey: true }, { button: 1 }, { button: 1, shiftKey: true }]) {
+			const { clicked, events, observed } = observing();
+			for (const event of click(events, readingLink(), init))
+				expect(event.defaultPrevented).toBe(false);
+			expect(clicked).toEqual([]);
+			expect(events.opened).toEqual([]);
+			expect(observed.map(({ kind, sourcePath, target }) => ({ kind, sourcePath, target }))).toEqual([
+				{
+					kind: UserEventKind.WikilinkObserved,
+					sourcePath: "Library/Story.md",
+					target: { alias: "Fahrer", basename: "Worter/f/fah/fahre/fahrer" },
+				},
+			]);
+			expect(events.forks).toEqual([
+				{ fork: { traced: true }, kind: UserEventKind.WikilinkObserved },
+			]);
+		}
+	});
+
+	it("observes no plain click, nor one with only Shift or Alt, nor a right click", () => {
+		const plain = observing();
+		click(plain.events, readingLink());
+		expect(plain.clicked).toEqual(["Worter/f/fah/fahre/fahrer"]);
+		expect(plain.observed).toEqual([]);
+
+		for (const init of [{ shiftKey: true }, { altKey: true }, { button: 2 }]) {
+			const { clicked, events, observed } = observing();
+			for (const event of click(events, readingLink(), init))
+				expect(event.defaultPrevented).toBe(false);
+			expect([...clicked, ...observed]).toEqual([]);
+		}
 	});
 });

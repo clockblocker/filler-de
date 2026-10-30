@@ -3,7 +3,8 @@
  * that dispatches events to its listeners as a browser does (capture, then
  * bubble, honouring `stopPropagation`), elements that answer `closest` and
  * `querySelectorAll` for the selectors the detectors use, an active note
- * with an editor, and a host that runs each handled event at once.
+ * with an editor, a Reading view that renders sections to the
+ * post-processors, and a host that runs each handled event at once.
  */
 import {
 	EditorState,
@@ -232,6 +233,12 @@ export class FakeElement {
 	querySelector(selector: string): FakeElement | null {
 		return this.querySelectorAll(selector)[0] ?? null;
 	}
+
+	contains(other: FakeElement | null): boolean {
+		for (let node = other; node; node = node.parentElement)
+			if (node === this) return true;
+		return false;
+	}
 }
 
 /** An editor, as CodeMirror's view: its state, and the changes dispatched. */
@@ -293,6 +300,7 @@ export function eventLayerOn(
 	/** The causes the forked programs failed with, as the edge logs them. */
 	const failures: Cause.Cause<unknown>[] = [];
 	const extensions: Extension[] = [];
+	const postProcessors: ((element: never, context: never) => void)[] = [];
 	const host: UserEventsHost = {
 		app,
 		document: dom.document,
@@ -321,6 +329,16 @@ export function eventLayerOn(
 					Effect.sync(() =>
 						dom.document.removeEventListener(type, handler, listenOptions),
 					),
+			),
+		markdownPostProcessor: (processor) =>
+			Effect.acquireRelease(
+				Effect.sync(() => {
+					postProcessors.push(processor);
+				}),
+				() =>
+					Effect.sync(() => {
+						postProcessors.splice(postProcessors.indexOf(processor), 1);
+					}),
 			),
 		openLink: (target, sourcePath) =>
 			options.openLinkFails
@@ -352,5 +370,29 @@ export function eventLayerOn(
 		forks,
 		layer,
 		opened,
+		/**
+		 * Reading view rendered `section` of the note at `sourcePath`, from
+		 * its lines `lineStart` to `lineEnd` of `text`, as the post-processors
+		 * are told.
+		 */
+		renderSection: (
+			section: FakeElement,
+			info: {
+				readonly sourcePath: string;
+				readonly text: string;
+				readonly lineStart: number;
+				readonly lineEnd: number;
+			},
+		) => {
+			const context = {
+				getSectionInfo: (element: unknown) =>
+					element === section
+						? { lineEnd: info.lineEnd, lineStart: info.lineStart, text: info.text }
+						: null,
+				sourcePath: info.sourcePath,
+			};
+			for (const processor of postProcessors)
+				(processor as (element: unknown, context: unknown) => void)(section, context);
+		},
 	};
 }

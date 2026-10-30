@@ -1,11 +1,16 @@
 /**
  * Internal link (wikilink) clicks, in reading mode (`a.internal-link`) and
- * in the editor (`.cm-hmd-internal-link`). A click with a modifier is
- * Obsidian's, for a new tab and the like.
+ * in the editor (`.cm-hmd-internal-link`), each told with where the link
+ * stands in its note (`link-offset.ts`).
  *
- * A handler that takes the click prevents Obsidian's navigation; when it
- * answers passthrough, the link is opened as Obsidian would have, through
- * the host's workspace, in the same fiber.
+ * A plain click is `WikilinkClicked`. A handler that takes it prevents
+ * Obsidian's navigation; when it answers passthrough, the link is opened
+ * as Obsidian would have, through the host's workspace, in the same fiber.
+ *
+ * A click with Cmd/Ctrl, or the middle button, is Obsidian's, for a new
+ * tab and the like: it is `WikilinkObserved`, whose handler runs beside
+ * Obsidian's navigation and can neither stop nor replace it. A click with
+ * only Shift or Alt is no link click.
  */
 import { Effect } from "effect";
 import type { App } from "obsidian";
@@ -14,36 +19,69 @@ import { DomSelectors } from "../../../internal/dom-selectors";
 import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { PayloadKind } from "../../../types/payload-base";
 import { getCurrentFilePath } from "../../get-current-file-path";
+import { toSourcePath } from "../../source-path";
 import { editorLineOf } from "../editor-line";
 import type { ClickSubscriber } from "../generic-click-detector";
 import { WikilinkClickCodec } from "./codec";
-import type { WikiTarget } from "./payload";
+import { editorLinkOffset, type RenderedSections } from "./link-offset";
+import type { WikilinkClickKind, WikiTarget } from "./payload";
 
-export function wikilinkClick(dispatch: EventDispatch): ClickSubscriber {
+/** The mouse's middle button, as `MouseEvent.button` names it. */
+const MIDDLE_BUTTON = 1;
+
+/** The click on `target`'s link as `kind`, read inside the mousedown; null for none. */
+function linkClickOf<K extends WikilinkClickKind>(
+	app: App,
+	sections: RenderedSections,
+	kind: K,
+	target: HTMLElement,
+) {
+	const linkElement = findLinkElement(target);
+	if (!linkElement) return null;
+
+	const splitPath = getCurrentFilePath(app);
+	if (!splitPath) return null;
+
+	const wikiTarget = extractLinkData(app, linkElement, target);
+	if (!wikiTarget) return null;
+
+	const blockContent = extractBlockContent(app, linkElement);
+	if (blockContent === null) return null;
+
+	const offset = linkElement.classList.contains(
+		DomSelectors.INTERNAL_LINK_CLASS,
+	)
+		? sections.linkOffset(linkElement, toSourcePath(splitPath) ?? "")
+		: editorLinkOffset(app, linkElement);
+
+	return WikilinkClickCodec.encode({
+		blockContent,
+		kind,
+		offset,
+		splitPath,
+		wikiTarget,
+	});
+}
+
+export function wikilinkClick(
+	dispatch: EventDispatch,
+	sections: RenderedSections,
+): ClickSubscriber {
 	const { app, openLink } = dispatch.host;
 	return {
 		kind: PayloadKind.WikilinkClicked,
 		onMouseDown: (target, evt) => {
-			const linkElement = findLinkElement(target);
-			if (!linkElement) return;
-
+			if (evt.button !== 0) return;
 			if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey)
 				return;
 
-			const splitPath = getCurrentFilePath(app);
-			if (!splitPath) return;
-
-			const wikiTarget = extractLinkData(app, linkElement, target);
-			if (!wikiTarget) return;
-
-			const blockContent = extractBlockContent(app, linkElement);
-			if (blockContent === null) return;
-
-			const payload = WikilinkClickCodec.encode({
-				blockContent,
-				splitPath,
-				wikiTarget,
-			});
+			const payload = linkClickOf(
+				app,
+				sections,
+				PayloadKind.WikilinkClicked,
+				target,
+			);
+			if (!payload) return;
 
 			const handler = dispatch.decide(
 				PayloadKind.WikilinkClicked,
@@ -60,8 +98,44 @@ export function wikilinkClick(dispatch: EventDispatch): ClickSubscriber {
 				// Passthrough: the navigation prevented above, as Obsidian does it.
 				(result) =>
 					result.outcome === "passthrough"
-						? openLink(wikiTarget.basename, payload.sourcePath)
+						? openLink(payload.target.basename, payload.sourcePath)
 						: Effect.void,
+			);
+		},
+	};
+}
+
+/** Cmd/Ctrl-clicks and middle clicks on a link, which Obsidian navigates on its own. */
+export function wikilinkObserve(
+	dispatch: EventDispatch,
+	sections: RenderedSections,
+): ClickSubscriber {
+	const { app } = dispatch.host;
+	return {
+		buttons: [0, MIDDLE_BUTTON],
+		kind: PayloadKind.WikilinkObserved,
+		onMouseDown: (target, evt) => {
+			if (evt.button !== MIDDLE_BUTTON && !(evt.ctrlKey || evt.metaKey))
+				return;
+
+			const payload = linkClickOf(
+				app,
+				sections,
+				PayloadKind.WikilinkObserved,
+				target,
+			);
+			if (!payload) return;
+
+			const handler = dispatch.decide(
+				PayloadKind.WikilinkObserved,
+				payload,
+			);
+			if (!handler) return;
+			// Nothing is prevented or applied: Obsidian opens the link.
+			dispatch.run(
+				PayloadKind.WikilinkObserved,
+				handler,
+				Effect.succeed(payload),
 			);
 		},
 	};

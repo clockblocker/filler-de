@@ -19,7 +19,11 @@ import { actionElementClick } from "./events/click/action-element/detector";
 import { checkboxClick } from "./events/click/checkbox/detector";
 import { frontmatterCheckboxClick } from "./events/click/checkbox-frontmatter/detector";
 import { listenForClicks } from "./events/click/generic-click-detector";
-import { wikilinkClick } from "./events/click/wikilink-click/detector";
+import {
+	wikilinkClick,
+	wikilinkObserve,
+} from "./events/click/wikilink-click/detector";
+import { renderedSections } from "./events/click/wikilink-click/link-offset";
 import { listenForClipboard } from "./events/clipboard/detector";
 import { listenForSelectAll } from "./events/select-all/detector";
 import { listenForSelectionChanges } from "./events/selection-changed/detector";
@@ -60,12 +64,15 @@ export const makeObsidianEventLayer = Effect.fnUntraced(function* (
 			}),
 	};
 
+	// Where Reading view's clicked links stand in their notes.
+	const sections = yield* renderedSections(host);
 	// The clicks, in this order, before any other mouse listener.
 	yield* listenForClicks(dispatch, [
 		checkboxClick(dispatch),
 		frontmatterCheckboxClick(dispatch),
 		actionElementClick(dispatch),
-		wikilinkClick(dispatch),
+		wikilinkClick(dispatch, sections),
+		wikilinkObserve(dispatch, sections),
 	]);
 	yield* listenForClipboard(dispatch);
 	yield* listenForSelectAll(dispatch);

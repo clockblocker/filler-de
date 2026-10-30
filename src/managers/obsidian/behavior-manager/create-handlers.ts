@@ -11,6 +11,7 @@
  */
 
 import {
+	type PayloadFor,
 	type UserEventFailure,
 	type UserEventHandler,
 	type UserEventKind,
@@ -33,19 +34,35 @@ type HandlerDef = {
 	};
 }[UserEventKind];
 
+/** A clicked link, as the plugin is told it. */
+export type LinkClick = {
+	/** The link's target, as written. */
+	readonly target: string;
+	/** The note it was clicked in. */
+	readonly sourcePath: string;
+	/** Where it stands in that note's text, inside its `[[…]]`, when the layer could tell. */
+	readonly offset?: number;
+};
+
+const linkClickOf = (payload: PayloadFor<"WikilinkClicked">): LinkClick => ({
+	...(payload.offset === undefined ? {} : { offset: payload.offset }),
+	sourcePath: payload.sourcePath,
+	target: payload.target.basename,
+});
+
 /**
  * Create all handlers for user event registration.
  * All librarian-dependent handlers delegate to librarian methods.
  *
  * @param librarian - Librarian instance for tree operations
- * @param onWikilinkClicked - Run with every clicked link's target, once
- *   Obsidian was told to open it, in the click's fiber: Classify waits
- *   there for a Reading's Knowledge to open its note again
+ * @param onWikilinkClicked - Run with every clicked link, once Obsidian
+ *   was told to open it, in the click's fiber: Classify waits there for a
+ *   Reading's Knowledge to open its note again
  */
 export function createHandlers(
 	librarian: Librarian,
 	onWikilinkClicked?: (
-		target: string,
+		click: LinkClick,
 	) => Effect.Effect<void, UserEventFailure>,
 ): HandlerDef[] {
 	const handlers: HandlerDef[] = [
@@ -75,7 +92,7 @@ export function createHandlers(
 		handlers.push({
 			handler: {
 				afterwards: (payload) =>
-					onWikilinkClicked(payload.target.basename),
+					onWikilinkClicked(linkClickOf(payload)),
 				doesApply: () => true,
 				// Obsidian opens the link, as it would have.
 				handle: () =>
