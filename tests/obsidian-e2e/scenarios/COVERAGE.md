@@ -57,7 +57,7 @@ layout assertions, live in `classify-resolution-script.ts`, and
 in process. Its `classify-sentence-blocks` scenario, run in process by the
 same twin, owns the cut a paragraph of several Sentences without IDs gets
 before Classify mints: one sentence block per Sentence, so the Attestation
-embeds its own Sentence. The resolver's other cases are unit tests under
+embeds its own Sentence, and an unlink and a second Classify after the cut. The resolver's other cases are unit tests under
 `tests/unit/classify/resolution/`. `dictionary-layout.ts` holds the layout
 helpers every classifying scenario shares.
 

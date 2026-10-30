@@ -1,7 +1,7 @@
 /**
  * Decoration Stripper
  *
- * Strips markdown decorations (italics, bold, etc.) before sentence segmentation,
+ * Strips markdown decorations (italics, bold, `_` and `__` too, etc.) before sentence segmentation,
  * then restores them to each resulting sentence individually.
  *
  * Problem: When text like "*Sentence one. Sentence two.*" is segmented,
@@ -58,7 +58,7 @@ function markerCount(line: string, marker: string): number {
 		(candidate) => candidate.marker === marker,
 	)?.openPattern;
 	return pattern
-		? (line.match(new RegExp(pattern.source, "g")) ?? []).length
+		? (line.match(new RegExp(pattern.source, pattern.flags)) ?? []).length
 		: 0;
 }
 
@@ -108,7 +108,24 @@ const DECORATION_PATTERNS: { marker: string; openPattern: RegExp }[] = [
 	{ marker: "~~", openPattern: /(?<!~)~~(?!~)/g },
 	// Highlight: ==
 	{ marker: "==", openPattern: /(?<!=)==(?!=)/g },
+	// Underscore emphasis: ___, __, _, never inside a word (snake_case)
+	{ marker: "___", openPattern: underscoreRun(3) },
+	{ marker: "__", openPattern: underscoreRun(2) },
+	{ marker: "_", openPattern: underscoreRun(1) },
 ];
+
+/**
+ * A run of exactly `length` underscores that may open or close emphasis:
+ * one with a letter or digit on both sides is inside a word, as in
+ * `snake_case`, and emphasizes nothing.
+ */
+function underscoreRun(length: number): RegExp {
+	const run = `_{${length}}`;
+	return new RegExp(
+		`(?<![_\\p{L}\\p{N}])${run}(?!_)|(?<!_)${run}(?![_\\p{L}\\p{N}])`,
+		"gu",
+	);
+}
 
 /**
  * Check if content contains sentence-ending punctuation that would cause
@@ -142,7 +159,7 @@ function findDecorationSpans(text: string): DecorationSpan[] {
 
 	for (const { marker, openPattern } of DECORATION_PATTERNS) {
 		// Find all occurrences of this marker
-		const regex = new RegExp(openPattern.source, "g");
+		const regex = new RegExp(openPattern.source, openPattern.flags);
 		const positions: number[] = [];
 
 		let match = regex.exec(text);

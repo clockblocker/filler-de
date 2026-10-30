@@ -340,6 +340,27 @@ Groß, schlank .. ein cooler Amerikaner.`;
 			});
 		});
 
+		describe("underscores (_, __)", () => {
+			test("each sentence gets own wrapper", () => {
+				expect(
+					splitStrInSentenceBlocks("_Er kam. Sie ging._ Ende.").markedText,
+				).toBe("_Er kam._ ^0\n\n_Sie ging._ ^1\n\nEnde. ^2");
+				expect(
+					splitStrInSentenceBlocks("Er kam. __Sie ging. Er lief.__ Ende.")
+						.markedText,
+				).toBe(
+					"Er kam. ^0\n\n__Sie ging.__ ^1\n\n__Er lief.__ ^2\n\nEnde. ^3",
+				);
+			});
+
+			test("an underscore inside a word is no emphasis", () => {
+				expect(
+					splitStrInSentenceBlocks("Die snake_case Form. Eine my_var Zeile.")
+						.markedText,
+				).toBe("Die snake_case Form. ^0\n\nEine my_var Zeile. ^1");
+			});
+		});
+
 		describe("strikethrough (~~)", () => {
 			test("strikethrough: each sentence gets own wrapper", () => {
 				const text = `~~Strike sentence one here. Strike sentence two here.~~`;

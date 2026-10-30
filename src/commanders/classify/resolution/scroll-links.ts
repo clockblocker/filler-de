@@ -29,9 +29,12 @@ import {
 } from "@textfresser/lemma-note-codec";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { scrollBodyRange } from "../../../stateless-helpers/scroll-body-range";
+import { type ScrollSentence, scrollSentences } from "../scroll-sentences";
 import type { SourceRange, UnitRef } from "../types";
 import {
+	findCut,
 	pieceIndexOf,
+	type SentenceSplit,
 	sentenceSplitEdits,
 	sentenceSplitOf,
 	type TextEdit,
@@ -201,32 +204,17 @@ function plainParagraphAt(
 	return { from, to: block.mintAt };
 }
 
-/** An `_` that may open or close emphasis: not inside a word. */
-const UNDERSCORE_EMPHASIS = /(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])/gu;
-
 /**
- * Whether a cut at `at`, in `paragraph`, leaves the Markdown around it
- * whole: never inside code, math, a comment, a URL or HTML, a link or an
- * embed, nor inside `_` emphasis, which the formatter does not close and
- * open again as it does `*`, `~~` and `==`.
+ * Whether a cut over `gap`, in the paragraph, leaves the Markdown around
+ * it whole: never inside code, math, a comment, a URL or HTML, a link or
+ * an embed. Emphasis the formatter closes and opens again around the cut.
  */
-function cutAllowed(
-	content: string,
-	paragraph: SourceRange,
-	at: number,
-): boolean {
+function cutAllowed(content: string, gap: SourceRange): boolean {
+	const at = gap.from;
 	if (structureAround(content, { from: at, to: at })) return false;
-	if (
-		linksAround(content, { from: at, to: at }).some(
-			(link) => link.from < at && at < link.to,
-		)
-	)
-		return false;
-	const before = content
-		.slice(paragraph.from, at)
-		.replace(LINKISH, "")
-		.replace(INLINE_RAW, "");
-	return (before.match(UNDERSCORE_EMPHASIS) ?? []).length % 2 === 0;
+	return !linksAround(content, { from: at, to: at }).some(
+		(link) => link.from < at && at < link.to,
+	);
 }
 
 /** The block IDs that end the lines of `content`. */
@@ -360,9 +348,10 @@ export type MintedBlockIds = {
 	/** The ID of the block each requested snapshot offset lies in now. */
 	readonly ids: ReadonlyMap<number, string>;
 	/**
-	 * What this write changed where the snapshot's text still stood, at
-	 * snapshot offsets: IDs appended at a line's end, and paragraphs cut
-	 * into sentence blocks.
+	 * The edits that bring the snapshot in line with what this write left,
+	 * at snapshot offsets, where the snapshot's text still stood: IDs
+	 * appended at a line's end, paragraphs cut into sentence blocks, by
+	 * this write or by another run that read the same paragraph.
 	 */
 	readonly edits: readonly ScrollEdit[];
 };
@@ -377,18 +366,52 @@ type PlannedSplit = {
 	readonly edits: readonly TextEdit[];
 };
 
+/** A plain paragraph of the snapshot and the sentence blocks it cuts into. */
+type CutPlan = {
+	readonly paragraph: SourceRange;
+	readonly text: string;
+	readonly split: SentenceSplit;
+};
+
+/** The line ending `content` uses. */
+const eolOf = (content: string) => (content.includes("\r\n") ? "\r\n" : "\n");
+
+/** How the plain paragraph at `offset` cuts into sentence blocks, if it holds several Sentences. */
+function cutPlanAt(content: string, offset: number): CutPlan | undefined {
+	const paragraph = plainParagraphAt(content, offset);
+	if (!paragraph) return undefined;
+	const text = content.slice(paragraph.from, paragraph.to);
+	const split = sentenceSplitOf(text, (gap) =>
+		cutAllowed(content, {
+			from: paragraph.from + gap.from,
+			to: paragraph.from + gap.to,
+		}),
+	);
+	return split && { paragraph, split, text };
+}
+
 /**
  * Gives each block without an ID one, numbered after the highest `^N` the
  * current content holds, so overlapping runs never mint the same ID.
- * `offsets` are snapshot offsets, one per occurrence that needs an ID.
+ * `offsets` are snapshot offsets, one per occurrence that needs an ID. It
+ * is a pure function of the two contents and the offsets, so any caller
+ * holding a snapshot can run it in a compare-and-swap write.
  *
- * A plain paragraph of several Sentences is first cut into sentence
- * blocks, each with its own ID, so an occurrence gets the ID of its
- * Sentence. The cut lands only when the paragraph is still, character for
- * character, what the snapshot held, found by its first line. Otherwise,
- * and for any other block, the block is found again by its first line, and
- * one ID goes at the end of the paragraph as it is now; a block that gained
- * an ID meanwhile keeps it.
+ * A plain paragraph of several Sentences is cut into sentence blocks, each
+ * with its own ID, so an occurrence gets the ID of its Sentence. For each
+ * paragraph, in this order:
+ *
+ * 1. The paragraph is still, character for character, what the snapshot
+ *    held, found by its first line: it is cut here.
+ * 2. Another run that read the same paragraph cut it already: its blocks'
+ *    IDs are taken, and its cut goes into the snapshot as if this write
+ *    made it, so the links still map.
+ * 3. The block is found again by its last line, and one ID goes at the end
+ *    of the paragraph as it is now; a block that gained an ID meanwhile
+ *    keeps it.
+ * 4. Each occurrence's Sentence is found in the current content by its
+ *    text, as Classify reads it, where exactly one Sentence has that text,
+ *    and takes its block's ID, or gives the block one.
  */
 export function mintBlockIds(input: {
 	readonly snapshot: string;
@@ -397,14 +420,19 @@ export function mintBlockIds(input: {
 }): MintedBlockIds {
 	const { current, snapshot } = input;
 	const map = offsetMapper(snapshot, current);
+	const eol = eolOf(current);
 	let next = blockIdHelper.findHighestNumber(current) + 1;
 	const ids = new Map<number, string>();
 	const inserts = new Map<number, { readonly id: string }>();
 	/** Where each mint's snapshot line end sits in the current content, if its line is intact. */
 	const appendedAt = new Map<number, number>();
 	const splits: PlannedSplit[] = [];
+	/** Cuts another run made, at snapshot offsets. */
+	const found: TextEdit[] = [];
 	const inSplit = (at: number) =>
 		splits.some(({ current }) => current.from <= at && at <= current.to);
+	let snapshotSentences: readonly ScrollSentence[] | undefined;
+	let currentSentences: readonly ScrollSentence[] | undefined;
 
 	// The offsets of each snapshot block, in the order they first appear.
 	const groups = new Map<number, number[]>();
@@ -416,17 +444,23 @@ export function mintBlockIds(input: {
 		else groups.set(block.mintAt, [offset]);
 	}
 
-	/** Cuts the group's paragraph into sentence blocks, if it may. */
-	const split = (offsets: readonly number[]): boolean => {
-		const [first] = offsets;
-		if (first === undefined) return false;
-		const paragraph = plainParagraphAt(snapshot, first);
-		if (!paragraph) return false;
-		const text = snapshot.slice(paragraph.from, paragraph.to);
-		const pieces = sentenceSplitOf(text, (at) =>
-			cutAllowed(snapshot, paragraph, paragraph.from + at),
-		);
-		if (!pieces) return false;
+	const idsOfPieces = (
+		plan: CutPlan,
+		offsets: readonly number[],
+		pieceIds: readonly string[],
+	) => {
+		for (const offset of offsets) {
+			const id =
+				pieceIds[
+					pieceIndexOf(plan.split, offset - plan.paragraph.from)
+				];
+			if (id !== undefined) ids.set(offset, id);
+		}
+	};
+
+	/** 1: cuts the paragraph here, if it is as the snapshot held it. */
+	const cutHere = (plan: CutPlan, offsets: readonly number[]): boolean => {
+		const { paragraph, split, text } = plan;
 		const moved = map.range({
 			from: paragraph.from,
 			to: paragraph.from + lineAt(snapshot, paragraph.from).length,
@@ -440,21 +474,33 @@ export function mintBlockIds(input: {
 			[...inserts.keys()].some((at) => here.from <= at && at <= here.to)
 		)
 			return false;
-		const pieceIds = pieces.map(() => String(next++));
+		const pieceIds = split.map(() => String(next++));
 		splits.push({
 			current: here,
-			edits: sentenceSplitEdits(pieces, pieceIds, text.length),
+			edits: sentenceSplitEdits(split, pieceIds, text.length, eol),
 			snapshotFrom: paragraph.from,
 		});
-		for (const offset of offsets) {
-			const id = pieceIds[pieceIndexOf(pieces, offset - paragraph.from)];
-			if (id !== undefined) ids.set(offset, id);
-		}
+		idsOfPieces(plan, offsets, pieceIds);
 		return true;
 	};
 
-	for (const [mintAt, offsets] of groups) {
-		if (split(offsets)) continue;
+	/** 2: takes the cut another run made of the same paragraph. */
+	const reuseCut = (plan: CutPlan, offsets: readonly number[]): boolean => {
+		const { paragraph, split, text } = plan;
+		const cut = findCut(current, text, split, eol);
+		if (!cut) return false;
+		for (const edit of sentenceSplitEdits(split, cut.ids, text.length, eol))
+			found.push({
+				from: paragraph.from + edit.from,
+				text: edit.text,
+				to: paragraph.from + edit.to,
+			});
+		idsOfPieces(plan, offsets, cut.ids);
+		return true;
+	};
+
+	/** 3: one ID at the end of the block, found by its last line. */
+	const appendOne = (mintAt: number, offsets: readonly number[]): boolean => {
 		const start = lineStartOf(snapshot, mintAt);
 		// The whole line, so the block is found by its text, never by an
 		// offset the user's typing now gives another line.
@@ -465,21 +511,56 @@ export function mintBlockIds(input: {
 				snapshot.slice(start, mintAt) ||
 			lineStartOf(current, moved.from) !== moved.from
 		)
-			continue;
+			return false;
 		const block = locateBlock(current, moved.from);
-		if (block._tag === "Unidentified" && block.mintAt === moved.to)
-			appendedAt.set(block.mintAt, mintAt);
 		if (block._tag === "Identified") {
 			for (const offset of offsets) ids.set(offset, block.id);
-			continue;
+			return true;
 		}
-		if (block._tag === "Unaddressable" || inSplit(block.mintAt)) continue;
-		let planned = inserts.get(block.mintAt);
+		if (block._tag === "Unaddressable" || inSplit(block.mintAt))
+			return false;
+		if (block.mintAt === moved.to) appendedAt.set(block.mintAt, mintAt);
+		const id = idAt(block.mintAt);
+		for (const offset of offsets) ids.set(offset, id);
+		return true;
+	};
+
+	/** The ID appended at `mintAt` in the current content, planned once. */
+	const idAt = (mintAt: number): string => {
+		let planned = inserts.get(mintAt);
 		if (!planned) {
 			planned = { id: String(next++) };
-			inserts.set(block.mintAt, planned);
+			inserts.set(mintAt, planned);
 		}
-		for (const offset of offsets) ids.set(offset, planned.id);
+		return planned.id;
+	};
+
+	/** 4: each occurrence's Sentence, found by its text. */
+	const bySentence = (offsets: readonly number[]) => {
+		snapshotSentences ??= scrollSentences(snapshot).sentences;
+		currentSentences ??= scrollSentences(current).sentences;
+		const now = currentSentences;
+		for (const offset of offsets) {
+			const sentence = snapshotSentences.find(
+				({ source }) => source.from <= offset && offset < source.to,
+			);
+			if (!sentence) continue;
+			const matches = now.filter(({ text }) => text === sentence.text);
+			const [match] = matches;
+			if (!match || matches.length > 1) continue;
+			const block = locateBlock(current, match.source.from);
+			if (block._tag === "Identified") ids.set(offset, block.id);
+			else if (block._tag === "Unidentified" && !inSplit(block.mintAt))
+				ids.set(offset, idAt(block.mintAt));
+		}
+	};
+
+	for (const [mintAt, offsets] of groups) {
+		const plan = cutPlanAt(snapshot, offsets[0] ?? mintAt);
+		if (plan && (cutHere(plan, offsets) || reuseCut(plan, offsets)))
+			continue;
+		if (appendOne(mintAt, offsets)) continue;
+		bySentence(offsets);
 	}
 
 	const shifted = (edits: readonly TextEdit[], by: number) =>
@@ -513,6 +594,7 @@ export function mintBlockIds(input: {
 		...splits.flatMap(({ edits, snapshotFrom }) =>
 			shifted(edits, snapshotFrom),
 		),
+		...found,
 	];
 	return { content, edits, ids };
 }

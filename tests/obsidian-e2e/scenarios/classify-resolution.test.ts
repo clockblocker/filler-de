@@ -165,6 +165,36 @@ describe("Obsidian E2E - Classify resolution", () => {
 				const note = (await dictionary()).markdown[hund.readingPath];
 				expect(note).toMatch(KONTEXT_1);
 				expect(note).not.toMatch(KONTEXT_0);
+
+				// The user unlinks Der Hund: its block links nothing, so it goes.
+				const cut = (await snapshot()).markdown["Story.md"] ?? "";
+				const unlinked = cut.replace(
+					linkTo(hund.readingPath, "Der Hund"),
+					"Der Hund",
+				);
+				await act({ content: unlinked, kind: "modifyFile", path: "Story.md" });
+				expect(
+					(await dictionary()).markdown[hund.readingPath],
+				).toBeUndefined();
+
+				// Classify again: the blocks keep their IDs, nothing is cut again.
+				await act({
+					kind: "runClassify",
+					path: "Story.md",
+					selection: SENTENCE_BLOCKS_SELECTION,
+				});
+				const again = (await status()).classify?.resolved?.[0];
+				if (!again || !("readingPath" in again))
+					throw new Error("Der Hund did not resolve again");
+				expect((await snapshot()).markdown["Story.md"]).toBe(
+					healed.replace(
+						SENTENCE_BLOCKS_STORY,
+						sentenceBlocksStory(linkTo(again.readingPath, "Der Hund")),
+					),
+				);
+				expect((await dictionary()).markdown[again.readingPath]).toMatch(
+					KONTEXT_1,
+				);
 			},
 		);
 	});

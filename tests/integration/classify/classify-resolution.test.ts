@@ -252,16 +252,58 @@ describe("Classify resolves a selection end to end", () => {
 	});
 
 	it("cuts a paragraph of several Sentences into sentence blocks, so the Attestation embeds its own Sentence", async () => {
-		const { classify, commander, link, readingNoteOf, scroll, vault } =
-			await classifyHarness(SENTENCE_BLOCKS_STORY);
+		const {
+			activity,
+			cache,
+			classify,
+			commander,
+			link,
+			readingNoteOf,
+			scroll,
+			store,
+			vault,
+		} = await classifyHarness(SENTENCE_BLOCKS_STORY);
 		await classify(SENTENCE_BLOCKS_SELECTION);
 		const hund = commander.latestHandoff()?.resolved[0];
 		const hundNote = await readingNoteOf(LEMMA_PATHS.hund);
 		expect(hund).toMatchObject({ linked: 1, readingPath: hundNote });
+		const derHund = await link(LEMMA_PATHS.hund, "Der Hund");
+		const cut = sentenceBlocksStory(derHund);
+		expect(scroll.content).toBe(cut);
+		const refs = () => vault.content(hundNote)?.match(/!\[\[Story#\^\d+\|/gu);
+		expect(refs()).toEqual(["![[Story#^1|"]);
+
+		// The user unlinks Der Hund: its block links nothing, so it goes.
+		const { value: observer } = await inScope(
+			makeUnlinkObserver({
+				activity,
+				cache,
+				quietMs: 0,
+				scrolls: {
+					modifiedAt: () => Effect.succeed(undefined),
+					read: (path) =>
+						Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
+					resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
+				},
+				segmenterVersion: Effect.succeed("test-segmenter"),
+				store: Effect.succeed(store),
+			}),
+		);
+		scroll.content = cut.replace(derHund, "Der Hund");
+		await Effect.runPromise(observer.modified([SCROLL]));
+		await Effect.runPromise(observer.whenIdle);
+		expect(vault.content(hundNote)).toBeUndefined();
+		expect(vault.content(LEMMA_PATHS.hund)).toBeUndefined();
+
+		// Classify again: the block keeps its ID, nothing is cut again, and
+		// the Attestation names the same Sentence.
+		await classify(SENTENCE_BLOCKS_SELECTION);
+		const again = await readingNoteOf(LEMMA_PATHS.hund);
 		expect(scroll.content).toBe(
 			sentenceBlocksStory(await link(LEMMA_PATHS.hund, "Der Hund")),
 		);
-		const refs = vault.content(hundNote)?.match(/!\[\[Story#\^\d+\|/gu);
-		expect(refs).toEqual(["![[Story#^1|"]);
+		expect(vault.content(again)?.match(/!\[\[Story#\^\d+\|/gu)).toEqual([
+			"![[Story#^1|",
+		]);
 	});
 });

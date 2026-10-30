@@ -8,6 +8,7 @@ import {
 	sourceBlocksOf,
 	withEdits,
 } from "../../../../src/commanders/classify/resolution/scroll-links";
+import { scrollSentences } from "../../../../src/commanders/classify/scroll-sentences";
 
 const target = {
 	readingPath: "Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See.md",
@@ -252,12 +253,89 @@ describe("mintBlockIds cutting a paragraph into sentence blocks", () => {
 		);
 	});
 
-	it("never cuts inside `_` emphasis or inline code", () => {
-		const snapshot = "_Der See ist tief. Das Wasser ist kalt._ Ein `Hund. Ein` Boot. Ende hier.\n";
+	it("closes and opens `_` and `__` emphasis again at a cut, and never cuts inside inline code", () => {
+		const snapshot =
+			"_Der See ist tief. Das Wasser ist kalt._ Er kam. __Sie ging. Er lief.__ Ein `Hund. Ein` Boot. Ende hier.\n";
 		const { minted } = mintAndLink(snapshot, ["See"]);
 		expect(minted.content).toBe(
-			"_Der See ist tief. Das Wasser ist kalt._ ^0\n\nEin `Hund. Ein` Boot. ^1\n\nEnde hier. ^2\n",
+			"_Der See ist tief._ ^0\n\n_Das Wasser ist kalt._ ^1\n\nEr kam. ^2\n\n__Sie ging.__ ^3\n\n__Er lief.__ ^4\n\nEin `Hund. Ein` Boot. ^5\n\nEnde hier. ^6\n",
 		);
+		// Classify reads the same Sentences after the cut as before it.
+		const texts = (content: string) =>
+			scrollSentences(content).sentences.map(({ text }) => text);
+		expect(texts(minted.content)).toEqual(texts(snapshot));
+	});
+
+	it("cuts only between Classify's Sentences, where the formatter would cut inside one", () => {
+		// The formatter ends a Sentence after `*Halt!*`; Classify reads one.
+		const snapshot = "Er rief: *Halt!* und der See lief. Sie blieb.\n";
+		const { ids, minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"Er rief: *Halt!* und der See lief. ^0\n\nSie blieb. ^1\n",
+		);
+		expect(ids).toEqual(["0"]);
+	});
+
+	it("refuses a cut after which Classify would read other Sentences: one ID, as before", () => {
+		const snapshot = "Der See *ist tief. Das Wasser* ist kalt. Ende.\n";
+		const { minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(`${snapshot.trimEnd()} ^0\n`);
+	});
+
+	it("keeps the file's CRLF line endings", () => {
+		const snapshot = "Der See ist tief. Das Wasser ist kalt.\r\nEs regnet.\r\n";
+		const { minted } = mintAndLink(snapshot, ["See"]);
+		expect(minted.content).toBe(
+			"Der See ist tief. ^0\r\n\r\nDas Wasser ist kalt. ^1\r\n\r\nEs regnet. ^2\r\n",
+		);
+	});
+});
+
+describe("mintBlockIds in overlapping runs over one snapshot", () => {
+	const snapshot = "Er kam. Der See ist tief. Wir bleiben.\n\nDer Hund schläft. Er träumt.\n";
+	const cut = "Er kam. ^0\n\nDer See ist tief. ^1\n\nWir bleiben. ^2\n\n";
+
+	/** Run B mints for `word` and links it, after run A's write left `current`. */
+	function runB(current: string, word: string) {
+		const occurrence = at(snapshot, word);
+		const minted = mintBlockIds({ current, offsets: [occurrence.from], snapshot });
+		const moved = withEdits(snapshot, minted.edits);
+		const linked = linkUnitsInScroll({
+			current: minted.content,
+			edits: [{ occurrences: [moved.move(occurrence)], ref, target }],
+			snapshot: moved.content,
+		});
+		return { id: minted.ids.get(occurrence.from), linked, minted };
+	}
+
+	it("takes the blocks another run cut from the same paragraph, and links into them", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		expect(a.content).toBe(`${cut}Der Hund schläft. Er träumt.\n`);
+		const b = runB(a.content, "See");
+		expect(b.id).toBe("1");
+		expect(b.minted.content).toBe(a.content);
+		expect(b.linked.linked).toEqual([1]);
+		expect(b.linked.skipped).toEqual([]);
+		expect(b.linked.content).toContain(`Der ${LINK} ist tief. ^1\n`);
+	});
+
+	it("finds its Sentence's block by its text once the other run's links landed too", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		const own = "[[Worter/de/Lexeme/VERB/k/kom/komme/🚶 kommen|kam]]";
+		const linkedByA = a.content.replace("Er kam.", `Er ${own}.`);
+		const b = runB(linkedByA, "See");
+		// The Attestation still names the See's own Sentence; the text it
+		// read moved, so its link waits for the next Classify.
+		expect(b.id).toBe("1");
+		expect(b.minted.content).toBe(linkedByA);
+	});
+
+	it("cuts its own paragraph when the other run cut another one", () => {
+		const a = mintBlockIds({ current: snapshot, offsets: [at(snapshot, "Er kam").from], snapshot });
+		const b = runB(a.content, "Hund");
+		expect(b.id).toBe("3");
+		expect(b.minted.content).toBe(`${cut}Der Hund schläft. ^3\n\nEr träumt. ^4\n`);
+		expect(b.linked.linked).toEqual([1]);
 	});
 });
 

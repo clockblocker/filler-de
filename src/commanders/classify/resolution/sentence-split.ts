@@ -13,8 +13,15 @@
  * nothing else, so the links, decorations, hard breaks and footnotes inside
  * the Sentences stay as they were, and every offset inside a Sentence moves
  * by a known amount.
+ *
+ * It must also follow Classify's own Sentences (`markdownSentences`), whose
+ * texts key the segmentation cache and every occurrence: a cut stands only
+ * between two of them, and the cut paragraph must read as the same
+ * Sentences as before. Where the formatter and Classify disagree, the
+ * blocks they would part stay one.
  */
 import { splitStrInSentenceBlocks } from "../../librarian/pages/segmenter/block-marker/split-str-in-sentence-blocks";
+import { markdownSentences } from "../scroll-sentences";
 import type { SourceRange } from "../types";
 
 /** One sentence block of a paragraph, at offsets in the paragraph's text. */
@@ -31,8 +38,8 @@ export type SentenceSplit = readonly SentencePiece[];
 /** An edit to a text: `[from, to)` becomes `text`. */
 export type TextEdit = SourceRange & { readonly text: string };
 
-const LEADING_DECORATION = /^[*~=]*/u;
-const TRAILING_DECORATION = /[*~=]*$/u;
+const LEADING_DECORATION = /^[*_~=]*/u;
+const TRAILING_DECORATION = /[*_~=]*$/u;
 
 /** The formatter's blocks, each without its ` ^N` and the blank line after it. */
 function formattedBlocks(text: string): readonly string[] | undefined {
@@ -83,14 +90,21 @@ function pieceAt(
 	return undefined;
 }
 
+/** The texts of the Sentences Classify reads in `markdown`. */
+const sentenceTextsOf = (markdown: string) =>
+	markdownSentences(markdown).sentences.map(({ text }) => text);
+
 /**
  * The sentence blocks of a paragraph's `text`, or none when it holds one
- * Sentence or the formatter's result is not exact. Two blocks with no
- * whitespace between them, or whose cut `cutAllowed` refuses, stay one.
+ * Sentence or the cut is not exact. Two blocks stay one when no whitespace
+ * stands between them, when no boundary between two of Classify's
+ * Sentences lies between them, or when `cutAllowed` refuses the whitespace
+ * between them. The whole cut is refused when the cut paragraph would read
+ * as other Sentences than `text`.
  */
 export function sentenceSplitOf(
 	text: string,
-	cutAllowed: (at: number) => boolean,
+	cutAllowed: (gap: SourceRange) => boolean,
 ): SentenceSplit | undefined {
 	const blocks = formattedBlocks(text);
 	if (!blocks) return undefined;
@@ -108,34 +122,73 @@ export function sentenceSplitOf(
 		cursor = piece.to;
 	}
 	if (text.slice(cursor).trim()) return undefined;
+	const sentences = markdownSentences(text).sentences;
+	/** Whether one of Classify's Sentences ends, and the next starts, within `gap`. */
+	const atBoundary = (gap: SourceRange) =>
+		sentences.some(({ source }, index) => {
+			const next = sentences[index + 1];
+			return (
+				next !== undefined &&
+				source.to <= gap.to &&
+				next.source.from >= gap.from
+			);
+		});
 	const merged: SentencePiece[] = [];
 	for (const piece of pieces) {
 		const previous = merged.at(-1);
-		if (
-			previous &&
-			(piece.from === previous.to || !cutAllowed(previous.to))
-		)
-			// Without the cut, the markers it needed go too.
+		if (!previous) {
+			merged.push(piece);
+			continue;
+		}
+		const gap = { from: previous.to, to: piece.from };
+		if (gap.from < gap.to && atBoundary(gap) && cutAllowed(gap))
+			merged.push(piece);
+		// Without the cut, the markers it needed go too.
+		else
 			merged[merged.length - 1] = {
 				from: previous.from,
 				prefix: previous.prefix,
 				suffix: piece.suffix,
 				to: piece.to,
 			};
-		else merged.push(piece);
 	}
-	return merged.length < 2 ? undefined : merged;
+	if (merged.length < 2) return undefined;
+	const cut = applyEdits(
+		text,
+		sentenceSplitEdits(
+			merged,
+			merged.map((_, index) => String(index)),
+			text.length,
+			"\n",
+		),
+	);
+	const before = sentenceTextsOf(text);
+	const after = sentenceTextsOf(cut);
+	return before.length === after.length &&
+		before.every((sentence, index) => sentence === after[index])
+		? merged
+		: undefined;
+}
+
+/** `text` with `edits`, which do not overlap, applied. */
+function applyEdits(text: string, edits: readonly TextEdit[]): string {
+	let result = text;
+	for (const edit of [...edits].sort((a, b) => b.from - a.from))
+		result = result.slice(0, edit.from) + edit.text + result.slice(edit.to);
+	return result;
 }
 
 /**
  * The edits that cut a paragraph of `length` characters as `split` says,
  * the blocks taking `ids` in order: the whitespace after each block becomes
- * its markers, ` ^id` and a blank line; after the last, ` ^id` alone.
+ * its markers, ` ^id` and a blank line in the file's line ending `eol`;
+ * after the last, ` ^id` alone.
  */
 export function sentenceSplitEdits(
 	split: SentenceSplit,
 	ids: readonly string[],
 	length: number,
+	eol: string,
 ): readonly TextEdit[] {
 	return split.map((piece, index) => {
 		const next = split[index + 1];
@@ -143,7 +196,7 @@ export function sentenceSplitEdits(
 		return next
 			? {
 					from: piece.to,
-					text: `${marker}\n\n${next.prefix}`,
+					text: `${marker}${eol}${eol}${next.prefix}`,
 					to: next.from,
 				}
 			: { from: piece.to, text: marker, to: length };
@@ -154,4 +207,50 @@ export function sentenceSplitEdits(
 export function pieceIndexOf(split: SentenceSplit, offset: number): number {
 	const index = split.findIndex(({ to }) => offset < to);
 	return index < 0 ? split.length - 1 : index;
+}
+
+/**
+ * Where `content` already holds `text` cut as `split` says, by another run
+ * that read the same paragraph: the cut's start and the IDs its blocks
+ * carry. None unless exactly one place holds it.
+ */
+export function findCut(
+	content: string,
+	text: string,
+	split: SentenceSplit,
+	eol: string,
+): { readonly at: number; readonly ids: readonly string[] } | undefined {
+	const pieces = split.map(
+		(piece) =>
+			piece.prefix + text.slice(piece.from, piece.to) + piece.suffix,
+	);
+	const [first] = pieces;
+	if (first === undefined) return undefined;
+	const lead = text.slice(0, split[0]?.from ?? 0);
+	let found: { at: number; ids: string[] } | undefined;
+	for (
+		let at = content.indexOf(lead + first);
+		at >= 0;
+		at = content.indexOf(lead + first, at + 1)
+	) {
+		if (at > 0 && content[at - 1] !== "\n") continue;
+		const ids: string[] = [];
+		let position = at + lead.length;
+		for (const [index, piece] of pieces.entries()) {
+			if (!content.startsWith(`${piece} ^`, position)) break;
+			position += piece.length + 2;
+			const id = /^\d+/u.exec(content.slice(position))?.[0];
+			if (id === undefined) break;
+			position += id.length;
+			const separator = index < pieces.length - 1 ? `${eol}${eol}` : "";
+			if (!content.startsWith(separator, position)) break;
+			position += separator.length;
+			ids.push(id);
+		}
+		const lineEnd = content.slice(position).match(/^\r?(?:\n|$)/u);
+		if (ids.length !== pieces.length || !lineEnd) continue;
+		if (found) return undefined;
+		found = { at, ids };
+	}
+	return found;
 }
