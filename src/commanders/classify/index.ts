@@ -15,6 +15,10 @@ export {
 	makeKnowledgeQueue,
 } from "./resolution/knowledge-queue";
 export { produceKnowledge } from "./resolution/produce-knowledge";
+export {
+	makeReadingLifetime,
+	type ReadingLifetime,
+} from "./resolution/reading-lifetime";
 export { createScrollActivity } from "./resolution/scroll-activity";
 export {
 	observeScrollModifications,

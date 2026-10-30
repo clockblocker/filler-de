@@ -45,6 +45,12 @@ export type StoredLemmaNote = {
 	readonly pendingRelations: readonly PendingSemanticRelationRecord<"de">[];
 };
 
+/** A stored Reading and the path of its Reading note. */
+export type StoredReadingNote = {
+	readonly path: string;
+	readonly entry: ReadingEntry<"de">;
+};
+
 /**
  * The dictionary as one published index version holds it, at one revision.
  * Every read is synchronous, so a plan built from a view inside
@@ -66,9 +72,9 @@ export type DictionaryView = {
 	readonly loadReevaluateShadowsContext: (
 		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
 	) => Result.Result<ReevaluateShadowsSlice<"de">, DictionaryRequestError>;
-	/** dumdict's `removeOccurrence` and `reconcileAttestationLinks` slice. */
+	/** The slice of dumdict's removal workflows. */
 	readonly loadOccurrenceSlice: (
-		request: OccurrenceSliceRequest,
+		request: OccurrenceSliceRequest<"de">,
 	) => OccurrenceSlice<"de">;
 	/** dumdict's `rekeySurfaces` slice. */
 	readonly loadRekeySurfacesSlice: (
@@ -85,6 +91,8 @@ export type DictionaryView = {
 		readonly path: string;
 		readonly lemma: Dumling.Lemma<"de">;
 	}[];
+	/** Every stored Reading and the path of its Reading note, by path. */
+	readonly readingNotes: () => readonly StoredReadingNote[];
 	/**
 	 * Every stored Attestation Link whose ref starts with `prefix`, such as
 	 * the refs into one Scroll.
@@ -183,6 +191,7 @@ export function viewOf(
 			loadRekeySurfacesSlice(index, revision, request),
 		readingLocation: (reading) =>
 			index.readingLocation(readingKeyOf(reading)),
+		readingNotes: () => index.readingNotes(),
 		relationEdgesTo: (lemma) => index.edgesTo(lemmaKeyOf(lemma)),
 		revision,
 		surface: (surfaceId) => index.surface(surfaceId),

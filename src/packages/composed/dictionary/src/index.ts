@@ -50,4 +50,5 @@ export type {
 	DictionaryView,
 	LemmaCandidate,
 	StoredLemmaNote,
+	StoredReadingNote,
 } from "./view";

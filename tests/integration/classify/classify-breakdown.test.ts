@@ -15,7 +15,6 @@ import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/
 import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
-import { makeUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import type { ScriptedLunaAnswers } from "../../../src/managers/dumgen/scripted-luna";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -50,6 +49,7 @@ import {
 	clicksOn,
 	MemoryScroll,
 	resolveAmong,
+	unlinkingOver,
 } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
@@ -126,21 +126,7 @@ async function storyOf(
 		}),
 		segmenterVersion: Effect.succeed("test-segmenter"),
 	});
-	const { value: observer } = await inScope(
-		makeUnlinkObserver({
-			activity,
-			cache,
-			quietMs: 0,
-			scrolls: {
-				modifiedAt: () => Effect.succeed(undefined),
-				read: (path) =>
-					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
-				resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
-			},
-			segmenterVersion: Effect.succeed("test-segmenter"),
-			store: Effect.succeed(store),
-		}),
-	);
+	const { edited } = await unlinkingOver({ activity, cache, scroll, store, vault });
 	// The user clicks each unit Classify linked, which attests it (#281).
 	const { clickAll } = await clicksOn({
 		activity,
@@ -174,11 +160,10 @@ async function storyOf(
 			await Effect.runPromise(queue.whenIdle);
 			return resolved;
 		},
-		/** The user edits the Scroll, and the unlink observer answers. */
+		/** The user edits the Scroll; the unlink observer and the Reading lifetime answer. */
 		edit: async (content: string) => {
 			scroll.content = content;
-			await Effect.runPromise(observer.modified([SCROLL]));
-			await Effect.runPromise(observer.whenIdle);
+			await edited();
 		},
 		notes: (): Record<string, string | undefined> =>
 			Object.fromEntries(

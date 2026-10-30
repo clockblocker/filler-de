@@ -18,6 +18,7 @@ import type {
 	KnowledgeQueue,
 	OccurrenceAttester,
 } from "../commanders/classify";
+import type { ReadingLifetime } from "../commanders/classify/resolution/reading-lifetime";
 import type { ScrollActivity } from "../commanders/classify/resolution/scroll-activity";
 import type { UnlinkObserver } from "../commanders/classify/resolution/unlink-observer";
 import type { SegmentationCache } from "../commanders/classify/segmentation-cache";
@@ -39,7 +40,7 @@ export class TextfresserCommands extends Context.Service<
 	{ readonly current: Effect.Effect<Textfresser> }
 >()("textfresser/plugin/TextfresserCommands") {}
 
-/** Classify and its background work: Knowledge runs, unlink checks. */
+/** Classify and its background work: Knowledge runs, unlink and lifetime checks. */
 export class ClassifyServices extends Context.Service<
 	ClassifyServices,
 	{
@@ -50,6 +51,8 @@ export class ClassifyServices extends Context.Service<
 		readonly knowledgeQueue: KnowledgeQueue;
 		/** Removes the occurrences whose links the user deletes from a Scroll (#116). */
 		readonly unlinkObserver: UnlinkObserver;
+		/** Removes the Readings no Attestation or link names any more (#281). */
+		readonly readingLifetime: ReadingLifetime;
 		/** Reopens a clicked Reading note once its Knowledge lands (#116). */
 		readonly reopenReading: (
 			target: string,

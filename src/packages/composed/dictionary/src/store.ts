@@ -168,6 +168,7 @@ import {
 	type DictionaryView,
 	type LemmaCandidate,
 	type StoredLemmaNote,
+	type StoredReadingNote,
 	viewOf,
 } from "./view";
 
@@ -288,9 +289,9 @@ export type DumdictVaultStore = {
 	readonly loadReevaluateShadowsContext: (
 		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
 	) => Effect.Effect<ReevaluateShadowsSlice<"de">, DictionaryRequestError>;
-	/** dumdict's `removeOccurrence` and `reconcileAttestationLinks` slice. */
+	/** The slice of dumdict's removal workflows. */
 	readonly loadOccurrenceSlice: (
-		request: OccurrenceSliceRequest,
+		request: OccurrenceSliceRequest<"de">,
 	) => Effect.Effect<OccurrenceSlice<"de">>;
 	/** dumdict's `rekeySurfaces` slice. */
 	readonly loadRekeySurfacesSlice: (
@@ -370,6 +371,8 @@ export type DumdictVaultStore = {
 			readonly lemma: Dumling.Lemma<"de">;
 		}[]
 	>;
+	/** Every stored Reading and the path of its Reading note, by path. */
+	readonly readingNotes: Effect.Effect<readonly StoredReadingNote[]>;
 	/**
 	 * Every stored Attestation Link whose ref starts with `prefix`, such as
 	 * the refs into one Scroll.
@@ -3551,6 +3554,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			Effect.sync(() => live().loadRekeySurfacesSlice(request)),
 		readingLocation: (reading) =>
 			Effect.sync(() => live().readingLocation(reading)),
+		readingNotes: Effect.sync(() => live().readingNotes()),
 		refreshTables,
 		relationEdgesTo: (lemma) =>
 			Effect.sync(() => live().relationEdgesTo(lemma)),

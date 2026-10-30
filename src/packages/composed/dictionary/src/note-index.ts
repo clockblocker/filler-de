@@ -579,6 +579,16 @@ export class NoteIndex {
 			.sort((a, b) => byCodeUnit(a.path, b.path));
 	}
 
+	/** Every Reading read as data, with its Reading note's path, by path. */
+	readingNotes(): {
+		readonly path: string;
+		readonly entry: ReadingEntry<"de">;
+	}[] {
+		return [...this.readings.values()]
+			.map(({ entry, path }) => ({ entry, path }))
+			.sort((a, b) => byCodeUnit(a.path, b.path));
+	}
+
 	reading(readingKey: string): ReadingEntry<"de"> | undefined {
 		return this.readings.get(readingKey)?.entry;
 	}

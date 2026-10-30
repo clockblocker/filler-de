@@ -14,6 +14,10 @@ import {
 } from "../../../../src/commanders/classify/classify-selection";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import {
+	makeReadingLifetime,
+	type ReadingLifetimeDeps,
+} from "../../../../src/commanders/classify/resolution/reading-lifetime";
+import {
 	createScrollActivity,
 	type ScrollActivity,
 } from "../../../../src/commanders/classify/resolution/scroll-activity";
@@ -41,6 +45,7 @@ import { fakeDumgen } from "../../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
+	memoryNoteLinks,
 	planFor,
 	resolutionHarness,
 	resolveAmong,
@@ -120,10 +125,21 @@ async function classifiedSee(content: string, sentences: readonly string[]) {
  * The observer on a runtime of its own, whose `TestClock` moves only when
  * the test adjusts it: its quiet periods are slept out on that clock.
  */
-function onTestClock<E>(deps: UnlinkObserverDeps<E>) {
+function onTestClock<E>(
+	deps: UnlinkObserverDeps<E>,
+	lifetimeDeps?: ReadingLifetimeDeps<E>,
+) {
 	const runtime = ManagedRuntime.make(TestClock.layer());
 	const scope = Scope.makeUnsafe();
-	const observer = runtime.runSync(Scope.provide(scope)(makeUnlinkObserver(deps)));
+	const lifetime =
+		lifetimeDeps === undefined
+			? undefined
+			: runtime.runSync(Scope.provide(scope)(makeReadingLifetime(lifetimeDeps)));
+	const observer = runtime.runSync(
+		Scope.provide(scope)(
+			makeUnlinkObserver(lifetime === undefined ? deps : { ...deps, readings: lifetime }),
+		),
+	);
 	return {
 		/** Moves the clock on by `millis`, running the sleeps it passes. */
 		adjust: (millis: number) => runtime.runPromise(TestClock.adjust(millis)),
@@ -131,6 +147,13 @@ function onTestClock<E>(deps: UnlinkObserverDeps<E>) {
 		close: () => runtime.runPromise(Scope.close(scope, Exit.void)),
 		modified: (paths: readonly string[]) =>
 			runtime.runPromise(observer.modified(paths)),
+		/** Obsidian resolved the links of the files at `paths` again, and the lifetime's check ends. */
+		relinked: async (paths: readonly string[]) => {
+			if (!lifetime) return;
+			for (const path of paths)
+				await runtime.runPromise(lifetime.changed({ _tag: "Resolved", path }));
+			await runtime.runPromise(lifetime.whenIdle);
+		},
 		/** Runs `effect` on the observer's clock, as a Classify run would. */
 		run: <A>(effect: Effect.Effect<A>) => runtime.runPromise(effect),
 		sweep: () => runtime.runPromise(observer.sweep),
@@ -170,14 +193,16 @@ function observerOver(options: {
 	readonly sweepQuietMs?: number;
 	/** Reads Scrolls from the vault instead of `scroll`, as after a rename. */
 	readonly readFromVault?: boolean;
-	/** Whether another file links a note, as Obsidian's resolved links tell. */
-	readonly linkedElsewhere?: (notePath: string) => boolean;
+	/** Other notes outside `Worter/` and what they hold, whose links Obsidian resolved too. */
+	readonly others?: () => Readonly<Record<string, string>>;
 }) {
 	const notices: string[] = [];
 	const reads: string[] = [];
 	const store: UnlinkStore = options.store;
-	const observer = onTestClock({
-		activity: options.activity ?? createScrollActivity(),
+	const activity = options.activity ?? createScrollActivity();
+	const observer = onTestClock(
+		{
+		activity,
 		...(options.blockedBy === undefined ? {} : { blockedBy: options.blockedBy }),
 		cache: options.cache ?? memorySegmentationCache(),
 		notify: (message) => notices.push(message),
@@ -199,22 +224,29 @@ function observerOver(options: {
 					return options.readScroll?.(content) ?? Effect.succeed(content);
 				}),
 			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
-			...(options.linkedElsewhere === undefined
-				? {}
-				: {
-						linkedElsewhere: (notePath: string) =>
-							Effect.sync(() => options.linkedElsewhere?.(notePath) ?? false),
-					}),
 		},
 		segmenterVersion: Effect.succeed(SEGMENTER_VERSION),
 		store: Effect.succeed(store),
-	});
+	},
+		{
+			activity,
+			...(options.blockedBy === undefined ? {} : { blockedBy: options.blockedBy }),
+			links: memoryNoteLinks(
+				() => ({ ...options.others?.(), [SCROLL]: options.scroll() }),
+				() => [...options.vault.markdownPaths(), SCROLL],
+			),
+			quietMs: 0,
+			store: Effect.succeed(options.store),
+			sweepQuietMs: 0,
+		},
+	);
 	return {
-		/** The user's edit lands, VAM reports it, and the check runs. */
+		/** The user's edit lands, VAM reports it, the check runs, and Obsidian resolves the Scroll's links. */
 		edit: async (write: () => void) => {
 			write();
 			await observer.modified([SCROLL]);
 			await observer.whenIdle();
+			await observer.relinked([SCROLL]);
 		},
 		notices,
 		observer,
@@ -299,7 +331,7 @@ async function classifyRepeated(content: string) {
 }
 
 describe("unlink observer", () => {
-	it("removes an occurrence whose link the user deleted, and the Reading with its last one", async () => {
+	it("removes an occurrence whose link the user deleted, keeping its Reading while a link names it, and then the Reading once none does (#281)", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
 		const { cache, harness } = await classifiedSee(content, [
 			"Der See ist tief.",
@@ -339,7 +371,9 @@ describe("unlink observer", () => {
 		expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Story"]);
 
 		// The last link goes: the Scroll still holds the Sentence it was
-		// recorded in, so the Reading, its Surface and its Lemma go with it.
+		// recorded in, so its Attestation goes, and with no Attestation and
+		// no link left, the Reading lifetime removes the Reading, its
+		// Surface and its Lemma.
 		await edit(() => {
 			harness.scroll.content = harness.scroll.content.replace(link, "See");
 		});
@@ -739,7 +773,7 @@ describe("unlink observer", () => {
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
 	});
 
-	it("lets no link shield an occurrence whose key it computes and nothing records, as one never clicked, but keeps a Reading's last while one names it (#281)", async () => {
+	it("lets no link shield an occurrence whose key it computes and nothing records, as one never clicked, and keeps the Reading it empties while that link names it (#281)", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt.\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
 		// The second Sentence is segmented, but its See was never attested.
@@ -769,40 +803,50 @@ describe("unlink observer", () => {
 		});
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
 		// One whose key is recorded nowhere is another occurrence: it explains
-		// nothing, but the ref is its Reading's last, and removing it would
-		// remove the Reading that link opens, so it stays.
+		// nothing, so the Attestation and its embed go at once. The Reading
+		// it empties stays, as the unclicked link still opens it.
 		await edit(() => {
 			harness.scroll.content = `Der See ist tief. ^0\n\nDer ${link} ist kalt.\n`;
 		});
-		expect(await refsOf(harness.store, see)).toHaveLength(1);
-		// Once no link names the Reading, it goes.
+		expect(await refsOf(harness.store, see)).toEqual([]);
+		expect(harness.vault.content(notePath(lake))).not.toContain("Story#^0");
+		expect(await run(harness.store.readingLocation(lake))).toBeDefined();
+		// Once no link names the Reading, it goes, and its Lemma with it.
 		await edit(() => {
 			harness.scroll.content = "Der See ist tief. ^0\n\nDer See ist kalt.\n";
 		});
-		expect(await refsOf(harness.store, see)).toEqual([]);
+		expect(await run(harness.store.readingLocation(lake))).toBeUndefined();
+		expect(harness.vault.content(notePath(lake))).toBeUndefined();
+		expect(await run(harness.store.lemmaNote(see))).toBeUndefined();
 	});
 
-	it("keeps a Reading's last occurrence while another Scroll links the Reading (#281)", async () => {
+	it("removes an Attestation whose link went with Keep, and keeps its Reading while another Scroll links it (#281)", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
 		const link = linkTo(notePath(lake), "See");
-		let elsewhere = true;
-		const { edit } = observerOver({
+		let other = `Ein ${link} im Wald.\n`;
+		const { edit, observer } = observerOver({
 			cache,
-			linkedElsewhere: (path) => elsewhere && path === notePath(lake),
+			others: () => ({ "Library/Other.md": other }),
 			scroll: () => harness.scroll.content,
 			store: harness.store,
 			vault: harness.vault,
 		});
+		// Obsidian has resolved the other Scroll's links, as at startup.
+		await observer.relinked(["Library/Other.md"]);
 		await edit(() => {
 			harness.scroll.content = harness.scroll.content.replace(link, "See");
 		});
-		expect(await refsOf(harness.store, see)).toHaveLength(1);
-		elsewhere = false;
-		await edit(() => {
-			harness.scroll.content += "\n";
-		});
+		// The Attestation and its embed go; the Reading the other Scroll's
+		// unclicked link opens stays, with no Attestation.
 		expect(await refsOf(harness.store, see)).toEqual([]);
+		expect(harness.vault.content(notePath(lake))).not.toContain("Story#^0");
+		expect((await run(harness.store.readingLocation(lake)))?.entry.attestationLinks).toEqual([]);
+		// The other Scroll's link goes: so does the Reading.
+		other = "Ein See im Wald.\n";
+		await observer.relinked(["Library/Other.md"]);
+		expect(await run(harness.store.readingLocation(lake))).toBeUndefined();
+		expect(await run(harness.store.lemmaNote(see))).toBeUndefined();
 	});
 
 	it("waits for a Classify run on the Scroll to end before it judges", async () => {

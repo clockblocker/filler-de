@@ -5,7 +5,8 @@
  * the scripted dumgen resolves the noun, the separable verb and the
  * Locution through the real dumgen, so the desktop scenario tests the
  * Obsidian side only. Its last step is the `classify-unlink` scenario's:
- * the user unlinks two occurrences and the unlink observer removes them.
+ * the user unlinks two occurrences: the unlink observer removes their
+ * Attestations, and the Reading lifetime the Reading no link names.
  * The `classify-sentence-blocks` scenario's story follows: a paragraph of
  * several Sentences without IDs, cut into sentence blocks first.
  */
@@ -19,7 +20,6 @@ import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/
 import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
-import { makeUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
@@ -41,6 +41,7 @@ import {
 	clicksOn,
 	MemoryScroll,
 	resolveAmong,
+	unlinkingOver,
 } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
@@ -271,26 +272,11 @@ describe("Classify resolves a selection end to end", () => {
 		// The user unlinks the second "Der Hund" and "heute" (#116).
 		const hundNote = await readingNoteOf(LEMMA_PATHS.hund);
 		const heuteNote = await readingNoteOf(LEMMA_PATHS.heute);
-		const { value: observer } = await inScope(
-			makeUnlinkObserver({
-				activity,
-				cache,
-				quietMs: 0,
-				scrolls: {
-					modifiedAt: () => Effect.succeed(undefined),
-					read: (path) =>
-						Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
-					resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
-				},
-				segmenterVersion: Effect.succeed("test-segmenter"),
-				store: Effect.succeed(store),
-			}),
-		);
+		const { edited } = await unlinkingOver({ activity, cache, scroll, store, vault });
 		scroll.content = scroll.content
 			.replace(`${await link(LEMMA_PATHS.hund, "Der Hund")} schläft.`, "Der Hund schläft.")
 			.replace(await link(LEMMA_PATHS.heute, "heute"), "heute");
-		await Effect.runPromise(observer.modified([SCROLL]));
-		await Effect.runPromise(observer.whenIdle);
+		await edited();
 		expect(vault.content(hundNote)).toMatch(/!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u);
 		expect(vault.content(hundNote)).not.toMatch(/Story#\^1/u);
 		expect(vault.content(heuteNote)).toBeUndefined();
@@ -330,24 +316,9 @@ describe("Classify resolves a selection end to end", () => {
 		expect(refs()).toEqual(["![[Story#^1|"]);
 
 		// The user unlinks Der Hund: its block links nothing, so it goes.
-		const { value: observer } = await inScope(
-			makeUnlinkObserver({
-				activity,
-				cache,
-				quietMs: 0,
-				scrolls: {
-					modifiedAt: () => Effect.succeed(undefined),
-					read: (path) =>
-						Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
-					resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
-				},
-				segmenterVersion: Effect.succeed("test-segmenter"),
-				store: Effect.succeed(store),
-			}),
-		);
+		const { edited } = await unlinkingOver({ activity, cache, scroll, store, vault });
 		scroll.content = cut.replace(derHund, "Der Hund");
-		await Effect.runPromise(observer.modified([SCROLL]));
-		await Effect.runPromise(observer.whenIdle);
+		await edited();
 		expect(vault.content(hundNote)).toBeUndefined();
 		expect(vault.content(LEMMA_PATHS.hund)).toBeUndefined();
 

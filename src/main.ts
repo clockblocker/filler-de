@@ -308,7 +308,10 @@ export default class TextEaterPlugin extends Plugin {
 						),
 					),
 				resetRunning: () => dictionaryReset.isRunning(),
-				sweep: classify.unlinkObserver.sweep,
+				sweep: Effect.andThen(
+					classify.unlinkObserver.sweep,
+					classify.readingLifetime.sweep,
+				),
 			};
 		});
 	}

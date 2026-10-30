@@ -4,7 +4,6 @@ import {
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
-import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import {
 	splitPathCodec,
 	VaultActionManager,
@@ -24,6 +23,7 @@ import {
 	HIDDEN_FOLDER,
 	makeKnowledgeQueue,
 	makeOccurrenceAttester,
+	makeReadingLifetime,
 	makeUnlinkObserver,
 	observeScrollModifications,
 	produceKnowledge,
@@ -57,6 +57,7 @@ import { Settings } from "../settings/settings-service";
 import { dictionaryProjections } from "../stateless-helpers/dictionary-projections";
 import { metadataFormatOf } from "../stateless-helpers/note-metadata";
 import { getErrorMessage } from "../utils/get-error-message";
+import { obsidianNoteLinks } from "./obsidian-note-links";
 import {
 	ClassifyServices,
 	composePluginServices,
@@ -147,24 +148,6 @@ const resolverStore = (store: DictionaryStore["Service"]) =>
 				}),
 		),
 	);
-
-/**
- * Whether a Markdown file outside `Worter/` other than `scrollPath` links
- * the note at `notePath`, by Obsidian's resolved links.
- */
-const linkedElsewhere =
-	(app: Pick<App, "metadataCache">) =>
-	(notePath: string, scrollPath: string) =>
-		Effect.sync(() =>
-			Object.entries(app.metadataCache.resolvedLinks).some(
-				([source, targets]) =>
-					source !== scrollPath &&
-					!VaultPath.caseInsensitive.isUnder(source, WORTER_FOLDER, {
-						inclusive: false,
-					}) &&
-					(targets[notePath] ?? 0) > 0,
-			),
-		);
 
 /**
  * Re-renders the active note at `path` in Reading view, keeping its scroll
@@ -296,6 +279,16 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 				segmenterVersion,
 				store: dictionary,
 			});
+			// A Reading lives while it has an Attestation or a link names it
+			// (#281). Its checks are interrupted as this Layer's scope
+			// closes, after the unlink observer's.
+			const readingLifetime = yield* makeReadingLifetime({
+				activity: scrollActivity,
+				blockedBy: lifecycle.classifyRefusal,
+				knowledge: knowledgeQueue,
+				links: obsidianNoteLinks(deps.plugin.app),
+				store: dictionary,
+			});
 			// Its checks are interrupted as this Layer's scope closes,
 			// before the Knowledge queue's runs.
 			const unlinkObserver = yield* makeUnlinkObserver({
@@ -303,10 +296,8 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 				blockedBy: lifecycle.classifyRefusal,
 				cache,
 				notify,
-				scrolls: {
-					...vamUnlinkScrolls(vam),
-					linkedElsewhere: linkedElsewhere(deps.plugin.app),
-				},
+				readings: readingLifetime,
+				scrolls: vamUnlinkScrolls(vam),
 				segmenterVersion,
 				store: dictionary,
 			});
@@ -315,6 +306,7 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 				cache,
 				classify,
 				knowledgeQueue,
+				readingLifetime,
 				reopenReading,
 				scrollActivity,
 				segmenterVersion,
@@ -364,13 +356,14 @@ const DictionaryResetLive = (deps: PluginServicesDeps) =>
 /**
  * VAM's listening: it turns file system events into VaultEvents, filters
  * its own, and notifies subscribers such as the Librarian. Then the
- * protected paths' warnings and the Scrolls' modifications.
+ * protected paths' warnings, the Scrolls' modifications, and the changes
+ * to which notes link which, as Obsidian resolves them.
  */
 const ObservationLive = (deps: PluginServicesDeps) =>
 	Layer.effectDiscard(
 		Effect.gen(function* () {
 			const vam = yield* VaultActionManager;
-			const { unlinkObserver } = yield* ClassifyServices;
+			const { readingLifetime, unlinkObserver } = yield* ClassifyServices;
 			const notices = yield* Notices;
 			yield* vam.startListening();
 			// It logs each warning it shows, under its delivery's span.
@@ -391,7 +384,13 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 			);
 			yield* Effect.asVoid(
 				Effect.acquireRelease(
-					observeScrollModifications(vam, unlinkObserver),
+					observeScrollModifications(vam, {
+						modified: (paths) =>
+							Effect.andThen(
+								unlinkObserver.modified(paths),
+								readingLifetime.modified(paths),
+							),
+					}),
 					(stop) =>
 						releaseGuarded(
 							deps.notices,
@@ -399,6 +398,12 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 							stop,
 						),
 				),
+			);
+			// Interrupted, and Obsidian's listeners released, as this
+			// Layer's scope closes.
+			yield* obsidianNoteLinks(deps.plugin.app).changes.pipe(
+				Stream.runForEach(readingLifetime.changed),
+				Effect.forkScoped,
 			);
 		}),
 	);

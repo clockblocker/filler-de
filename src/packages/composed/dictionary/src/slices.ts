@@ -372,23 +372,26 @@ export function loadReevaluateShadowsContext(
 }
 
 /**
- * The slice `removeOccurrence` and `reconcileAttestationLinks` plan from:
- * each stored Lemma one of whose Readings holds a link with a requested
- * ref, whole, every other Reading that claims one of them or one of their
+ * The slice the removal workflows (`removeOccurrence`, `removeReading`,
+ * `reconcileAttestationLinks`) plan from: each stored Lemma one of whose
+ * Readings holds a link with a requested ref or is a requested Reading,
+ * whole, every other Reading that claims one of them or one of their
  * Readings, and every stored Shadow relation whose Pending Entry ID is one
  * of theirs.
  */
 export function loadOccurrenceSlice(
 	index: NoteIndex,
 	revision: StoreRevision,
-	request: OccurrenceSliceRequest,
+	request: OccurrenceSliceRequest<"de">,
 ): OccurrenceSlice<"de"> {
 	const lemmaKeys = new Set<string>();
+	const addOwner = (reading: Dumling.Reading<"de">) => {
+		const owner = index.readingOwner(readingKeyOf(reading));
+		if (owner !== undefined) lemmaKeys.add(owner);
+	};
 	for (const ref of new Set(request.refs))
-		for (const link of index.linksWithRef(ref)) {
-			const owner = index.readingOwner(readingKeyOf(link.reading));
-			if (owner !== undefined) lemmaKeys.add(owner);
-		}
+		for (const link of index.linksWithRef(ref)) addOwner(link.reading);
+	for (const reading of request.readings ?? []) addOwner(reading);
 	const lemmas: LemmaSlice<"de">[] = [...lemmaKeys].sort().flatMap((key) => {
 		const data = index.lemmaData(key);
 		return data

@@ -19,6 +19,8 @@ import { memoryJudgementCache } from "../../../../src/commanders/classify/judgem
 import { optionallyReflexiveOf } from "../../../../src/commanders/classify/resolution/commit-occurrence";
 import { dumgenUnitResolver, isRateLimited } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeReadingLifetime } from "../../../../src/commanders/classify/resolution/reading-lifetime";
+import { createScrollActivity } from "../../../../src/commanders/classify/resolution/scroll-activity";
 import {
 	memorySegmentationCache,
 	SegmentationCache,
@@ -33,6 +35,7 @@ import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
 	baseTextKnowledge,
+	memoryNoteLinks,
 	planFor,
 	resolutionHarness,
 	run,
@@ -621,7 +624,7 @@ describe("dumgenUnitResolver", () => {
 		});
 	});
 
-	it("moves an occurrence judged another Reading: the old one goes with its last link", async () => {
+	it("moves an occurrence judged another Reading: the old one stays empty while a link opens it, and goes once none does (#281)", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const plan = planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits });
 		let emoji = "🌊";
@@ -635,14 +638,42 @@ describe("dumgenUnitResolver", () => {
 		const [first] = (await run(harness.store.lemmaNote(see)))?.readings ?? [];
 		const ref = first?.attestationLinks[0]?.ref;
 		expect(ref).toBeDefined();
+		const { value: lifetime } = await inScope(
+			makeReadingLifetime({
+				activity: createScrollActivity(),
+				links: memoryNoteLinks(
+					() => ({ [SCROLL]: harness.scroll.content }),
+					() => [...harness.vault.markdownPaths(), SCROLL],
+				),
+				quietMs: 0,
+				store: Effect.succeed(harness.store),
+				sweepQuietMs: 0,
+			}),
+		);
+		const relinked = async () => {
+			await run(lifetime.changed({ _tag: "Resolved", path: SCROLL }));
+			await run(lifetime.whenIdle);
+		};
+		await relinked();
 
 		emoji = "🏞";
 		const [moved] = await harness.resolve({ ...plan, content: harness.scroll.content });
 		expect(moved?._tag).toBe("Resolved");
+		const emojis = async () =>
+			((await run(harness.store.lemmaNote(see)))?.readings ?? []).map(({ reading }) =>
+				"emojiDescription" in reading ? reading.emojiDescription : "",
+			);
 		const note = await run(harness.store.lemmaNote(see));
-		expect(note?.readings.map(({ reading }) => ("emojiDescription" in reading ? reading.emojiDescription : ""))).toEqual(["🏞"]);
-		expect(note?.readings[0]?.attestationLinks.map((link) => link.ref)).toEqual([ref ?? ""]);
-		// 🌊 lost its last occurrence, so its Reading note went with it.
+		expect((await emojis()).sort()).toEqual(["🌊", "🏞"].sort());
+		expect(note?.readings.flatMap(({ attestationLinks }) => attestationLinks.map((link) => link.ref))).toEqual([ref ?? ""]);
+		// 🌊 lost its last occurrence, but the Scroll's link still opens it.
+		await relinked();
+		expect(await emojis()).toContain("🌊");
+		// Once no link opens it, the empty Reading goes; 🏞 keeps its
+		// Attestation.
+		harness.scroll.content = "Der See ist tief. ^0\n";
+		await relinked();
+		expect(await emojis()).toEqual(["🏞"]);
 		expect(harness.vault.content(SEE_READING_PATH)).toBeUndefined();
 	});
 

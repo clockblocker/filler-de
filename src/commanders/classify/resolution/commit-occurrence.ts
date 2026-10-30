@@ -9,8 +9,8 @@
  *
  * A ref names one occurrence, once in the dictionary. An occurrence judged
  * a different Reading than it was recorded under moves: it is removed
- * (`removeOccurrence`, with its cascade, which the store follows with the
- * Shadow re-evaluation a removal asks for) and recorded again. One judged
+ * (`removeOccurrence`, keeping the Reading it empties, which lives while a
+ * link names it, `reading-lifetime.ts`) and recorded again. One judged
  * the same Reading under another Surface keeps its link.
  *
  * Each occurrence is one store transaction (`transact`): it plans from the
@@ -195,20 +195,49 @@ function linkOf(
 }
 
 /**
- * Plans removing an occurrence (`removeOccurrence`) and what it leaves
- * behind: a Reading with no link, a Surface no link names, a Lemma with no
- * Reading, with the claims on them. Once the plan has landed, the store
- * re-evaluates the Shadows of the Lemmas it removed, as a commit of its own
- * from a slice loaded then (texteater#1257).
+ * Plans removing an occurrence's Attestation (`removeOccurrence`) and what
+ * it leaves behind: a Surface no link names, with the claims on it. The
+ * Reading it empties stays (`emptyReading: "Keep"`): a Reading lives while
+ * it has an Attestation or a link names it, and the Reading lifetime
+ * removes it once neither holds (#281).
  */
 export function planRemoval(
 	view: DictionaryView,
 	ref: string,
 ): Result.Result<Transaction<"Removed">, DictionaryCommitFailed> {
+	const request = { emptyReading: "Keep", ref } as const;
 	const slice = view.loadOccurrenceSlice(
-		planner.occurrenceSliceRequest({ ref }),
+		planner.occurrenceSliceRequest(request),
 	);
-	const attempt = planOf(() => planner.removeOccurrence(slice, { ref }));
+	return committedRemoval(
+		planOf(() => planner.removeOccurrence(slice, request)),
+	);
+}
+
+/**
+ * Plans removing a Reading (`removeReading`) and what it leaves behind, as
+ * an emptying removal does: its Surfaces no other link names, its Lemma
+ * with its last Reading, and the claims on them. Once the plan has landed,
+ * the store re-evaluates the Shadows of the Lemmas it removed, as a commit
+ * of its own from a slice loaded then (texteater#1257), and moves the
+ * Breakdown and Source links that waited on them (#267).
+ */
+export function planReadingRemoval(
+	view: DictionaryView,
+	reading: Dumling.Reading<"de">,
+): Result.Result<Transaction<"Removed">, DictionaryCommitFailed> {
+	const request = { reading };
+	const slice = view.loadOccurrenceSlice(
+		planner.occurrenceSliceRequest(request),
+	);
+	return committedRemoval(
+		planOf(() => planner.removeReading(slice, request)),
+	);
+}
+
+const committedRemoval = (
+	attempt: Result.Result<DumdictPlanOutcome<"de">, DictionaryCommitFailed>,
+): Result.Result<Transaction<"Removed">, DictionaryCommitFailed> => {
 	if (Result.isFailure(attempt)) return Result.fail(attempt.failure);
 	const outcome = attempt.success;
 	if (outcome.status === "conflict")
@@ -225,7 +254,7 @@ export function planRemoval(
 	if (outcome.plan.changes.length === 0)
 		return Result.succeed(Transaction.stop("Removed"));
 	return Result.succeed(Transaction.commit(outcome.plan, "Removed"));
-}
+};
 
 /**
  * What a ref recorded elsewhere asks: nothing when this Reading holds it
