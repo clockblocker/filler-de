@@ -29,6 +29,7 @@ export {
 	type HostPlugin,
 	makePluginHost,
 	PluginHost,
+	type PostProcessor,
 	type WorkspaceEvents,
 } from "./plugin-host";
 export { createRequestUrlFetch, type RequestUrl } from "./request-url-fetch";
