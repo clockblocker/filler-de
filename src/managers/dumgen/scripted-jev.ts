@@ -1,9 +1,11 @@
 /**
  * A jev that answers from a script instead of the TypeSafe API, for runs
  * that must never reach a provider: desktop E2E and in-process tests. It
- * answers a question by its id from `answers`; any other Noul gets 0.1, a
- * Choice offering `German` picks it, any other Choice its last option, and
- * a Score its lowest score.
+ * answers a question by its id from `answers`, where `<stage>:<id>` answers
+ * it only in that stage and wins over a bare `<id>`: stages reuse ids, as
+ * `f_1` is a fixed-word Noul in `candidates` and a headword Choice in
+ * `breakdown-forms`. Any other Noul gets 0.1, a Choice offering `German`
+ * picks it, any other Choice its last option, and a Score its lowest score.
  */
 import type { Answer, JevAsk } from "dumgen";
 
@@ -26,7 +28,7 @@ export function createScriptedJev(answers: ScriptedJevAnswers = {}): {
 		requests[stage] = (requests[stage] ?? 0) + 1;
 		const answered: Record<string, Answer> = {};
 		for (const [id, question] of Object.entries(request.questions)) {
-			const scripted = answers[id];
+			const scripted = answers[`${stage}:${id}`] ?? answers[id];
 			if (scripted) answered[id] = scripted;
 			else if (question.type === "noul")
 				answered[id] = { noul: 0.1, type: "noul" };

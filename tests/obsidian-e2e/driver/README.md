@@ -50,7 +50,7 @@ record Textfresser's VAM Markdown modify observations below that
 library-relative folder; `modifications` settles and returns them. It also
 installs a scripted jev in Textfresser's dumgen for the whole scenario, from
 `"dumgen": { "jev": { "<question id>": "<Choice option>" | <Noul> } }` or
-empty, with Luna's answers by stage under `"luna": { "<stage>": [{ "when"?:
+empty, where a `"<stage>:<question id>"` key answers in that stage only, with Luna's answers by stage under `"luna": { "<stage>": [{ "when"?:
 "<input text>", "output": … }] }`, and `cleanupSession` removes it, so no
 scenario reaches a provider; `status` counts its requests under
 `dumgenRequests`. `"resetDictionary": true` moves `Worter/`, and the `Worter backup …/` folders and `Dictionary reset ….md` reports a dictionary reset leaves at the vault root, to Obsidian's trash first, and

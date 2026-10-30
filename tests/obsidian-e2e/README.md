@@ -123,8 +123,11 @@ heals it again as on load, and settles once the restart is done.
 `runClassify` selects text that occurs once in a Scroll and runs the Classify
 command. Desktop E2E never reaches a provider: every scenario's dumgen answers
 jev from a script, which a scenario declares as `dumgen: { jev: { <question
-id>: "<Choice option>" | <Noul> } }`; unscripted questions get the scripted
-jev's defaults (`src/managers/dumgen/scripted-jev.ts`), German included.
+id>: "<Choice option>" | <Noul> } }`; a `<stage>:<id>` key answers that
+question in that stage only, over a bare id, since stages reuse ids (`f_1`
+is a Noul in `candidates` and a Choice in `breakdown-forms`); unscripted
+questions get the scripted jev's defaults
+(`src/managers/dumgen/scripted-jev.ts`), German included.
 Each scenario's scripted segmentations are cached under their own segmenter
 version, so a scenario starts with a cold Segmentation Cache; they collect,
 a few small entries per run, in the test vault's hidden

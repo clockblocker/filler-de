@@ -17,6 +17,7 @@ export const TITLES = {
 	deineKontexte: title("kontexte", "Deine Kontexte"),
 	eintraege: title("eintraege", "Einträge"),
 	flexion: title("flexion", "Flexion"),
+	morpheme: title("morpheme", "Morpheme"),
 	note: title("kontexte", "Note"),
 	tags: title("tags", "Tags"),
 	uebersetzung: title("translations", "Übersetzung"),

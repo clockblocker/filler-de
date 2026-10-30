@@ -88,9 +88,11 @@ type ScenarioAction =
 interface ScenarioDefinition {
 	/**
 	 * dumgen never reaches a provider in desktop E2E: its jev answers every
-	 * question from this script, by question id. A string picks that Choice
-	 * option and a number is a Noul; anything unscripted gets the scripted
-	 * jev's defaults (`src/managers/dumgen/scripted-jev.ts`).
+	 * question from this script, by question id, or by `<stage>:<id>` for
+	 * that stage only, which wins over the bare id (stages reuse ids). A
+	 * string picks that Choice option and a number is a Noul; anything
+	 * unscripted gets the scripted jev's defaults
+	 * (`src/managers/dumgen/scripted-jev.ts`).
 	 */
 	readonly dumgen?: {
 		readonly jev: Readonly<Record<string, string | number>>;
