@@ -9,7 +9,13 @@
  * Semantic Relations are therefore asked only by the occurrence that
  * created the Reading (`New`); a later one (`TopUp`) asks only for the
  * base text it still lacks, as tf-demo's incremental publication does.
+ *
+ * A Reading's Breakdown and its Source (texteater ADR 0050) stay outside
+ * that mask, as in tf-demo: {@link breakdownAskFor} decides whether a run
+ * breaks the Reading down.
  */
+import type { BreakdownSettled } from "@textfresser/lemma-note-codec";
+import { authoredFor, closedRoute } from "dumcorpus/inventories";
 import { routeOf } from "dumling";
 import type * as Dumling from "dumling/types";
 import {
@@ -48,8 +54,8 @@ const BASE_TEXT_ASPECTS = new Set([
 ]);
 
 /**
- * Never asked: a Reading's Breakdown and its Source (texteater ADR 0050)
- * come with the Breakdown adoption, which asks and renders them.
+ * Never in the mask: a Reading's Breakdown and its Source (texteater ADR
+ * 0050) are asked by {@link breakdownAskFor}, the Source as its first step.
  */
 const NEVER_ASKED = new Set(["breakdown", "source"]);
 
@@ -129,13 +135,69 @@ export function knowledgeRequestFor(input: {
 	return request as Dumrel.KnowledgeRequestMask;
 }
 
+/** The Families whose Readings have a Breakdown; a Morpheme or Foreign one has none. */
+const BREAKDOWN_FAMILIES: ReadonlySet<string> = new Set([
+	"Lexeme",
+	"Locution",
+	"Saying",
+]);
+
+/** How a run breaks its Reading down: whether it asks for the Source first. */
+export type BreakdownAsk = {
+	/** Whether the Reading's route asks `knowledge.produce` for a Source. */
+	readonly source: boolean;
+};
+
 /**
- * Aspects a later occurrence asks again when they failed or never came.
+ * Whether one run breaks the Reading down (tf-demo's `asksBreakdown`;
+ * texteater ADR 0050, ADR 0051): a Lexeme, Locution or Saying Reading that
+ * stores neither a Breakdown nor a Source. A Closed Route member, or a
+ * Lemma with authored Readings, carries authored Breakdowns, so it asks
+ * nothing (ADR 0021). The Source comes first, when the route asks for one.
+ *
+ * tf-demo asks on a base run only, and a Partial Reading's next run is a
+ * base run. The plugin keeps no record of a run but the note, so it asks
+ * on any occurrence of a Reading stored without either: the occurrence
+ * that created it, and a later one after a failed segmenter or Source,
+ * which is how a Partial Breakdown is retried. Once one is stored, or the
+ * note records the Reading as settled with neither (`NoParts`,
+ * `Unresolved`), a later occurrence asks nothing, as tf-demo's top-up does.
+ */
+export function breakdownAskFor(input: {
+	readonly reading: Dumling.Reading<"de">;
+	/** The stored entry's Knowledge, if the Reading is stored. */
+	readonly knowledge?: Dumrel.ReadingKnowledge<Dumling.Reading<"de">>;
+	/** Why the stored Reading's Breakdown is asked no more, if its note says. */
+	readonly settled?: BreakdownSettled;
+}): BreakdownAsk | undefined {
+	if (input.settled !== undefined) return undefined;
+	const { lemma } = input.reading;
+	if (!BREAKDOWN_FAMILIES.has(lemma.family)) return undefined;
+	if (closedRoute(routeOf(lemma)) || authoredFor(lemma).length > 0)
+		return undefined;
+	const stored = input.knowledge ?? {};
+	if (
+		stored.source !== undefined ||
+		stored.breakdown?.constituents !== undefined ||
+		stored.breakdown?.morphemes !== undefined
+	)
+		return undefined;
+	const selected = selectKnowledge({ route: routeOf(lemma) });
+	return { source: selected.success && selected.value.source === null };
+}
+
+/**
+ * Aspects a later occurrence asks again when they failed or never came:
+ * the base text, and the Breakdown and its Source ({@link breakdownAskFor}).
  * The principal parts that a New occurrence alone asked moved from Reading
  * Knowledge into the Lemma Paradigm (texteater#1226); see
  * {@link paradigmRequestFor}.
  */
-export const RETRIED_ASPECTS: ReadonlySet<string> = BASE_TEXT_ASPECTS;
+export const RETRIED_ASPECTS: ReadonlySet<string> = new Set([
+	...BASE_TEXT_ASPECTS,
+	"breakdown",
+	"source",
+]);
 
 /**
  * Whether Classify asks `knowledge.produce` for the Lemma Paradigm

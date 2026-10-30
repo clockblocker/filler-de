@@ -1,5 +1,6 @@
 import {
 	ATTESTATION_REF_START,
+	type BreakdownSettled,
 	findPathCollisions,
 	lemmaNoteOwner,
 	NoteSerializeError,
@@ -424,6 +425,21 @@ export type DumdictVaultStore = {
 		readonly text: string;
 	}) => Effect.Effect<
 		"Appended" | "AlreadyThere",
+		DictionaryRequestError | DictionaryScanError
+	>;
+	/**
+	 * Records in a stored Reading's note why its Breakdown is asked no more
+	 * (#266), as `appendFreeform` places text: no record changes, and it
+	 * writes only through a compare-and-swap on the content it read. A
+	 * later rewrite of the note keeps the marker until its Knowledge holds a
+	 * Breakdown or a Source. It answers `Missing` when no such Reading is
+	 * stored.
+	 */
+	readonly settleBreakdown: (
+		reading: Dumling.Reading<"de">,
+		settled: BreakdownSettled,
+	) => Effect.Effect<
+		"Settled" | "Missing",
 		DictionaryRequestError | DictionaryScanError
 	>;
 	/** Stops observing the vault. */
@@ -3061,6 +3077,75 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		}
 	});
 
+	const settleBreakdownUnderLock = Effect.fnUntraced(function* (
+		reading: Dumling.Reading<"de">,
+		settled: BreakdownSettled,
+	): Effect.fn.Return<
+		"Settled" | "Missing",
+		DictionaryRequestError | DictionaryScanError
+	> {
+		if (stale) {
+			yield* rebuild();
+			yield* settle;
+		}
+		const readingKey = readingKeyOf(reading);
+		for (let attempt = 1; ; attempt += 1) {
+			const view = index;
+			const location = view.readingLocation(readingKey);
+			const held =
+				location === undefined
+					? undefined
+					: view.lemmaNote(lemmaKeyOf(reading.lemma));
+			if (location === undefined || held === undefined) return "Missing";
+			const { path } = location;
+			const refuse = (reason: string, cause: unknown = path) =>
+				new DictionaryRequestError({
+					cause,
+					message: `Could not settle the Breakdown of ${path}: ${reason}`,
+				});
+			const current = yield* Effect.result(readCurrent(view, path));
+			if (current._tag === "Failure") {
+				yield* rereadChanges([path]);
+				if (attempt < FREEFORM_ATTEMPTS) continue;
+				return yield* refuse(
+					"the note kept changing while the store read it",
+				);
+			}
+			const { options: render } = renderOptionsFor(
+				view,
+				projections,
+				metadataFormat(),
+			);
+			const next = yield* Effect.try({
+				catch: (cause) => refuse(message(cause), cause),
+				try: () =>
+					writeReadingNote(held.data, location.entry.reading, {
+						...render,
+						breakdownSettled: settled,
+					})(current.success),
+			});
+			if (next === current.success) return "Settled";
+			const entry = classifyFile(path, next);
+			const outcome = yield* Effect.result(
+				dispatch([compareAndSwap(path, current.success, next)]),
+			);
+			if (outcome._tag === "Success") {
+				// No record changed, so plans made at this revision stay valid.
+				const published = index.clone();
+				published.set(path, entry);
+				cache?.delete(path);
+				publishRendering(published);
+				return "Settled";
+			}
+			const changes = yield* rereadChanges([path]);
+			if (changes.length > 0 && attempt < FREEFORM_ATTEMPTS) continue;
+			return yield* refuse(
+				`the write failed: ${message(outcome.failure)}`,
+				outcome.failure,
+			);
+		}
+	});
+
 	/**
 	 * The table re-render (#121). Tables are projections (system ADR 0049),
 	 * so a pack or Table Schema change needs no data migration, but notes
@@ -3284,6 +3369,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		),
 		revision: Effect.sync(revision),
 		scrollRefNames,
+		settleBreakdown: (reading, settled) =>
+			lock.withPermit(
+				settleBreakdownUnderLock(reading, settled).pipe(
+					Effect.ensuring(report),
+				),
+			),
 		surface: (surfaceId) => Effect.sync(() => live().surface(surfaceId)),
 		transact,
 	};

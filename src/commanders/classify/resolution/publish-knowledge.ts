@@ -24,6 +24,11 @@ import {
 	planOf,
 } from "./commit-occurrence";
 import {
+	pointsBack,
+	sourceTargetOf,
+	storedBasesOf,
+} from "./knowledge-breakdown";
+import {
 	DictionaryCommitFailed,
 	type GermanKnowledgeChange,
 	type GermanPendingRelation,
@@ -44,7 +49,11 @@ export type KnowledgePublication = {
 };
 
 type Published =
-	| { readonly _tag: "Committed" }
+	| {
+			readonly _tag: "Committed";
+			/** A Source dropped for pointing back, by its base's Canonical Form. */
+			readonly droppedSource?: string;
+	  }
 	| { readonly _tag: "OverBudget"; readonly reason: string };
 
 const isRelation = (change: GermanKnowledgeChange) =>
@@ -80,8 +89,8 @@ const publishOnce = Effect.fnUntraced(function* (
 			cause: checked,
 			message: checked.message ?? checked.code,
 		});
-	const { request } = checked;
-	return yield* store
+	const checkedRequest = checked.request;
+	const published = yield* store
 		.transact(
 			(
 				view,
@@ -89,6 +98,33 @@ const publishOnce = Effect.fnUntraced(function* (
 				Transaction<Published>,
 				DictionaryCommitFailed
 			> => {
+				// Another run may have stored the other direction since this
+				// one checked (texteater #1279): the first stored one wins.
+				const owner = checkedRequest.reading.lemma;
+				const backPointing = checkedRequest.changes.find((change) => {
+					const target = sourceTargetOf(change);
+					return (
+						target !== undefined &&
+						pointsBack(owner, target, storedBasesOf(view, target))
+					);
+				});
+				const droppedSource =
+					backPointing === undefined
+						? undefined
+						: sourceTargetOf(backPointing)?.canonicalForm;
+				const request =
+					backPointing === undefined
+						? checkedRequest
+						: {
+								...checkedRequest,
+								changes: checkedRequest.changes.filter(
+									(change) => change !== backPointing,
+								),
+							};
+				const committed: Published = {
+					_tag: "Committed",
+					...(droppedSource === undefined ? {} : { droppedSource }),
+				};
 				const context = view.loadReadingEntryContext(
 					planner.contextRequest({
 						intent: "applyGeneratedKnowledge",
@@ -136,18 +172,22 @@ const publishOnce = Effect.fnUntraced(function* (
 						}),
 					);
 				if (outcome.plan.changes.length === 0)
-					return Result.succeed(
-						Transaction.stop<Published>({ _tag: "Committed" }),
-					);
+					return Result.succeed(Transaction.stop(committed));
 				return Result.succeed(
-					Transaction.commit<Published>(outcome.plan, {
-						_tag: "Committed",
-					}),
+					Transaction.commit(outcome.plan, committed),
 				);
 			},
 			{ maxAttempts: MAX_COMMIT_ATTEMPTS },
 		)
 		.pipe(Effect.mapError(commitFailure("Knowledge was saved")));
+	if (published._tag === "Committed" && published.droppedSource !== undefined)
+		yield* Effect.logWarning("BackPointingSourceRejected").pipe(
+			Effect.annotateLogs({
+				base: published.droppedSource,
+				owner: publication.reading.lemma.canonicalForm,
+			}),
+		);
+	return published;
 });
 
 /**

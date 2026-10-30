@@ -1,4 +1,5 @@
 import {
+	type BreakdownSettled,
 	lemmaNotePath,
 	pathCollisionKey,
 	readingNotePath,
@@ -41,6 +42,8 @@ export type ReadingLocation = {
 	readonly path: string;
 	readonly lemmaPath: string;
 	readonly entry: ReadingEntry<"de">;
+	/** Why its Breakdown is asked no more, as its note records it (#266). */
+	readonly breakdownSettled?: BreakdownSettled;
 };
 
 function attempt(path: () => string): string | undefined {
@@ -577,9 +580,16 @@ export class NoteIndex {
 		const found = this.readings.get(readingKey);
 		if (!found) return undefined;
 		const lemmaPath = this.aggregates.get(found.lemmaKey)?.lemmaPath;
-		return lemmaPath === undefined
-			? undefined
-			: { entry: found.entry, lemmaPath, path: found.path };
+		if (lemmaPath === undefined) return undefined;
+		const note = this.entry(found.path);
+		const settled =
+			note?.kind === "reading" ? note.data.breakdownSettled : undefined;
+		return {
+			entry: found.entry,
+			lemmaPath,
+			path: found.path,
+			...(settled === undefined ? {} : { breakdownSettled: settled }),
+		};
 	}
 
 	surface(surfaceId: string): SurfaceEntry<"de"> | undefined {

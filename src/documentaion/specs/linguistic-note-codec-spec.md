@@ -72,7 +72,7 @@ type LemmaRecords<L> = {             // every record of one Lemma
 	pendingRelations: PendingSemanticRelationRecord<L>[];
 };
 type LemmaNoteData<L> = { lemmaRecord: LemmaRecord<L>; ownedSurfaceEntries: SurfaceEntry<L>[] };
-type ReadingNoteData<L> = { readingEntry: ReadingEntry<L>; pendingRelations: PendingSemanticRelationRecord<L>[] };
+type ReadingNoteData<L> = { readingEntry: ReadingEntry<L>; pendingRelations: PendingSemanticRelationRecord<L>[]; breakdownSettled?: "NoParts" | "Unresolved" };
 
 type LemmaNoteDocument = { metadata: LemmaNoteMetadata | undefined; segments: BodySegment[] };
 type ReadingNoteDocument = { metadata: ReadingNoteMetadata | undefined; segments: BodySegment[] };
@@ -148,6 +148,7 @@ Metadata, `readingNote`:
 | `attestationLinks` | Each Attestation Link as `{ ref, surfaceId }`; its Reading is the note's (texteater#1227) |
 | `attestedTranslations`, `notes` | `ReadingEntry`'s learner content, when not empty |
 | `pendingRelations` | The `PendingSemanticRelationRecord`s whose source is the note's Reading, as `{ relation, target, resolvedLemma? }`; source and locator are rebuilt from the Reading |
+| `breakdownSettled` | The plugin's, not a dumdict record (#266): why a Reading with neither a Breakdown nor a Source is asked for neither again, `NoParts` (its segmenters found none) or `Unresolved` (its Source came back Unresolved). A rewrite keeps it; it goes once the Knowledge holds a Breakdown or a Source |
 | `rendering` | The seals of the body's renderings |
 
 Visible Blocks, in canonical order (see Layout):
@@ -163,7 +164,7 @@ Visible Blocks, in canonical order (see Layout):
 | `inflection_embed` | `![[<lemma note>#^<block id>\|<Canonical Form>]]`: the Lemma note's table of this Reading's Licence Group |
 | `tags` | Tags from the tags hook |
 
-Principal parts (`plural`, `conjugationClass`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) left Reading Knowledge for the Lemma Paradigm (texteater#1226). A Block whose field is absent or empty is left out, and a new dumrel Knowledge aspect fails to compile until a Block shows it. The Breakdown model's `breakdown` and `source` (texteater ADR 0050) show in no Block yet: Classify asks for neither, and a note keeps a stored one in its metadata.
+Principal parts (`plural`, `conjugationClass`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) left Reading Knowledge for the Lemma Paradigm (texteater#1226). A Block whose field is absent or empty is left out, and a new dumrel Knowledge aspect fails to compile until a Block shows it. The Breakdown model's `breakdown` and `source` (texteater ADR 0050) show in no Block yet: Classify's Knowledge run asks for them (#266), and a note keeps them in its metadata until #268 renders them.
 
 ### Dropped
 
