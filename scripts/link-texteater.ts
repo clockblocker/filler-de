@@ -40,6 +40,7 @@ export const BATTERY_PACKAGES = [
 	"dumrel",
 	"dumcorpus",
 	"dumdict",
+	"dumtext",
 	"dumgen",
 ] as const;
 

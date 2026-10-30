@@ -116,6 +116,7 @@
 			"dumrel/validation-artifact": [
 				"./.texteater/battery/dumrel/src/generated/validation.ts"
 			],
+			"dumtext": ["./.texteater/battery/dumtext/src/index.ts"],
 			"effect": ["./node_modules/effect/dist/index"],
 			"effect/*": ["./node_modules/effect/dist/*"],
 			"emoji-regex": ["./node_modules/emoji-regex/index"],

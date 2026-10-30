@@ -8,6 +8,7 @@ import { lemmaRecordSchema } from "dumdict/schema";
 import { DumgenLive } from "dumgen";
 import { normalizeForm } from "dumling";
 import { parseReadingKnowledge } from "dumrel";
+import { splitMarkdown } from "dumtext";
 
 export const batteryExports = {
 	"common-utils": canonicalJson,
@@ -16,6 +17,7 @@ export const batteryExports = {
 	dumgen: DumgenLive,
 	dumling: normalizeForm,
 	dumrel: parseReadingKnowledge,
+	dumtext: splitMarkdown,
 } as const;
 
 export const batterySchemas = { lemmaRecordSchema } as const;

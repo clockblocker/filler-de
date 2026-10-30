@@ -3,8 +3,9 @@
  * with { type: "macro" }` runs it when the plugin is bundled (or a test is
  * transpiled) and inlines its result, so nothing here reaches the bundle.
  *
- * It hashes the battery sources segmentation runs on: dumgen's, and the
- * dumcorpus inventories and dumling routes it reads. The batteries are
+ * It hashes the battery sources segmentation runs on: dumgen's, dumtext's
+ * readers and splitter, and the dumcorpus inventories and dumling routes
+ * dumgen reads. The batteries are
  * bundled from source at texteater's `origin/main`, where segmentation can
  * change without a version bump, so the hash goes into every Sentence key:
  * any change to those sources misses the old cache entries.
@@ -13,7 +14,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 
-const BATTERIES = ["dumgen", "dumcorpus", "dumling"] as const;
+const BATTERIES = ["dumgen", "dumtext", "dumcorpus", "dumling"] as const;
 
 function filesUnder(folder: string): string[] {
 	return readdirSync(folder, { withFileTypes: true })

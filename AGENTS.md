@@ -69,10 +69,11 @@ The Effect migration (#215) is enforced by `bun run lint`, which runs
 
 ## Battery packages from texteater
 
-`common-utils`, `dumling`, `dumrel`, `dumcorpus`, `dumdict` and `dumgen` come
-from [clockblocker/texteater](https://github.com/clockblocker/texteater) at
-the commit pinned in `batteries.lock`. They are read from its
-`battery/*/src`, with no `dist`. Nothing is copied. The plugin never builds
+`common-utils`, `dumling`, `dumrel`, `dumcorpus`, `dumdict`, `dumtext` and
+`dumgen` come from
+[clockblocker/texteater](https://github.com/clockblocker/texteater) at the
+commit pinned in `batteries.lock`. They are read from its `battery/*/src`,
+with no `dist`. Nothing is copied. The plugin never builds
 against a texteater working checkout, such as `~/work/textfresser-batteries`,
 because those hold local commits and lag origin.
 

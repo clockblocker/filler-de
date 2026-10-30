@@ -138,9 +138,9 @@ export const LEMMA_PATHS = {
 
 /** Where each spelling's Crossroad note lives (ADR-0015), Lemmas' and met Surfaces'. */
 export const CROSSROAD_PATHS = {
+	anfaengt: "Worter/a/anf/anfän/anfängt.md",
 	anfangen: "Worter/a/anf/anfan/anfangen.md",
 	aufJedenFall: "Worter/a/auf/aufje/auf jeden fall.md",
-	faengtAn: "Worter/f/fän/fängt/fängt an.md",
 	heute: "Worter/h/heu/heute/heute.md",
 	hund: "Worter/h/hun/hund/hund.md",
 } as const;
@@ -152,7 +152,8 @@ const KONTEXT_0 = /!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u;
  * The dictionary after the first Classify, by vault path, given the
  * Reading notes it linked (Hund, anfangen, heute, auf jeden Fall): exactly
  * the four units' Lemma, Reading and Crossroad notes, the met Surface
- * "fängt an"'s Crossroad included, each with its data in the hidden
+ * "anfängt"'s Crossroad included (a separable verb's Surface is its base
+ * order form), each with its data in the hidden
  * section, and the layout the user reads (ADR-0015).
  */
 export function expectFirstClassifyNotes(
@@ -221,7 +222,7 @@ export function expectFirstClassifyNotes(
 	expect(visible(notes[CROSSROAD_PATHS.anfangen])).toBe(
 		`${TITLES.eintraege}\n- ${linkTo(LEMMA_PATHS.anfangen, "anfangen")} (VERB): ${linkTo(anfangen, "🏁")}`,
 	);
-	expect(visible(notes[CROSSROAD_PATHS.faengtAn])).toBe(
-		`${TITLES.begegneteFormen}\n- fängt an → ${linkTo(LEMMA_PATHS.anfangen, "anfangen")} (VERB)`,
+	expect(visible(notes[CROSSROAD_PATHS.anfaengt])).toBe(
+		`${TITLES.begegneteFormen}\n- anfängt → ${linkTo(LEMMA_PATHS.anfangen, "anfangen")} (VERB)`,
 	);
 }
