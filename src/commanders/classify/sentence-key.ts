@@ -19,6 +19,20 @@ import { segmenterSourceHash } from "./segmenter-source-hash" with {
  */
 export const DUMGEN_SEGMENTER_VERSION = `dumgen@0.1.0+jev-1.13.0+src-${segmenterSourceHash()}`;
 
+/**
+ * The segmenter version occurrence keys hash their Sentence's key under,
+ * frozen at the segmenter the first Attestation Refs were written with
+ * (texteater 806f93bf). It never changes: a ref's alias is its occurrence
+ * key, stored in Reading notes, and the unlink check and a link's click
+ * find a ref by recomputing it. Hashing the live segmenter version would
+ * give every Sentence new occurrence keys on every battery bump, and an
+ * old ref would then read as unlinked as soon as its Sentence is segmented
+ * again. The Segmentation Cache keys by the live version
+ * (`DUMGEN_SEGMENTER_VERSION`), so it still misses after a bump.
+ */
+export const OCCURRENCE_KEY_VERSION =
+	"dumgen@0.1.0+jev-1.13.0+src-894e89309b96";
+
 /** A Sentence's Stitched Text, the text its Segments give back. */
 export function sentenceStitchedText(text: string): string {
 	return stitchedText(text.normalize("NFC"));
@@ -52,4 +66,12 @@ export function sentenceInstances(texts: readonly string[]): number[] {
 		seen.set(stitched, instance + 1);
 		return instance;
 	});
+}
+
+/**
+ * The key a Sentence's occurrence keys hash: its `sentenceKey` under the
+ * frozen `OCCURRENCE_KEY_VERSION`, whatever segmenter is running.
+ */
+export function occurrenceSentenceKey(language: string, text: string): string {
+	return sentenceKey(OCCURRENCE_KEY_VERSION, language, text);
 }

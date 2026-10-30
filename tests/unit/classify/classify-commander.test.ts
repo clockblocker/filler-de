@@ -6,6 +6,7 @@ import {
 	pendingUnitResolver,
 } from "../../../src/commanders/classify";
 import { dictionaryNoteRefusal } from "../../../src/commanders/classify/classify-commander";
+import { occurrenceSentenceKey } from "../../../src/commanders/classify/sentence-key";
 import {
 	type DumgenProvide,
 	DumgenUnavailable,
@@ -129,7 +130,11 @@ describe("ClassifyCommander", () => {
 					{ ...selectionOf(STORY, "fängt"), text: "fängt" },
 					{ ...selectionOf(STORY, "an."), text: "an", to: selectionOf(STORY, "an.").to - 1 },
 				],
-				ref: { segments: [2, 6], sentenceKey: first?.sentences[0]?.sentenceKey ?? "" },
+				ref: {
+					occurrenceSentenceKey: occurrenceSentenceKey("de", "Er fängt heute an."),
+					segments: [2, 6],
+					sentenceKey: first?.sentences[0]?.sentenceKey ?? "",
+				},
 			},
 		]);
 		expect(first?.resolutions).toEqual(["Pending"]);

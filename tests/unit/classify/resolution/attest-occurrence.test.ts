@@ -45,18 +45,23 @@ async function attesterOver(
 		readonly fails?: boolean;
 		/** Classify waits for this before it ends. */
 		readonly gate?: Deferred.Deferred<void>;
+		/** The segmenter the attester runs, and its cache holds the Sentence under. */
+		readonly segmenterVersion?: string;
+		/** Refs the dictionary already holds. */
+		readonly stored?: readonly AttestationLink<"de">[];
 	} = {},
 ) {
+	const segmenterVersion = options.segmenterVersion ?? "test-segmenter";
 	const cache = memorySegmentationCache();
-	await run(cache.put(sentenceKey("test-segmenter", "de", SENTENCE.text), SENTENCE));
-	const stored: AttestationLink<"de">[] = [];
+	await run(cache.put(sentenceKey(segmenterVersion, "de", SENTENCE.text), SENTENCE));
+	const stored: AttestationLink<"de">[] = [...(options.stored ?? [])];
 	const runs: ClassifyInput[] = [];
 	const notices: string[] = [];
 	const activity = createScrollActivity();
 	const busy: boolean[] = [];
 	const keyed = (
 		await run(
-			occurrencesAt(CONTENT, [{ from: SEE_AT, to: SEE_AT + 3 }], cache, "test-segmenter"),
+			occurrencesAt(CONTENT, [{ from: SEE_AT, to: SEE_AT + 3 }], cache, segmenterVersion),
 		)
 	).get(SEE_AT);
 	const { value: attester } = await inScope(
@@ -82,7 +87,7 @@ async function attesterOver(
 				resolve: (linkpath) =>
 					Effect.succeed(linkpath === READING ? `${READING}.md` : `${linkpath}.md`),
 			},
-			segmenterVersion: Effect.succeed("test-segmenter"),
+			segmenterVersion: Effect.succeed(segmenterVersion),
 			store: Effect.succeed({
 				attestationLinksWithRefPrefix: (prefix: string) =>
 					Effect.succeed(stored.filter(({ ref }) => ref.startsWith(prefix))),
@@ -132,6 +137,25 @@ describe("makeOccurrenceAttester", () => {
 		await click(SEE_AT);
 		await run(attester.whenIdle);
 		expect(runs).toHaveLength(2);
+	});
+
+	it("still finds a ref written before a battery bump: the new segmenter keys the occurrence as the old one did", async () => {
+		// The ref Classify wrote under the old segmenter.
+		const before = memorySegmentationCache();
+		await run(before.put(sentenceKey("dumgen@old", "de", SENTENCE.text), SENTENCE));
+		const old = (
+			await run(occurrencesAt(CONTENT, [{ from: SEE_AT, to: SEE_AT + 3 }], before, "dumgen@old"))
+		).get(SEE_AT);
+		expect(old?.occurrence).toBeDefined();
+		// After the bump the Sentence is segmented again, cached under a new key.
+		const { attester, click, runs } = await attesterOver({
+			segmenterVersion: "dumgen@new",
+			stored: [{ ref: attestationRefOf(SCROLL, "0", old?.occurrence ?? "?") } as AttestationLink<"de">],
+		});
+		expect(sentenceKey("dumgen@new", "de", SENTENCE.text)).not.toBe(old?.sentenceKey);
+		await click(SEE_AT);
+		await run(attester.whenIdle);
+		expect(runs).toEqual([]);
 	});
 
 	it("runs a double click's occurrence once: the second waits for the first", async () => {

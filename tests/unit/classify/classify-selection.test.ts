@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { Cause, Exit } from "effect";
 import type { ClassifyError } from "../../../src/commanders/classify/classify-selection";
-import { sentenceKey } from "../../../src/commanders/classify/sentence-key";
+import { occurrenceKeyOf } from "../../../src/commanders/classify/resolution/scroll-links";
+import {
+	OCCURRENCE_KEY_VERSION,
+	occurrenceSentenceKey,
+	sentenceKey,
+} from "../../../src/commanders/classify/sentence-key";
 import { PENDING_RESOLUTION_REASON } from "../../../src/commanders/classify/unit-resolver";
 import { classifyHarness, selectionOf } from "./support";
 
@@ -34,9 +39,14 @@ describe("classifySelection", () => {
 			selection: selectionOf(SCROLL, "an."),
 		});
 		const key = sentenceKey("test-segmenter", "de", "Er fängt heute an.");
+		const ref = {
+			occurrenceSentenceKey: occurrenceSentenceKey("de", "Er fängt heute an."),
+			segments: [2, 6],
+			sentenceKey: key,
+		};
 		expect(outcome.plan.units).toHaveLength(1);
 		const [verb] = outcome.plan.units;
-		expect(verb?.ref).toEqual({ segments: [2, 6], sentenceKey: key });
+		expect(verb?.ref).toEqual(ref);
 		expect(verb?.unit.route).toEqual({
 			family: "Lexeme",
 			kind: "VERB",
@@ -53,10 +63,30 @@ describe("classifySelection", () => {
 			{
 				_tag: "Pending",
 				reason: PENDING_RESOLUTION_REASON,
-				ref: { segments: [2, 6], sentenceKey: key },
+				ref,
 			},
 		]);
 		expect(harness.handedOver).toEqual([outcome.plan]);
+	});
+
+	it("keys an occurrence the same under every segmenter version, while the cache key follows the version", async () => {
+		const run = (segmenterVersion: string) =>
+			classifyHarness({ segmenterVersion }).classify({
+				content: SCROLL,
+				scrollPath: "Library/Story.md",
+				selection: selectionOf(SCROLL, "an."),
+			});
+		const [before, after] = [await run("dumgen@old"), await run("dumgen@new")];
+		const [verbBefore] = before.plan.units;
+		const [verbAfter] = after.plan.units;
+		expect(verbBefore?.ref.sentenceKey).not.toBe(verbAfter?.ref.sentenceKey);
+		// The key a ref written before the freeze (texteater 806f93bf) carries.
+		const pinned = "f6baa5d0";
+		expect(verbBefore && occurrenceKeyOf(verbBefore.ref, 0)).toBe(pinned);
+		expect(verbAfter && occurrenceKeyOf(verbAfter.ref, 0)).toBe(pinned);
+		expect(OCCURRENCE_KEY_VERSION).toBe(
+			"dumgen@0.1.0+jev-1.13.0+src-894e89309b96",
+		);
 	});
 
 	it("includes a unit when the selection covers any part of any of its Segments", async () => {

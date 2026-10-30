@@ -14,6 +14,12 @@ import type { UserLinks } from "./resolution/scroll-links";
  */
 export type UnitRef = {
 	readonly sentenceKey: string;
+	/**
+	 * The Sentence's key under the frozen `OCCURRENCE_KEY_VERSION`
+	 * (`occurrenceSentenceKey`), which its occurrence keys hash, so a
+	 * battery bump changes none of them.
+	 */
+	readonly occurrenceSentenceKey: string;
 	readonly segments: readonly number[];
 };
 

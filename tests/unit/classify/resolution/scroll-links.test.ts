@@ -14,7 +14,7 @@ import { scrollSentences } from "../../../../src/commanders/classify/scroll-sent
 const target = {
 	readingPath: "Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See.md",
 };
-const ref = { segments: [2], sentenceKey: "k" };
+const ref = { occurrenceSentenceKey: "k", segments: [2], sentenceKey: "k" };
 const LINK = "[[Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See|See]]";
 
 function at(content: string, text: string) {

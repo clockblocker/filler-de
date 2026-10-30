@@ -57,6 +57,7 @@ const judge = (
 const keyed = (occurrence: string): KeyedOccurrence => ({
 	instance: 0,
 	occurrence,
+	occurrenceSentenceKey: `sentence of ${occurrence}`,
 	segments: [0],
 	sentenceKey: `sentence of ${occurrence}`,
 });
@@ -243,7 +244,11 @@ describe("unlinkedOccurrences", () => {
 		// "Der See." keyed at its first and second instance.
 		const at = (instance: number): KeyedOccurrence => ({
 			instance,
-			occurrence: occurrenceKeyOf({ segments: [2], sentenceKey: "s" }, instance),
+			occurrence: occurrenceKeyOf(
+				{ occurrenceSentenceKey: "s", segments: [2] },
+				instance,
+			),
+			occurrenceSentenceKey: "s",
 			segments: [2],
 			sentenceKey: "s",
 		});

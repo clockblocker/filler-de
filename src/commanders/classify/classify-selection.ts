@@ -35,6 +35,7 @@ import {
 } from "./scroll-sentences";
 import { SegmentationCache } from "./segmentation-cache";
 import {
+	occurrenceSentenceKey,
 	sentenceInstances,
 	sentenceKey,
 	sentenceStitchedText,
@@ -169,7 +170,14 @@ function coveredUnits(
 		.map((unit) => ({
 			instance,
 			occurrences: occurrencesOf(unit, segmented, ranges),
-			ref: { segments: [...unit.segments], sentenceKey: key },
+			ref: {
+				occurrenceSentenceKey: occurrenceSentenceKey(
+					"de",
+					sentence.text,
+				),
+				segments: [...unit.segments],
+				sentenceKey: key,
+			},
 			unit,
 		}));
 }

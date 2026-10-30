@@ -238,14 +238,18 @@ export function scrollBasenameOf(scrollPath: string): string {
  * which instance of the Sentence's text it stands in, so running Classify
  * over the same occurrence again names the same ref, while the instances
  * of a repeated Sentence never share one. The first instance's key leaves
- * the instance out.
+ * the instance out. The Sentence is named by its key under the frozen
+ * `OCCURRENCE_KEY_VERSION`, so a battery bump changes no key.
  */
-export function occurrenceKeyOf(ref: UnitRef, instance: number): string {
+export function occurrenceKeyOf(
+	ref: Pick<UnitRef, "occurrenceSentenceKey" | "segments">,
+	instance: number,
+): string {
 	return sha256Hex(
 		JSON.stringify(
 			instance === 0
-				? [ref.sentenceKey, ref.segments]
-				: [ref.sentenceKey, ref.segments, instance],
+				? [ref.occurrenceSentenceKey, ref.segments]
+				: [ref.occurrenceSentenceKey, ref.segments, instance],
 		),
 	).slice(0, 8);
 }

@@ -113,7 +113,7 @@ import { interruptsOf } from "../../../utils/causes";
 import { IdleTracker } from "../../../utils/idle-tracker";
 import { scrollSentences } from "../scroll-sentences";
 import type { SegmentationCache } from "../segmentation-cache";
-import { sentenceInstances } from "../sentence-key";
+import { occurrenceSentenceKey, sentenceInstances } from "../sentence-key";
 import { MAX_COMMIT_ATTEMPTS, planRemoval } from "./commit-occurrence";
 import type { DictionaryCommitFailed } from "./knowledge-types";
 import { tellUser } from "./notify";
@@ -239,10 +239,14 @@ const recordedSentencesHeld = Effect.fnUntraced(function* (
 			continue;
 		const cached = yield* cachedSentence(sentence, cache, segmenterVersion);
 		if (Option.isNone(cached)) continue;
-		const { key, segmented } = cached.value;
+		const { segmented } = cached.value;
+		const occurrenceSentence = occurrenceSentenceKey("de", sentence.text);
 		for (const unit of segmented.units) {
 			const occurrence = occurrenceKeyOf(
-				{ segments: [...unit.segments], sentenceKey: key },
+				{
+					occurrenceSentenceKey: occurrenceSentence,
+					segments: [...unit.segments],
+				},
 				instances[index] ?? 0,
 			);
 			for (const ref of wanted.get(`${block.id}\u0000${occurrence}`) ??

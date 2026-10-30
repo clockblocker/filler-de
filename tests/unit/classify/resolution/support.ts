@@ -35,6 +35,7 @@ import {
 } from "../../../../src/commanders/classify/resolution/scroll-files";
 import { scrollLinksOf } from "../../../../src/commanders/classify/resolution/scroll-unlinks";
 import type { SegmentationCache } from "../../../../src/commanders/classify/segmentation-cache";
+import { occurrenceSentenceKey } from "../../../../src/commanders/classify/sentence-key";
 import type {
 	AttestMode,
 	ClassifyPlan,
@@ -104,7 +105,11 @@ function plannedUnit(input: {
 	return {
 		instance: 0,
 		occurrences,
-		ref: { segments: [...input.unit.segments], sentenceKey: input.sentenceKey },
+		ref: {
+			occurrenceSentenceKey: occurrenceSentenceKey("de", input.sentence.text),
+			segments: [...input.unit.segments],
+			sentenceKey: input.sentenceKey,
+		},
 		unit: input.unit,
 	};
 }

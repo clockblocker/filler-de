@@ -41,6 +41,7 @@ export function classifyHarness(
 	options: {
 		readonly answers?: Readonly<Record<string, Answer>>;
 		readonly failStage?: string;
+		readonly segmenterVersion?: string;
 	} = {},
 ) {
 	const scripted = createScriptedJev(options.answers ?? FAENGT_AN_ANSWERS);
@@ -61,7 +62,9 @@ export function classifyHarness(
 				return pendingUnitResolver.resolve(plan);
 			},
 		}),
-		Layer.succeed(ClassifySegmenter, { segmenterVersion: "test-segmenter" }),
+		Layer.succeed(ClassifySegmenter, {
+			segmenterVersion: options.segmenterVersion ?? "test-segmenter",
+		}),
 		dumgen,
 	);
 	return {

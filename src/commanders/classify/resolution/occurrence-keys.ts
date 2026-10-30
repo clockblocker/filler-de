@@ -18,6 +18,7 @@ import {
 } from "../scroll-sentences";
 import type { SegmentationCache } from "../segmentation-cache";
 import {
+	occurrenceSentenceKey,
 	sentenceInstances,
 	sentenceKey,
 	sentenceStitchedText,
@@ -29,6 +30,8 @@ import { occurrenceKeyOf } from "./scroll-links";
 export type KeyedOccurrence = {
 	/** Its Sentence's Segmentation Cache key. */
 	readonly sentenceKey: string;
+	/** Its Sentence's key under the frozen `OCCURRENCE_KEY_VERSION`, which its occurrence key hashes. */
+	readonly occurrenceSentenceKey: string;
 	/** Its unit's Segments in that Sentence. */
 	readonly segments: readonly number[];
 	/** Which instance of its Sentence's text it stands in. */
@@ -98,9 +101,14 @@ function occurrenceIn(
 	)
 		return;
 	const segments = [...unit.segments];
+	const occurrenceSentence = occurrenceSentenceKey("de", sentence.text);
 	return {
 		instance,
-		occurrence: occurrenceKeyOf({ segments, sentenceKey: key }, instance),
+		occurrence: occurrenceKeyOf(
+			{ occurrenceSentenceKey: occurrenceSentence, segments },
+			instance,
+		),
+		occurrenceSentenceKey: occurrenceSentence,
 		segments,
 		sentenceKey: key,
 	};

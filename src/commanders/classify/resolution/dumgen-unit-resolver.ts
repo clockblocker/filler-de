@@ -707,6 +707,7 @@ export function dumgenUnitResolver(
 				let index = 0;
 				return outcomes.map((outcome, position): UnitResolution => {
 					const ref = plan.units[position]?.ref ?? {
+						occurrenceSentenceKey: "",
 						segments: [],
 						sentenceKey: "",
 					};
