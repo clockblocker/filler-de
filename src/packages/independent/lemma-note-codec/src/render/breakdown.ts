@@ -102,15 +102,44 @@ export function morphemesLine<L extends Dumling.Language>({
 		: [`${MORPHEMES_MARKER}${pieces.join("|")}`];
 }
 
+/** A Breakdown's pieces, as dumrel stores them. */
+type Pieces = NonNullable<
+	NonNullable<Dumrel.ReadingKnowledge["breakdown"]>["constituents"]
+>;
+
 const isPhraseme = (reading: Dumling.Reading) =>
 	reading.lemma.family === "Locution" || reading.lemma.family === "Saying";
 
 /**
- * The constituents line: the stored Constituents, one level down, joined by
- * ` + `. A word's parts show their Canonical Forms (`[[Kohle]] +
- * [[Kraftwerk]]`) and a phraseme's the letters of its wording
- * (`[[Faden|den Faden]] + [[verlieren]]`). A filler with letters, such as
- * a citation ending, is plain text; a hyphen or a space is left out.
+ * A phraseme's Constituents as its wording reads, as tf-demo shows them:
+ * each word links its unit with the letters it shows, ` · ` stands for a
+ * space between words, other filler is plain text, and a fused word keeps
+ * its letters together with each component linked apart (`[[in|i]][[Pfeffer|m
+ * Pfeffer]]`).
+ */
+function wordingLine<L extends Dumling.Language>(
+	constituents: Pieces,
+	link: LinkRenderer<L>,
+): string {
+	return constituents
+		.map(({ letters, target }) => {
+			if (target !== undefined)
+				return link(
+					{ names: namesOf<L>(target), role: "breakdown" },
+					letters.trim(),
+				);
+			return /^\s+$/u.test(letters) ? " · " : plain(letters);
+		})
+		.join("")
+		.trim();
+}
+
+/**
+ * The constituents line: the stored Constituents, one level down. A word's
+ * parts show their Canonical Forms joined by ` + `, as the exemplar does
+ * (`[[Kohle]] + [[Kraftwerk]]`); a filler with letters, such as a citation
+ * ending, is plain text, and a hyphen or a space is left out. A phraseme's
+ * show its wording (`[[Faden|den Faden]] · [[verlieren]]`).
  */
 export function constituentsLine<L extends Dumling.Language>({
 	reading,
@@ -119,14 +148,17 @@ export function constituentsLine<L extends Dumling.Language>({
 }: BreakdownInputs<L>): string[] {
 	const constituents = knowledge?.breakdown?.constituents;
 	if (constituents === undefined) return [];
-	const phraseme = isPhraseme(reading);
+	if (isPhraseme(reading)) {
+		const wording = wordingLine(constituents, link);
+		return wording.length === 0 ? [] : [wording];
+	}
 	const pieces = constituents.flatMap(({ letters, target }) => {
 		if (target === undefined)
 			return /\p{L}/u.test(letters) ? [plain(letters.trim())] : [];
 		return [
 			link(
 				{ names: namesOf<L>(target), role: "breakdown" },
-				phraseme ? letters.trim() : target.canonicalForm,
+				target.canonicalForm,
 			),
 		];
 	});

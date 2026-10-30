@@ -288,7 +288,7 @@ describe("the Morpheme section of a Reading note", () => {
 		);
 		expect(morphemeSection(body)).toEqual([
 			TITLE,
-			"[[Worter/de/Lexeme/NOUN/Masc/f/fad/faden/Faden|den Faden]] + [[Worter/v/ver/verli/verlieren|verlieren]]",
+			"[[Worter/de/Lexeme/NOUN/Masc/f/fad/faden/Faden|den Faden]] · [[Worter/v/ver/verli/verlieren|verlieren]]",
 		]);
 	});
 
