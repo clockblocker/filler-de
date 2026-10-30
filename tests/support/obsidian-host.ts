@@ -26,7 +26,23 @@ export function fakeHostPlugin() {
 	let optionUpdates = 0;
 	let unloaded = false;
 
+	/** The Reading views open now; each counts its full re-renders. */
+	const previews: { rerendered: number }[] = [];
 	const workspace = {
+		iterateAllLeaves: (callback: (leaf: unknown) => void) => {
+			for (const preview of previews)
+				callback({
+					view: {
+						previewMode: {
+							rerender: (full: boolean) => {
+								if (full) preview.rerendered++;
+							},
+						},
+					},
+				});
+			// A leaf of another view, and a deferred one, have no preview.
+			callback({ view: {} });
+		},
 		offref: (ref: EventRef) => {
 			const { callback, name } = ref as unknown as {
 				callback: Callback;
@@ -82,6 +98,12 @@ export function fakeHostPlugin() {
 		/** The callbacks listening to `name` now. */
 		listening: (name: string) => [...(listeners.get(name) ?? [])],
 		offrefs,
+		/** Opens a Reading view, whose full re-renders it counts. */
+		openPreview: () => {
+			const preview = { rerendered: 0 };
+			previews.push(preview);
+			return preview;
+		},
 		optionUpdates: () => optionUpdates,
 		plugin,
 		/** Renders `element` as Reading view would: every post-processor runs. */

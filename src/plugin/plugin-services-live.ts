@@ -44,7 +44,7 @@ import {
 	watchProtectedPaths,
 } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "../managers/overlay-manager";
-import { listenForMorphemeHover } from "../managers/overlay-manager/morpheme-hover/morpheme-hover";
+import { markMorphemes } from "../managers/overlay-manager/morpheme-hover/morpheme-hover";
 import { listenForOverlay } from "../managers/overlay-manager/overlay-listeners";
 import { listenForUnitHover } from "../managers/overlay-manager/unit-hover/unit-hover";
 import type { PluginServices } from "../runtime/plugin-live";
@@ -376,7 +376,7 @@ export const OverlayLive = (
 			// Released before the overlay is destroyed: newest first.
 			yield* listenForOverlay(overlay);
 			yield* listenForUnitHover(document);
-			yield* listenForMorphemeHover(document);
+			yield* markMorphemes;
 			// The toolbars follow the settings' button placements.
 			yield* settings.changes.pipe(
 				Stream.map(placements),

@@ -287,6 +287,7 @@ describe("PluginHost.editorExtension", () => {
 describe("PluginHost.markdownPostProcessor", () => {
 	it("registers one post-processor with Obsidian, which runs those whose scope is open", async () => {
 		const host = makeHost();
+		const preview = host.obsidian.openPreview();
 		const ran: string[] = [];
 		await host.inScope(
 			Effect.gen(function* () {
@@ -303,6 +304,8 @@ describe("PluginHost.markdownPostProcessor", () => {
 			}),
 		);
 		expect(host.obsidian.postProcessors).toHaveLength(1);
+		// Open Reading views render again, once, with the first.
+		expect(preview.rerendered).toBe(1);
 		const error = spyOn(console, "error").mockImplementation(() => {});
 		host.obsidian.postProcess({});
 		error.mockRestore();

@@ -394,56 +394,46 @@ a:visited {
 /* ------ Morpheme Hover ------ */
 
 /*
- * Hovering a morpheme of a Reading note's morphemes line reveals that one
- * morpheme, in the editor and in Reading view (`morpheme-hover.ts`), with
- * tf-demo's motion: a 170 ms wipe in from the inline start on a strong
- * ease-out, a 110 ms fade out. Reading view's morphemes keep their
- * `tf-morpheme` as the reveal goes, so it fades; the editor redraws its
- * decoration, so there it goes at once. No motion when reduced motion is
- * asked for.
+ * Each morpheme of a Reading note's morphemes line has `tf-morpheme`, in
+ * the editor and in Reading view (`morpheme-hover.ts`), and hovering one
+ * reveals it with tf-demo's motion: a 170 ms wipe in from the inline start
+ * on a strong ease-out, a 110 ms fade out, the wipe reset only once the
+ * fade is done. Only where the pointer hovers: a tap leaves nothing lit.
+ * No motion when reduced motion is asked for.
  */
-.tf-morpheme,
-.tf-morpheme-hover {
-	position: relative;
-	isolation: isolate;
-}
+@media (hover: hover) {
+	.tf-morpheme {
+		position: relative;
+		isolation: isolate;
+	}
 
-.tf-morpheme::before,
-.tf-morpheme-hover::before {
-	position: absolute;
-	inset: 0 -1px;
-	z-index: -1;
-	pointer-events: none;
-	content: "";
-	background-color: var(--text-highlight-bg);
-	border-radius: var(--radius-s);
-	opacity: 0;
-	transition: opacity 110ms ease-out;
-}
-
-.tf-morpheme-hover::before {
-	opacity: 1;
-	animation: tf-morpheme-reveal 170ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-@keyframes tf-morpheme-reveal {
-	from {
-		clip-path: inset(0 100% 0 0);
+	.tf-morpheme::before {
+		position: absolute;
+		inset: 0 -1px;
+		z-index: -1;
+		pointer-events: none;
+		content: "";
+		background-color: var(--text-highlight-bg);
+		border-radius: var(--radius-s);
 		opacity: 0;
+		clip-path: inset(0 100% 0 0);
+		transition:
+			opacity 110ms ease-out,
+			clip-path 0s linear 110ms;
 	}
-	50% {
+
+	.tf-morpheme:hover::before {
 		opacity: 1;
-	}
-	to {
 		clip-path: inset(0 0 0 0);
-		opacity: 1;
+		transition:
+			clip-path 170ms cubic-bezier(0.23, 1, 0.32, 1),
+			opacity 85ms linear;
 	}
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
 	.tf-morpheme::before,
-	.tf-morpheme-hover::before {
+	.tf-morpheme:hover::before {
 		transition: none;
-		animation: none;
 	}
 }

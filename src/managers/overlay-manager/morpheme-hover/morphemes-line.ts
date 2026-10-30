@@ -25,24 +25,18 @@ export const MORPHEMES_LINE_HOOK = `<span class="${MORPHEMES_LINE_CLASS}"></span
 
 const MORPHEME_TITLE_CLASS = sectionTitleClass("morpheme");
 
-/** A half-open range of offsets into a line. */
-type LineRange = {
+/** What a morphemes line shows of one morpheme, by offsets into the line. */
+export type MorphemeRange = {
 	readonly from: number;
 	readonly to: number;
-};
-
-/** One morpheme of a morphemes line, by offsets into the line. */
-export type MorphemeRange = LineRange & {
-	/** What the line shows of it: a link's alias, or the letters. */
-	readonly shown: LineRange;
 };
 
 const hasLetter = (text: string) => /\p{L}/u.test(text);
 
 /**
- * The morphemes of `line`, in order; none when `line` is no morphemes line.
- * A piece spans its whole link, `[[` to `]]`, so pointing at the target of
- * a link source mode shows finds it, while `shown` is its alias.
+ * The morphemes of `line`, in order, by what it shows of each: a link's
+ * alias, or its target without one, and plain letters as they are. None
+ * when `line` is no morphemes line.
  */
 export function morphemesOf(line: string): MorphemeRange[] {
 	if (!line.startsWith(MORPHEMES_LINE_HOOK)) return [];
@@ -80,25 +74,11 @@ function morphemeIn(
 		(candidate) => candidate.start === start && candidate.end === end,
 	);
 	if (link)
-		return {
-			from: start,
-			shown:
-				link.alias === null
-					? { from: start + 2, to: end - 2 }
-					: { from: start + 2 + link.target.length + 1, to: end - 2 },
-			to: end,
-		};
-	return hasLetter(line.slice(start, end))
-		? { from: start, shown: { from: start, to: end }, to: end }
-		: null;
+		return link.alias === null
+			? { from: start + 2, to: end - 2 }
+			: { from: start + 2 + link.target.length + 1, to: end - 2 };
+	return hasLetter(line.slice(start, end)) ? { from: start, to: end } : null;
 }
-
-/** The morpheme of `line` whose piece `offset` lies in, if any. */
-export const morphemeAt = (
-	line: string,
-	offset: number,
-): MorphemeRange | undefined =>
-	morphemesOf(line).find(({ from, to }) => from <= offset && offset < to);
 
 /** Whether `line` is a section's title line, and whether the Morpheme one. */
 function titleOf(line: string): "Morpheme" | "Other" | null {
@@ -110,6 +90,10 @@ function titleOf(line: string): "Morpheme" | "Other" | null {
  * Which of `lines`, a paragraph's, belong to a Morpheme section: from its
  * title, or from a morphemes line when the title is empty, up to the next
  * section's title. A Locution has no morphemes line, only its wording.
+ * With empty titles the bounds are loose, and that is accepted: with the
+ * Morpheme title empty a Locution's wording is not held, and with the next
+ * title empty the section runs on to the paragraph's end (codec spec,
+ * Breakdown).
  */
 export function morphemeSectionLines(lines: readonly string[]): boolean[] {
 	let inSection = false;

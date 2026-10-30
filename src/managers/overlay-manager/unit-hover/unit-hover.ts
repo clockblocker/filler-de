@@ -24,7 +24,7 @@ const unitHoverMark = Decoration.mark({ class: UNIT_HOVER_CLASS });
  * `node`, if it is an element. Not by `instanceof`: an editor in a popout
  * window has that window's `Element`.
  */
-export const elementOf = (node: EventTarget | null): Element | null =>
+const elementOf = (node: EventTarget | null): Element | null =>
 	Predicate.hasProperty(node, "closest") && Predicate.isFunction(node.closest)
 		? (node as Element)
 		: null;

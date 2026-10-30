@@ -1,11 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { Text } from "@codemirror/state";
 import { makeRecentTrace } from "@textfresser/vault-action-manager/diagnostics";
 import { Exit, Layer, Scope } from "effect";
-import { listenForMorphemeHover } from "../../../src/managers/overlay-manager/morpheme-hover/morpheme-hover";
+import {
+	markMorphemes,
+	morphemeMarks,
+} from "../../../src/managers/overlay-manager/morpheme-hover/morpheme-hover";
 import {
 	inRenderedMorphemeSection,
 	MORPHEMES_LINE_HOOK,
-	morphemeAt,
 	morphemeSectionLines,
 	morphemesOf,
 	plainPieces,
@@ -32,24 +35,14 @@ const CONSTITUENTS = `[[${KOHLE}|Kohle]] + [[${KRAFTWERK}|Kraftwerk]]`;
 
 /** What `line` shows of each of its morphemes. */
 const shownOf = (line: string) =>
-	morphemesOf(line).map(({ shown }) => line.slice(shown.from, shown.to));
+	morphemesOf(line).map(({ from, to }) => line.slice(from, to));
 
 describe("morphemesOf", () => {
 	it("splits the line on the pipes outside its links, never on an alias's", () => {
 		expect(shownOf(KOHLEKRAFTWERK)).toEqual(["Kohle", "kraft", "werk"]);
-		// Each piece spans its whole link, so its target finds it in source mode.
-		expect(
-			morphemesOf(KOHLEKRAFTWERK).map(({ from, to }) =>
-				KOHLEKRAFTWERK.slice(from, to),
-			),
-		).toEqual([
-			`[[${KOHLE}|Kohle]]`,
-			`[[${KRAFT}|kraft]]`,
-			`[[${WERK}|werk]]`,
-		]);
 	});
 
-	it("finds unlinked letters, and no Filler", () => {
+	it("finds unlinked letters and a link without an alias, and no Filler", () => {
 		const line = `${MORPHEMES_LINE_HOOK}ge|[[${FAHREN}|fahr]]|en|-|[[${KRAFT}]]`;
 		expect(shownOf(line)).toEqual(["ge", "fahr", "en", KRAFT]);
 	});
@@ -58,8 +51,6 @@ describe("morphemesOf", () => {
 		// The codec leaves a zero ending out; an empty piece is no target.
 		const line = `${MORPHEMES_LINE_HOOK}[[${KOHLE}|Kohle]]||[[${WERK}|werk]]|`;
 		expect(shownOf(line)).toEqual(["Kohle", "werk"]);
-		expect(morphemeAt(line, line.length)).toBeUndefined();
-		expect(morphemeAt(line, line.indexOf("||") + 1)).toBeUndefined();
 	});
 
 	it("finds nothing on a line without the hook, such as a Locution's wording", () => {
@@ -70,21 +61,51 @@ describe("morphemesOf", () => {
 	});
 });
 
-describe("morphemeAt", () => {
-	it("finds the morpheme an offset lies in, and none at a separator or the hook", () => {
-		const line = `${MORPHEMES_LINE_HOOK}ge|[[${FAHREN}|fahr]]|en`;
-		const at = (needle: string) => {
-			const found = morphemeAt(line, line.lastIndexOf(needle));
-			return found && line.slice(found.shown.from, found.shown.to);
-		};
-		expect(at("ge")).toBe("ge");
-		expect(at("[[")).toBe("fahr");
-		expect(at(FAHREN)).toBe("fahr");
-		expect(at("|fahr")).toBe("fahr");
-		expect(at("fahr]]")).toBe("fahr");
-		expect(at("|en")).toBeUndefined();
-		expect(at("en")).toBe("en");
-		expect(at("tf-morphemes")).toBeUndefined();
+describe("morphemeMarks", () => {
+	const content = [
+		title("morpheme", "Morpheme"),
+		`${MORPHEMES_LINE_HOOK}ge|[[${FAHREN}|fahr]]|en`,
+		CONSTITUENTS,
+		"",
+		KOHLEKRAFTWERK,
+	].join("\n");
+	const doc = Text.of(content.split("\n"));
+
+	/** The text each mark of `ranges` covers. */
+	const marked = (ranges: readonly { from: number; to: number }[]) => {
+		const texts: string[] = [];
+		morphemeMarks(doc, ranges).between(0, doc.length, (from, to) => {
+			texts.push(content.slice(from, to));
+		});
+		return texts;
+	};
+
+	it("marks the visible text of every morpheme in the drawn ranges", () => {
+		expect(marked([{ from: 0, to: doc.length }])).toEqual([
+			"ge",
+			"fahr",
+			"en",
+			"Kohle",
+			"kraft",
+			"werk",
+		]);
+	});
+
+	it("marks only the lines the ranges touch, each once", () => {
+		const second = content.indexOf(KOHLEKRAFTWERK);
+		expect(marked([{ from: second, to: doc.length }])).toEqual([
+			"Kohle",
+			"kraft",
+			"werk",
+		]);
+		// Two ranges in one line mark it once.
+		const first = content.indexOf(MORPHEMES_LINE_HOOK);
+		expect(
+			marked([
+				{ from: first, to: first + 2 },
+				{ from: first + 5, to: first + 9 },
+			]),
+		).toEqual(["ge", "fahr", "en"]);
 	});
 });
 
@@ -259,37 +280,8 @@ describe("inRenderedMorphemeSection", () => {
 	});
 });
 
-/** An event target that counts its listeners. */
-function countingTarget() {
-	const target = new EventTarget();
-	let listeners = 0;
-	const add = target.addEventListener.bind(target);
-	const remove = target.removeEventListener.bind(target);
-	target.addEventListener = (...args) => {
-		listeners++;
-		add(...args);
-	};
-	target.removeEventListener = (...args) => {
-		listeners--;
-		remove(...args);
-	};
-	return { listeners: () => listeners, target };
-}
-
-describe("listenForMorphemeHover", () => {
-	const global = globalThis as { window?: unknown };
-	let previous: unknown;
-	let window: ReturnType<typeof countingTarget>;
-	beforeEach(() => {
-		previous = global.window;
-		window = countingTarget();
-		global.window = window.target;
-	});
-	afterEach(() => {
-		global.window = previous;
-	});
-
-	it("holds its editor extension, post-processor and listeners only while its scope is open", async () => {
+describe("markMorphemes", () => {
+	it("holds its editor extension and post-processor only while its scope is open", async () => {
 		const { layer, obsidian } = fakeHost();
 		const runtime = makePluginRuntime(
 			layer.pipe(
@@ -301,18 +293,10 @@ describe("listenForMorphemeHover", () => {
 				},
 			},
 		);
-		const document = countingTarget();
 		const scope = Scope.makeUnsafe();
-		await runtime.e2e(
-			"listen",
-			Scope.provide(scope)(
-				listenForMorphemeHover(document.target as Document),
-			),
-		);
+		await runtime.e2e("mark", Scope.provide(scope)(markMorphemes));
 		expect(obsidian.registeredExtensions).toEqual([[expect.anything()]]);
 		expect(obsidian.postProcessors).toHaveLength(1);
-		expect(document.listeners()).toBe(2);
-		expect(window.listeners()).toBe(1);
 		let queried = 0;
 		const section = {
 			querySelectorAll: () => {
@@ -322,16 +306,11 @@ describe("listenForMorphemeHover", () => {
 		};
 		obsidian.postProcess(section);
 		expect(queried).toBe(1);
-		// Events over no morpheme change nothing.
-		document.target.dispatchEvent(new Event("mouseover"));
-		document.target.dispatchEvent(new Event("mouseout"));
 
 		await runtime.e2e("close", Scope.close(scope, Exit.void));
 		expect(obsidian.registeredExtensions).toEqual([[]]);
 		obsidian.postProcess(section);
 		expect(queried).toBe(1);
-		expect(document.listeners()).toBe(0);
-		expect(window.listeners()).toBe(0);
 		await runtime.dispose();
 	});
 });

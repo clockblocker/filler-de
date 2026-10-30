@@ -11,7 +11,7 @@
  * registers that itself), so the scope removes it only while the plugin is
  * still loaded: a reloaded plugin's command of the same id stays.
  */
-import { Context, Effect, Layer, Scope, Tracer } from "effect";
+import { Context, Effect, Layer, Predicate, Scope, Tracer } from "effect";
 import type {
 	Editor,
 	MarkdownFileInfo,
@@ -92,7 +92,7 @@ export type HostPlugin = Pick<
 	readonly app: {
 		readonly workspace: Pick<
 			Plugin["app"]["workspace"],
-			"on" | "offref" | "updateOptions"
+			"on" | "offref" | "updateOptions" | "iterateAllLeaves"
 		>;
 	};
 };
@@ -273,11 +273,26 @@ export const makePluginHost = Effect.fnUntraced(function* (plugin: HostPlugin) {
 			};
 		});
 
+	/** Renders every open Reading view again, from its Markdown. */
+	const rerenderPreviews = () =>
+		workspace.iterateAllLeaves((leaf) => {
+			// Duck-typed: a deferred leaf has no MarkdownView yet, and
+			// renders with the post-processors as it loads.
+			const preview = (leaf.view as { previewMode?: unknown })
+				.previewMode;
+			if (
+				Predicate.hasProperty(preview, "rerender") &&
+				Predicate.isFunction(preview.rerender)
+			)
+				preview.rerender(true);
+		});
+
 	const processors: PostProcessor[] = [];
 	let processorsRegistered = false;
 	const markdownPostProcessor = (processor: PostProcessor) =>
 		held(() => {
-			if (!processorsRegistered) {
+			const first = !processorsRegistered;
+			if (first) {
 				processorsRegistered = true;
 				plugin.registerMarkdownPostProcessor((element, context) => {
 					for (const run of [...processors]) run(element, context);
@@ -285,6 +300,9 @@ export const makePluginHost = Effect.fnUntraced(function* (plugin: HostPlugin) {
 			}
 			const guardedProcessor = guarded("post-processor", processor);
 			processors.push(guardedProcessor);
+			// Reading views open as the plugin loads were rendered without
+			// it: render them again, once.
+			if (first) guarded("re-render", rerenderPreviews)();
 			return () => {
 				const at = processors.indexOf(guardedProcessor);
 				if (at !== -1) processors.splice(at, 1);
