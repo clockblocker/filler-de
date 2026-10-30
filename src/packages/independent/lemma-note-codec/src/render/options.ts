@@ -1,6 +1,7 @@
 import type { ReadingEntry } from "dumdict";
 import { lemmaIdentityKey, readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import type * as Dumrel from "dumrel/types";
 import { Data } from "effect";
 import type { BodySegment } from "../boundary";
 import type { InflectionHook } from "../inflection";
@@ -52,6 +53,18 @@ export type RenderOptions<L extends Dumling.Language> = {
 	readonly inverseRelations?: (
 		context: ReadingNoteContext<L>,
 	) => readonly SemanticRelationProjection[] | undefined;
+	/**
+	 * The stored Breakdown and Source of every Reading a Breakdown target
+	 * resolves to, which the morphemes line's walk reads (dumrel's
+	 * `propagateMorphemes`, ADR 0051). Without it, each part that is no
+	 * Morpheme shows as one unsplit chunk.
+	 */
+	readonly morphemeSources?: Dumrel.LookupMorphemeSources;
+	/**
+	 * The language's Morpheme Policy for that walk, normally dumcorpus's
+	 * `germanMorphemePolicy`. Without it, the walk infers no Ending.
+	 */
+	readonly morphemePolicy?: Dumrel.MorphemePolicy;
 	/** Visible section titles. Cosmetic and never parsed; an empty one leaves its line out. */
 	readonly titles?: Partial<Record<SectionKind, string>>;
 };

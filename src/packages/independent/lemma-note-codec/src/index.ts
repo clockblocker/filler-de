@@ -158,6 +158,7 @@ export {
 	renderReadingNote,
 	serializeReadingNote,
 } from "./reading-note";
+export { MORPHEMES_LINE_CLASS } from "./render/breakdown";
 export {
 	articleOf,
 	DEFAULT_TITLES,
