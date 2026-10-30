@@ -20,6 +20,7 @@ import {
 	type SectionKind,
 	type SemanticRelationProjection,
 } from "./common";
+import type { Formation } from "./formations";
 
 /** What a Reading note's caller-supplied projections read. */
 export type ReadingNoteContext<L extends Dumling.Language> = {
@@ -65,6 +66,14 @@ export type RenderOptions<L extends Dumling.Language> = {
 	 * `germanMorphemePolicy`. Without it, the walk infers no Ending.
 	 */
 	readonly morphemePolicy?: Dumrel.MorphemePolicy;
+	/**
+	 * A Lemma note's Formations (texteater ADR 0050): the stored Readings
+	 * whose Constituents or Source link to this Lemma, computed by the
+	 * store from its index. Without it, the note lists none.
+	 */
+	readonly formations?: (
+		lemma: Dumling.Lemma<L>,
+	) => readonly Formation<L>[] | undefined;
 	/** Visible section titles. Cosmetic and never parsed; an empty one leaves its line out. */
 	readonly titles?: Partial<Record<SectionKind, string>>;
 };

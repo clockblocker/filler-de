@@ -30,6 +30,8 @@ import {
 	CONVERSION_STORY,
 	constituentsLine,
 	expectMorphemeSection,
+	formationLine,
+	formationLines,
 	morphemeLines,
 	morphemesLine,
 	PART_CROSSROADS,
@@ -38,7 +40,10 @@ import {
 	SETTLED_DUMGEN,
 	sourceLine,
 } from "../../obsidian-e2e/scenarios/classify-breakdown-script";
-import { expectHiddenMetadata, linkTo } from "../../obsidian-e2e/scenarios/dictionary-layout";
+import {
+	expectHiddenMetadata,
+	linkTo,
+} from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { inScope } from "../../support/scoped";
 import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
@@ -188,6 +193,7 @@ describe("Classify breaks each Reading down", () => {
 		expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 		// A pending part's Crossroad note is not created for it.
 		expect(notes[X.kraftwerk]).toBeUndefined();
+		expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 
 		expect(await story.classify(SELECTIONS.kraftwerk)).toEqual([
 			{ linked: 1, readingPath: P.kraftwerkReading },
@@ -204,6 +210,12 @@ describe("Classify breaks each Reading down", () => {
 			constituentsLine([X.kohle, "Kohle"], [P.kraftwerkLemma, "Kraftwerk"]),
 		];
 		expectMorphemeSection(notes[P.kohlekraftwerkReading], stored);
+		// Kraftwerk's Lemma note lists the word built on it (#269), linking
+		// its Reading note.
+		const formations = [
+			formationLine("Komposita", [P.kohlekraftwerkReading, "Kohlekraftwerk"]),
+		];
+		expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 		const asked = story.requests();
 		expect(asked["jev:breakdown-analysis"]).toBe(2);
 
@@ -212,10 +224,12 @@ describe("Classify breaks each Reading down", () => {
 			{ linked: 1, readingPath: P.kohlekraftwerkReading },
 		]);
 		expect(story.requests()).toEqual(asked);
-		expectMorphemeSection(story.notes()[P.kohlekraftwerkReading], stored);
+		notes = story.notes();
+		expectMorphemeSection(notes[P.kohlekraftwerkReading], stored);
+		expect(formationLines(notes[P.kraftwerkLemma])).toEqual(formations);
 
-		// The user unlinks Kraftwerk's only occurrence: its notes go, and
-		// Kohlekraftwerk's part links its Crossroad again.
+		// The user unlinks Kraftwerk's only occurrence: its notes go, with its
+		// Formations, and Kohlekraftwerk's part links its Crossroad again.
 		const unlinked = story.scroll.content.replace(
 			linkTo(P.kraftwerkReading, "Das Kraftwerk"),
 			"Das Kraftwerk",
@@ -225,6 +239,7 @@ describe("Classify breaks each Reading down", () => {
 		notes = story.notes();
 		expect(notes[P.kraftwerkReading]).toBeUndefined();
 		expect(notes[P.kraftwerkLemma]).toBeUndefined();
+		expect(formationLines(notes[P.kohlekraftwerkLemma])).toEqual([]);
 		expectMorphemeSection(notes[P.kohlekraftwerkReading], pending);
 	});
 
@@ -266,6 +281,10 @@ describe("Classify breaks each Reading down", () => {
 		expectMorphemeSection(notes[C.laufReading], [
 			morphemesLine([X.lauf, "Lauf"]),
 			sourceLine(C.laufenLemma, "laufen"),
+		]);
+		// laufen's Lemma note lists Lauf as built from it (#269).
+		expect(formationLines(notes[C.laufenLemma])).toEqual([
+			formationLine("Grundform von", [C.laufReading, "Lauf"]),
 		]);
 	});
 

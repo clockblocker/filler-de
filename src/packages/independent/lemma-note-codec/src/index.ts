@@ -168,6 +168,12 @@ export {
 	sectionTitleClass,
 } from "./render/common";
 export {
+	type Formation,
+	type FormationGroup,
+	formationGroupOf,
+	MAX_FORMATIONS,
+} from "./render/formations";
+export {
 	NoteSerializeError,
 	type PreviousDocument,
 	type ReadingNoteContext,

@@ -21,6 +21,7 @@ import {
 	lemmaNoteMetadataOf,
 } from "./metadata";
 import { articleOf, emojiOf, sectionTitle } from "./render/common";
+import { formationLines } from "./render/formations";
 import {
 	checkRecords,
 	type NoteSerializeError,
@@ -55,6 +56,9 @@ import type {
  *
  * <span …surfaces>Begegnete Formen</span>
  * - Mütter: Nom.Pl ^s-5e6f7a8b                                one list item per met Surface
+ *
+ * <span …formations>Wortbildung</span>
+ * Komposita: [[…/🏭 Kohlekraftwerk|Kohlekraftwerk]]          one line per group of Formations
  *
  * <freeform>
  * ```
@@ -124,9 +128,9 @@ export function parseLemmaNote<L extends Dumling.Language>(
 
 /**
  * Writes a Lemma note from its Lemma's records: the header, the links to
- * its Reading notes, its tables and its Surface lines, then the freeform of
- * `options.previous`, kept byte for byte but for the codec-owned Block IDs
- * an edited rendering still carries. Its metadata records the versions
+ * its Reading notes, its tables, its Surface lines and its Formations, then
+ * the freeform of `options.previous`, kept byte for byte but for the
+ * codec-owned Block IDs an edited rendering still carries. Its metadata records the versions
  * `options.inflection` renders the tables at. It fails with a
  * `NoteSerializeError` for records no valid note holds.
  */
@@ -202,6 +206,17 @@ export function serializeLemmaNote<L extends Dumling.Language>(
 	);
 	if (surfaceLines.length > 0) writer.gap(1);
 	for (const line of surfaceLines) writer.block(line);
+
+	const formations = formationLines(options.formations?.(lemma) ?? [], link);
+	if (formations.length > 0) writer.gap(1);
+	for (const [index, line] of formations.entries())
+		writer.block({
+			block: "formations",
+			lines: [
+				...(index === 0 ? sectionTitle("formations", titles) : []),
+				renderingLines(line).join(" "),
+			],
+		});
 
 	const freeform = freeformOf(options.previous?.segments ?? [])
 		.map((text) => trimBlankLines(withoutBlockIds(text)))

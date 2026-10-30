@@ -24,13 +24,15 @@ export type SectionKind =
 	| "art"
 	| "flexion"
 	| "tags"
-	| "surfaces";
+	| "surfaces"
+	| "formations";
 
 /** The dictionary notes' German section titles, and titles for the new ones. */
 export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 	art: "Art",
 	definition: "Definition",
 	flexion: "Flexion",
+	formations: "Wortbildung",
 	kontexte: "Deine Kontexte",
 	morpheme: "Morpheme",
 	note: "Note",
@@ -49,6 +51,7 @@ const SECTION_CLASSES: Readonly<Record<SectionKind, string>> = {
 	art: "art",
 	definition: "definition",
 	flexion: "flexion",
+	formations: "formations",
 	kontexte: "kontexte",
 	morpheme: "morpheme",
 	note: "kontexte",

@@ -5,7 +5,9 @@
 
 import {
 	crossroadNotePath,
+	type Formation,
 	type InflectionHook,
+	type LinkNamed,
 	type LinkResolver,
 	type RenderOptions,
 	sameTableVersions,
@@ -24,14 +26,15 @@ import {
 	inverseRelationsHook,
 	inverseRelationsReader,
 } from "./inverse-relations";
-import { formKeyOf, lemmaKeyOf, shadowKeyOf } from "./keys";
+import { formKeyOf, lemmaKeyOf, readingKeyOf, shadowKeyOf } from "./keys";
+import { isLemmaTarget, shadowOfTarget } from "./link-targets";
 import { byCodeUnit, type NoteIndex, relationEdgesOf } from "./note-index";
 import type { NoteData, PathEntry } from "./notes";
 
 /** What a host renders into every note beyond the store's own projections. */
 export type NoteProjections = Omit<
 	RenderOptions<"de">,
-	"paths" | "resolve" | "inverseRelations" | "morphemeSources"
+	"paths" | "resolve" | "inverseRelations" | "morphemeSources" | "formations"
 >;
 
 /**
@@ -111,6 +114,63 @@ function morphemeSourcesOf(
 	};
 }
 
+/** What a Breakdown or Source target names, as its owner's note links it. */
+const namesOfTarget = (target: Dumrel.LinkTarget): LinkNamed<"de"> =>
+	isLemmaTarget(target)
+		? { kind: "Lemma", lemma: target }
+		: {
+				kind: "Shadow",
+				shadow: target as Dumrel.UnitShadow & { language: "de" },
+			};
+
+/**
+ * A Lemma's Formations (texteater ADR 0050, #269): the stored Readings
+ * whose Constituents or Source link to this Lemma's note, read from the
+ * index's Shadow key -> owning Readings (#267). A link counts where the
+ * owner's own note sends it, by the same resolver and from the same stored
+ * target its Constituents or Source line links: its Lemma target, or its
+ * Shadow while that names this Lemma alone. While the Shadow names
+ * two Lemmas, the formation links the Crossroad, and neither Lemma note
+ * lists it. Morphemes never count: they are a walk, not a formation.
+ */
+function formationsOf(
+	view: NoteIndex,
+	resolve: LinkResolver<"de">,
+): NonNullable<RenderOptions<"de">["formations"]> {
+	return (lemma) => {
+		const key = lemmaKeyOf(lemma);
+		const lands = (target: Dumrel.LinkTarget | undefined) => {
+			if (target === undefined) return false;
+			const resolved = resolve({
+				names: namesOfTarget(target),
+				role: "breakdown",
+			});
+			return (
+				resolved.kind === "Lemma" && lemmaKeyOf(resolved.lemma) === key
+			);
+		};
+		return view
+			.linkOwnersOf(shadowKeyOf(lemma))
+			.flatMap((readingKey): Formation<"de">[] => {
+				const entry = view.reading(readingKey);
+				if (entry === undefined) return [];
+				const { breakdown, source } = entry.knowledge ?? {};
+				const constituents = breakdown?.constituents;
+				if (constituents?.some(({ target }) => lands(target)))
+					return [
+						{
+							constituents,
+							reading: entry.reading,
+							via: "constituents",
+						},
+					];
+				if (source !== undefined && lands(source.target))
+					return [{ reading: entry.reading, via: "source" }];
+				return [];
+			});
+	};
+}
+
 /** The options every note write renders with, against one index version. */
 export function renderOptionsFor(
 	view: NoteIndex,
@@ -118,15 +178,17 @@ export function renderOptionsFor(
 	format: MetadataFormat,
 ): { readonly options: WriteOptions<"de">; readonly failed: Set<string> } {
 	const inverse = inverseRelationsReader(view);
+	const resolve = linkResolver(view);
 	return {
 		failed: inverse.failed,
 		options: {
 			...projections,
 			format,
+			formations: formationsOf(view, resolve),
 			inverseRelations: inverseRelationsHook(inverse.read),
 			language: "de",
 			morphemeSources: morphemeSourcesOf(view),
-			resolve: linkResolver(view),
+			resolve,
 		},
 	};
 }
@@ -166,10 +228,43 @@ const morphemeSourcesKey = (data: NoteData | undefined): string =>
 const MORPHEME_WALK_DEPTH = 8;
 
 /**
- * The most notes one commit re-renders for the morphemes lines it moves, as
- * tf-demo caps its moved owners. The rest follow after the commit.
+ * The Constituents and Sources a Lemma's Readings store, by Reading, as one
+ * comparable string: what a base's Formations read of it (#269).
  */
-export const MAX_MORPHEME_READERS = 200;
+const formationLinksKey = (data: NoteData | undefined): string =>
+	canonicalJson(
+		(data?.readingEntries ?? []).flatMap(({ knowledge, reading }) => {
+			const constituents = knowledge?.breakdown?.constituents;
+			const source = knowledge?.source;
+			return constituents === undefined && source === undefined
+				? []
+				: [
+						[
+							readingKeyOf(reading),
+							constituents ?? null,
+							source ?? null,
+						],
+					];
+		}),
+	);
+
+/** Adds the Shadow keys a Lemma's Constituents and Sources link by. */
+function formationShadows(data: NoteData | undefined, into: Set<string>) {
+	for (const { knowledge } of data?.readingEntries ?? []) {
+		for (const { target } of knowledge?.breakdown?.constituents ?? [])
+			if (target !== undefined)
+				into.add(shadowKeyOf(shadowOfTarget(target)));
+		if (knowledge?.source !== undefined)
+			into.add(shadowKeyOf(shadowOfTarget(knowledge.source.target)));
+	}
+}
+
+/**
+ * The most other notes one commit re-renders for the morphemes lines and
+ * the Formations it moves, as tf-demo caps its moved owners. The rest
+ * follow after the commit.
+ */
+export const MAX_FAN_OUT_NOTES = 200;
 
 /**
  * The Lemmas whose morphemes lines read a Lemma or a Unit Shadow of these
@@ -220,13 +315,21 @@ function morphemeReaders(
  * - when a Lemma comes or goes, the notes that link by its Unit Shadow,
  *   whose uniqueness it changes, and the targets of every claim made by a
  *   Lemma with that Shadow, whose inverse links name it;
+ * - when a Lemma's Constituents or Sources change, or it comes or goes, the
+ *   Lemmas they name, whose Formations list it (#269). A link that moves
+ *   between Lemmas moves in its owner, so this covers the Lemma it leaves
+ *   and the one it reaches; a Source kept on its Shadow (texteater #1279)
+ *   names a base whose own Source names it, which the walk below reaches;
  * - when a Lemma's Breakdowns or Sources change, or it comes or goes, which
  *   moves where an inherited link of its Shadow resolves, the notes whose
- *   morphemes lines read it, up the walk, at most
- *   {@link MAX_MORPHEME_READERS} less `options.moved`, the owners whose
- *   links the change moves, so one cap bounds the notes it writes;
- *   `overflow` holds the rest, for the store to re-render after the change;
+ *   morphemes lines read it, up the walk;
  * - the Crossroads of every spelling the Lemmas or their Surfaces have.
+ *
+ * The bases whose Formations move, then the morphemes lines' readers, are
+ * capped together at {@link MAX_FAN_OUT_NOTES} less `options.moved`, the
+ * owners whose links the change moves, so one cap bounds the notes it
+ * writes; `overflow` holds the rest, for the store to re-render after the
+ * change.
  *
  * The Lemmas in `options.deferred`, owners whose links move after the
  * change (#267), are left out, and so are the notes whose morphemes lines
@@ -254,6 +357,8 @@ export function fanOutOf(
 	const shadows = new Set<string>();
 	/** Shadow keys whose morphemes-line readers the change moves. */
 	const walked = new Set<string>();
+	/** Shadow keys whose Lemmas' Formations the change moves. */
+	const based = new Set<string>();
 	const own = new Set(touched);
 	for (const key of own) {
 		const was = before.lemmaData(key);
@@ -261,6 +366,10 @@ export function fanOutOf(
 		for (const data of [was, is]) {
 			if (data) for (const form of formKeysOf(data)) formKeys.add(form);
 			claimTargets(data, lemmas);
+		}
+		if (formationLinksKey(was) !== formationLinksKey(is)) {
+			formationShadows(was, based);
+			formationShadows(is, based);
 		}
 		const lemma = (is ?? was)?.lemmaRecord.lemma;
 		if (lemma && Boolean(was) !== Boolean(is)) {
@@ -282,15 +391,27 @@ export function fanOutOf(
 	}
 	const deferred = options.deferred ?? new Set<string>();
 	for (const key of [...own, ...deferred]) lemmas.delete(key);
-	const readers = morphemeReaders([before, after], walked, deferred).filter(
+	const bases = [...based]
+		.sort(byCodeUnit)
+		.flatMap((shadow) => [
+			...before.lemmasNamedBy(shadow),
+			...after.lemmasNamedBy(shadow),
+		])
+		.filter((key) => !deferred.has(key));
+	const others = [
+		...new Set([
+			...bases,
+			...morphemeReaders([before, after], walked, deferred),
+		]),
+	].filter(
 		(key) => !own.has(key) && !lemmas.has(key) && after.lemmaData(key),
 	);
-	const budget = Math.max(0, MAX_MORPHEME_READERS - (options.moved ?? 0));
-	for (const key of readers.slice(0, budget)) lemmas.add(key);
+	const budget = Math.max(0, MAX_FAN_OUT_NOTES - (options.moved ?? 0));
+	for (const key of others.slice(0, budget)) lemmas.add(key);
 	return {
 		formKeys,
 		lemmas: new Set([...lemmas].filter((key) => after.lemmaData(key))),
-		overflow: readers.slice(budget),
+		overflow: others.slice(budget),
 	};
 }
 

@@ -106,7 +106,7 @@ surfaceBlockIds(surfaces); tableBlockIds(selectionKeys)
 notePathsOf(records): { lemma; readings; claims; collisions }
 ```
 
-`RenderOptions` are the projections' inputs: `resolve` (the store's link resolutions), `paths`, `inflection`, `tags`, `inverseRelations` and `titles`. `SerializeOptions` adds `previous`, the document parsed from the note's current file, whose freeform serialize keeps. Parse never throws and never repairs. Serialize and render return Effect's `Result`, failing with a `NoteSerializeError` (a `Data.TaggedError`) for records no valid note holds, such as a Reading of another Lemma or a Reading the records do not hold.
+`RenderOptions` are the projections' inputs: `resolve` (the store's link resolutions), `paths`, `inflection`, `tags`, `inverseRelations`, `morphemeSources`, `morphemePolicy`, `formations` and `titles`. `SerializeOptions` adds `previous`, the document parsed from the note's current file, whose freeform serialize keeps. Parse never throws and never repairs. Serialize and render return Effect's `Result`, failing with a `NoteSerializeError` (a `Data.TaggedError`) for records no valid note holds, such as a Reading of another Lemma or a Reading the records do not hold.
 
 A document preserves the bytes of freeform text. Data holds dumdict records only, each validated by dumdict's `parseAs*` parser for the codec's language; an invalid note returns typed issues, never invalid content as a record.
 
@@ -134,6 +134,7 @@ Visible Blocks, in order:
 | `readings` | One link per Reading note, its alias the Emoji Description (the Canonical Form for a Foreign Reading) |
 | `flexion_title`, `inflection` | One table per Licence Group, from the inflection hook, each captioned with its group's emojis and ending in its Block ID |
 | `surface` | One list item per owned Surface: its form, its Surface Axes, any Licence Conflict mark and its `^s-<hash>` Block ID, under "Begegnete Formen" |
+| `formations` | One line per group of the Lemma's Formations (texteater ADR 0050, #269): the stored words whose Constituents or Source link to it, each linking its Reading note, under "Wortbildung" |
 
 Freeform stands last.
 
@@ -197,13 +198,14 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 | `tags` | The `tags` hook |
 | `inverse_relation` | The `inverseRelations` hook: `SemanticRelationProjection`s for this Reading, computed by the store; see Projected inverse relations |
 | `morphemes` | `morphemeSources`, dumrel's `LookupMorphemeSources`: the stored Breakdown and Source of every Reading of a target's Lemma, computed by the store from its index (none for a Unit Shadow); and `morphemePolicy`, the language's `MorphemePolicy`. The plugin passes dumcorpus's `germanMorphemePolicy` (`dumcorpus/inventories`). Without a lookup each part shows as one unsplit chunk; without a policy the walk infers no Ending |
+| `formations` | The `formations` hook: for a Lemma, its `Formation`s, each a stored Reading and whether its Constituents (with those pieces) or its Source name the Lemma, computed by the store; see The dictionary store. The codec groups, orders and caps them |
 | Links in any rendering | `resolve`: the `LinkTarget` the store holds for each link (texteater#1221) |
 
 Inverse relations are never written as data, in this note or any other. The `relation` Block holds only direct claims (synonym, nearSynonym, antonym, nearAntonym, hypernym, holonym, endonym), and dumrel's stored Knowledge has no field for an inverse such as hyponym or meronym ([ADR 0012]). Every relation stays inside its source's relation space ([ADR 0020]).
 
 ### Links
 
-The codec decides no link target. Each link it renders is a `LinkSubject`: its role (`header`, `reading`, `relation`, `pendingRelation`, `inverseRelation`, `valency`, `inflection`, `breakdown`) and what the data names (an exact Lemma, an exact Reading, or a Unit Shadow). The caller's `resolve` answers the `LinkTarget` the store holds for it, and the codec maps the target to a path:
+The codec decides no link target. Each link it renders is a `LinkSubject`: its role (`header`, `reading`, `relation`, `pendingRelation`, `inverseRelation`, `valency`, `inflection`, `breakdown`, `formation`) and what the data names (an exact Lemma, an exact Reading, or a Unit Shadow). The caller's `resolve` answers the `LinkTarget` the store holds for it, and the codec maps the target to a path:
 
 - `Lemma` renders a link to that Lemma note;
 - `Spelling` renders the Crossroad path, `crossroadNotePath`;
@@ -211,7 +213,7 @@ The codec decides no link target. Each link it renders is a `LinkSubject`: its r
 
 Without `resolve`, the codec renders what a note knows without a lookup (`defaultResolve`):
 
-- **Sense known.** An exact Reading goes to its Reading note: a Lemma note's links to its own Reading notes and a claim in Reading target mode.
+- **Sense known.** An exact Reading goes to its Reading note: a Lemma note's links to its own Reading notes, its Formations, whose owning Reading the store knows, and a claim in Reading target mode.
 - **Exact Lemma.** A direct claim's Lemma goes to its Lemma note, since dumdict holds a direct claim only on a stored Lemma, and so does a Reading note's header, which names its own Lemma, and a Breakdown piece's or a Source's Lemma target (phylosophy.md, Breakdown-link rule).
 - **Sense unknown.** Everything else goes to the Crossroad note of its spelling, with the spelling as alias, such as `[[Worter/k/kra/kraft/kraftwerk|Kraftwerk]]`: pending relations, inverse relations (by their source's Lemma's Unit Shadow), a Valency Frame's preposition, which may be stored nowhere, a Breakdown piece's or a Source's Unit Shadow target, a part not stored yet, and a Lemma note's header. No Breakdown link points at a Reading note (texteater ADR 0050).
 
@@ -285,7 +287,7 @@ Tests cover (`lemma-note-codec/tests/`, `tests/unit/dictionary-notes/`):
 ## Open questions
 
 1. **Whole-path length.** Windows' 260-character limit without long-path support is not checked; only each segment is capped (ADR-0015).
-2. **Formations.** Whether a morpheme's "used in" backlinks become a projection over the stored Breakdowns: the Lemma note's Formations (#269).
+2. **Formations.** Formations on a Crossroad note, for a base that is pending or whose Shadow names several Lemmas (tf-demo shows them on its Shadow note).
 
 ## Layout
 
@@ -385,7 +387,7 @@ D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
 
 - **Header.** In a Reading note: the Emoji Description, a German noun's article, a link to its Lemma note, and the transcription as a YouGlish link with `♫` in its text (`/…/` for a language YouGlish lacks). In a Lemma note: the article and a link to its spelling's Crossroad note. The transcription is Reading Knowledge, so only Reading notes show it.
 - **Sections.** In a Reading note, every Block but the header belongs to a section, in this order: Deine Kontexte (`attestation`), Note (`notes_title`, `notes`, `notes_placeholder`), Semantische Beziehungen (`relation`, `pending_relation`, `inverse_relation`), Morpheme (`morphemes`, `constituents`, `source`), Übersetzung (`translation`, `attested_translation`), Definition, Valenz, Art (`locution_type`, `saying_type`, `formula_role`), Flexion (`inflection_embed`) and Tags. A section opens with its title, `<span class="note_block_title note_block_title_<class>">Title</span>`. The class is the example's: `kontexte` (the Note title's too), `synonyme`, `morpheme`, `translations`, `flexion`, `tags`, and the section's own name for the new ones (`surfaces` in a Lemma note). Titles are cosmetic: `titles` replaces them, and an empty title leaves the line out.
-- **Spacing.** A blank line follows the header, two follow the Note section, and sections otherwise stand on consecutive lines, as in the example. In a Lemma note, a blank line separates the header, the Reading links, the Flexion title, each table and the Surface list.
+- **Spacing.** A blank line follows the header, two follow the Note section, and sections otherwise stand on consecutive lines, as in the example. In a Lemma note, a blank line separates the header, the Reading links, the Flexion title, each table, the Surface list and the Formations.
 - **Renderings.** Attestation embeds are separated by a blank line. Relations are one line per relation with the dictionary's symbols, `=` synonym, `≈` near synonym, `≠` antonym, `≉` near antonym, `⊃` hypernym, `⊂` hyponym, `∋` holonym, `∈` meronym, `⇒` endonym, `⇐` exonym, each target once, so direct, pending and projected relations read as one list. A Valency Frame shows one line per Slot, `<n>. <status>: <complements>`; a Reflexive complement (texteater ADR 0052) shows `sich`, `sich (Dat)` when its case is Dat, after the preposition it follows in a fixed phrase (`[[außer]] sich (Dat)`). Translations show each one's text, its pieces joined by a space (texteater ADR 0055), prefixed by the language only when there are several; attested translations show in italics. Links alias the spelling alone. Inflection cells are display-only (batteries ADR 0019).
 - **Tables** (`drawTable`) are drawn in the dictionary's line style, never as Markdown grids, from the shape of the pack's view alone; the drawer names no case, tense or person.
   - **One panel** (a noun's declension, a comparison, a stem's declension): one line per row, `<row label>: <cells>`, with no panel caption.
@@ -402,7 +404,21 @@ D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
   - **Source line.** When there are no Constituents: `← [[laufen]]` for a conversion, clipping, acronym or participle, and `← *historically the participle of* [[lassen]]` for a participle whose Participle Meaning is Drifted (texteater ADR 0036).
   - **Never parsed.** The lines are renderings like any other: sealed, regenerated from the metadata, and never read back (phylosophy.md, Breakdown-link rule). A line that a part's Breakdown arriving changes is replaced on the next render; a line the user edited stays as freeform.
 - **Note.** A Reading note always has the Note title, so a user knows where to write. While the note has neither `notes` nor freeform, `notes_placeholder` shows `*You can write here*`.
-- **Not rendered.** The example's Verweise section has no data, nor do the old "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen". Its Morpheme section is the Breakdown rendering above.
+- **Formations.** A Lemma note's "Wortbildung" section, `<span class="note_block_title note_block_title_formations">Wortbildung</span>`, lists the stored words built on the Lemma (texteater ADR 0050), as DWDS's word-formation panel and tf-demo's Formations do:
+
+  ```
+  <span class="note_block_title note_block_title_formations">Wortbildung</span>
+  Präfixverben: [[…/🤝 abkaufen|abkaufen]], [[…/🛒 einkaufen|einkaufen]], [[…/💰 verkaufen|verkaufen]]
+  Komposita: [[…/🏬 Kaufhaus|Kaufhaus]]
+  Ableitungen: [[…/🧑 Käufer|Käufer]]
+  Grundform von: [[…/🛍️ Kauf|Kauf]]
+  ```
+
+  - **Groups.** tf-demo's `formationGroupOf`, by the Kind of a formation's other pieces: a Locution or Saying is a phrase (`Wendungen`); a Prefix makes a prefixed word (`Präfixverben` when every one is a verb, `Präfixbildungen` otherwise); a Suffix or Suffixoid a derivation (`Ableitungen`); words alone, an Interfix aside, a compound (`Komposita`). A word whose Source names the Lemma is Sourced (`Grundform von`, DWDS's `als Grundform`, tf-demo's `Base of`), unless its Constituents name it too. The groups stand in tf-demo's order: Prefixed, Compounds, Derivations, Sourced, Phrases, one line each, `<label>: <links>`.
+  - **Order and links.** Within a group, by Canonical Form as German collates it (`Intl.Collator("de")`), then by Reading identity. Each line is escaped as every rendering is (`%%` never opens a comment). Each formation links its Reading note (role `formation`), aliased by its Canonical Form, and by its Canonical Form and Emoji Description when another formation of the note shows the same form (`Zugkraft 🚂`, `Zugkraft 🧲`). Links are joined by `, `, as the exemplar joins its links.
+  - **Cap.** At most 200 formations are listed, tf-demo's `MAX_FORMATION_REFERENCES`; a group cut short ends with `… <n> weitere`, as DWDS folds its panel, and a group past the cap shows only that.
+  - **Never parsed.** Each line is a sealed rendering of the `formations` hook's answer, never stored: a line whose formations change is replaced, and a line the user edited stays as freeform. A Lemma with no Formations has no section.
+- **Not rendered.** The example's Verweise section has no data, nor does "Abweichungen". The old "Morphologische Relationen" (Verwendet in) backlinks are the Formations above. Its Morpheme section is the Breakdown rendering above.
 
 ## The dictionary store (#113)
 
@@ -426,11 +442,13 @@ Strays, empty files and Crossroad notes are never quarantined. Empty files at no
 - an unresolved pending relation and a Lemma note's own spelling: the Crossroad note;
 - every other sense-unknown link, an inverse relation's source, a Breakdown piece's or a Source's Unit Shadow, or a preposition not stored as named: the Lemma note while its Unit Shadow names exactly one stored Lemma (`resolveShadow`), the Crossroad note otherwise.
 
+**Formations (#269).** A Lemma's Formations are the stored Readings whose Constituents or Source link to its Lemma note: the owners the index keeps under its Unit Shadow's key (the Shadow key → owning Readings index of #267) whose Constituents piece or Source target, as stored, `resolve` sends to this Lemma, as the owner's own Constituents or Source line links it. That is the Lemma target #267 moves there, or the Shadow while it names this Lemma alone. While the Shadow names two Lemmas (der See and die See), the formation links the Crossroad, and neither Lemma note lists it; it moves back with the link. A morpheme piece counts for nothing: the morphemes line is a walk, not a formation. They are computed on every render, never stored.
+
 **Commits.** A commit stages its changes over the index, renders every note it touches against the index as it will read once the commit lands, and writes them as stop-on-first-failure batches in this order:
 
 1. creates of new Lemma and Reading notes;
 2. rewrites of the notes whose records change;
-3. re-renders of the other notes whose links or inverse relations the change moves, of the notes whose morphemes lines walk a Lemma whose Breakdowns or Sources the change moves, or that comes or goes and so moves where an inherited link of its Shadow resolves (up the walk's depth of 8, following only Breakdown and Source targets; at most 200 such notes, the rest re-rendered in chunks of 200 right after the commit), and of the Crossroad notes of every spelling it touches;
+3. re-renders of the other notes whose links or inverse relations the change moves, of the Lemma notes whose Formations it moves (the Lemmas a changed, added or removed Reading's Constituents or Source name), of the notes whose morphemes lines walk a Lemma whose Breakdowns or Sources the change moves, or that comes or goes and so moves where an inherited link of its Shadow resolves (up the walk's depth of 8, following only Breakdown and Source targets), and of the Crossroad notes of every spelling it touches. The Formations' and the morphemes lines' notes share one cap with the owners whose links the commit moves: at most 200 notes, the Formations' first, the rest re-rendered in chunks of 200 right after the commit;
 4. removed Reading notes, then removed Lemma notes, to the trash.
 
 Every rewrite is a compare-and-swap with the facility's transforms inside it. A note whose records stay is rewritten only when its metadata, which holds its renderings' seals, changes, so a note the user rearranged is not rewritten for that alone. A Reading note's embed names its Licence Group's table, so a Paradigm Change that splits or merges groups rewrites the Lemma note's tables and its Reading notes' embeds in one commit.
