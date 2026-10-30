@@ -13,7 +13,11 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Context, type Effect, Layer } from "effect";
-import type { ClassifyCommander, KnowledgeQueue } from "../commanders/classify";
+import type {
+	ClassifyCommander,
+	KnowledgeQueue,
+	OccurrenceAttester,
+} from "../commanders/classify";
 import type { ScrollActivity } from "../commanders/classify/resolution/scroll-activity";
 import type { UnlinkObserver } from "../commanders/classify/resolution/unlink-observer";
 import type { SegmentationCache } from "../commanders/classify/segmentation-cache";
@@ -40,6 +44,8 @@ export class ClassifyServices extends Context.Service<
 	ClassifyServices,
 	{
 		readonly classify: ClassifyCommander;
+		/** Attests the occurrence of a clicked unit link (#281). */
+		readonly attester: OccurrenceAttester;
 		/** Classify's background Knowledge runs, one per Reading (#64). */
 		readonly knowledgeQueue: KnowledgeQueue;
 		/** Removes the occurrences whose links the user deletes from a Scroll (#116). */

@@ -73,4 +73,26 @@ export type ClassifyPlan = {
 	 * replaces the old notes' links (#148). `Keep` when absent.
 	 */
 	readonly userLinks?: UserLinks;
+	/** When the plan's occurrences become Attestations (#281); `OnClick` when absent. */
+	readonly attest?: AttestMode;
+	/**
+	 * For `Clicked`: the Reading note the clicked link opens. While its
+	 * Reading is stored, the occurrence is attested to it, never judged
+	 * another.
+	 */
+	readonly clickedReading?: string;
 };
+
+/**
+ * When Classify attests an occurrence it links (#281):
+ *
+ * - `OnClick`: the command. It links and commits, but an occurrence gets
+ *   its Attestation Ref only once the user clicks its link; one already
+ *   attested keeps its ref. Each judgement is cached for the click.
+ * - `Now`: the dictionary reset, whose old notes were attested. Every
+ *   occurrence is attested as it is linked, its block cut and minted.
+ * - `Clicked`: the click on one occurrence's link. It is attested from its
+ *   cached judgement, judged again only on a miss; its Knowledge was asked
+ *   for when it was linked.
+ */
+export type AttestMode = "OnClick" | "Now" | "Clicked";

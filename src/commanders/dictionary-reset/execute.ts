@@ -291,7 +291,10 @@ const regenerateOne = Effect.fnUntraced(function* (
 	// The old notes' links at the occurrence, such as `Der [[Fahrer]]`,
 	// predate the dictionary's layout, so the link to the Reading replaces
 	// them (#148).
+	// The old notes attested their occurrences, so the new ones do at once
+	// (#281).
 	const outcome = yield* classifySelection({
+		attest: "Now",
 		content: target.content,
 		scrollPath: target.scrollPath,
 		selection: target.selection,

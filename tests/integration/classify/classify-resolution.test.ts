@@ -14,6 +14,7 @@ import { makeDumdictVaultStore } from "@textfresser/dictionary";
 import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
+import { memoryJudgementCache } from "../../../src/commanders/classify/judgement-cache";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
@@ -36,7 +37,11 @@ import {
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
 import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { inScope } from "../../support/scoped";
-import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
+import {
+	clicksOn,
+	MemoryScroll,
+	resolveAmong,
+} from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
@@ -102,6 +107,7 @@ async function classifyHarness(story: string) {
 		}),
 	);
 	const cache = memorySegmentationCache();
+	const judgements = memoryJudgementCache();
 	const activity = createScrollActivity();
 	const commander = new ClassifyCommander({
 		cache,
@@ -110,6 +116,7 @@ async function classifyHarness(story: string) {
 		resolver: dumgenUnitResolver({
 			activity,
 			dumgen: operations,
+			judgements,
 			knowledge: queue,
 			notify: (message) => notices.push(message),
 			scroll,
@@ -145,12 +152,24 @@ async function classifyHarness(story: string) {
 	};
 	const link = async (path: string, shown: string) =>
 		`[[${(await readingNoteOf(path)).slice(0, -3)}|${shown}]]`;
+	// A click on a link attests its occurrence (#281).
+	const { click } = await clicksOn({
+		activity,
+		cache,
+		classify: (input) => commander.classify(input),
+		resolve: (linkpath) =>
+			resolveAmong(() => [...vault.markdownPaths(), SCROLL])(linkpath),
+		scroll,
+		store,
+	});
 	return {
 		activity,
 		cache,
 		classify,
+		click,
 		commander,
 		dumgen,
+		judgements,
 		link,
 		readingNoteOf,
 		scroll,
@@ -172,6 +191,8 @@ describe("Classify resolves a selection end to end", () => {
 			scroll,
 			store,
 			vault,
+			click,
+			judgements,
 		} = await classifyHarness(STORY);
 		await classify(FIRST_SELECTION);
 		const first = commander.latestHandoff();
@@ -192,6 +213,17 @@ describe("Classify resolves a selection end to end", () => {
 			LEMMA_PATHS.aufJedenFall,
 		])
 			readingPaths.push(await readingNoteOf(path));
+		// Classify attests nothing, and keeps each judgement for its click.
+		for (const path of readingPaths)
+			expect(vault.content(path)).not.toMatch(/Story#\^/u);
+		expect(judgements.entries.size).toBe(4);
+		// A click on each unit attests it, asking dumgen nothing again; the
+		// separable verb's second piece is the same occurrence.
+		const asked = () => JSON.stringify(Effect.runSync(dumgen.testing.requests));
+		const beforeClicks = asked();
+		for (const shown of ["Der Hund", "fängt", "heute", "auf jeden Fall", "an"])
+			await click(shown);
+		expect(asked()).toBe(beforeClicks);
 		expectFirstClassifyNotes(notesOf(vault), readingPaths);
 		const afterFirst = notesOf(vault);
 		const knowledgeCalls = () =>
@@ -207,9 +239,17 @@ describe("Classify resolves a selection end to end", () => {
 			linked: 1,
 			readingPath: await readingNoteOf(LEMMA_PATHS.hund),
 		});
+		expect(vault.content(await readingNoteOf(LEMMA_PATHS.hund))).not.toMatch(
+			/Story#\^1/u,
+		);
+		await click("Der Hund", 1);
 		expect(vault.content(await readingNoteOf(LEMMA_PATHS.hund))).toMatch(
 			/!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u,
 		);
+		// A second click adds nothing.
+		const once = vault.content(await readingNoteOf(LEMMA_PATHS.hund));
+		await click("Der Hund", 1);
+		expect(vault.content(await readingNoteOf(LEMMA_PATHS.hund))).toBe(once);
 		expect(knowledgeCalls()).toEqual(before);
 		// The same Surface again: the Lemma note and the Crossroad stay.
 		expect(vault.content(LEMMA_PATHS.hund)).toBe(afterFirst[LEMMA_PATHS.hund]);
@@ -262,6 +302,7 @@ describe("Classify resolves a selection end to end", () => {
 			scroll,
 			store,
 			vault,
+			click,
 		} = await classifyHarness(SENTENCE_BLOCKS_STORY);
 		await classify(SENTENCE_BLOCKS_SELECTION);
 		const hund = commander.latestHandoff()?.resolved[0];
@@ -269,6 +310,10 @@ describe("Classify resolves a selection end to end", () => {
 		expect(hund).toMatchObject({ linked: 1, readingPath: hundNote });
 		const derHund = await link(LEMMA_PATHS.hund, "Der Hund");
 		const cut = sentenceBlocksStory(derHund);
+		// Classify links but cuts nothing; the click cuts and mints.
+		expect(scroll.content).not.toBe(cut);
+		expect(scroll.content).toContain(derHund);
+		await click("Der Hund");
 		expect(scroll.content).toBe(cut);
 		const refs = () => vault.content(hundNote)?.match(/!\[\[Story#\^\d+\|/gu);
 		expect(refs()).toEqual(["![[Story#^1|"]);
@@ -298,6 +343,7 @@ describe("Classify resolves a selection end to end", () => {
 		// Classify again: the block keeps its ID, nothing is cut again, and
 		// the Attestation names the same Sentence.
 		await classify(SENTENCE_BLOCKS_SELECTION);
+		await click("Der Hund");
 		const again = await readingNoteOf(LEMMA_PATHS.hund);
 		expect(scroll.content).toBe(
 			sentenceBlocksStory(await link(LEMMA_PATHS.hund, "Der Hund")),

@@ -170,6 +170,8 @@ function observerOver(options: {
 	readonly sweepQuietMs?: number;
 	/** Reads Scrolls from the vault instead of `scroll`, as after a rename. */
 	readonly readFromVault?: boolean;
+	/** Whether another file links a note, as Obsidian's resolved links tell. */
+	readonly linkedElsewhere?: (notePath: string) => boolean;
 }) {
 	const notices: string[] = [];
 	const reads: string[] = [];
@@ -197,6 +199,12 @@ function observerOver(options: {
 					return options.readScroll?.(content) ?? Effect.succeed(content);
 				}),
 			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
+			...(options.linkedElsewhere === undefined
+				? {}
+				: {
+						linkedElsewhere: (notePath: string) =>
+							Effect.sync(() => options.linkedElsewhere?.(notePath) ?? false),
+					}),
 		},
 		segmenterVersion: Effect.succeed(SEGMENTER_VERSION),
 		store: Effect.succeed(store),
@@ -254,6 +262,7 @@ async function classifyRepeated(content: string) {
 	});
 	const outcome = await run(
 		classifySelection({
+			attest: "Now",
 			content,
 			scrollPath: SCROLL,
 			selection: selectionOf(content, content.trim()),
@@ -730,7 +739,7 @@ describe("unlink observer", () => {
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
 	});
 
-	it("lets no link shield an occurrence whose key it computes and nothing records, as one never clicked (#281)", async () => {
+	it("lets no link shield an occurrence whose key it computes and nothing records, as one never clicked, but keeps a Reading's last while one names it (#281)", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt.\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
 		// The second Sentence is segmented, but its See was never attested.
@@ -759,9 +768,39 @@ describe("unlink observer", () => {
 			harness.scroll.content = `Der See ist tief. ^0\n\nDer ${link} ist sehr kalt.\n`;
 		});
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
-		// One whose key is recorded nowhere is another occurrence: it goes.
+		// One whose key is recorded nowhere is another occurrence: it explains
+		// nothing, but the ref is its Reading's last, and removing it would
+		// remove the Reading that link opens, so it stays.
 		await edit(() => {
 			harness.scroll.content = `Der See ist tief. ^0\n\nDer ${link} ist kalt.\n`;
+		});
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		// Once no link names the Reading, it goes.
+		await edit(() => {
+			harness.scroll.content = "Der See ist tief. ^0\n\nDer See ist kalt.\n";
+		});
+		expect(await refsOf(harness.store, see)).toEqual([]);
+	});
+
+	it("keeps a Reading's last occurrence while another Scroll links the Reading (#281)", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
+		const link = linkTo(notePath(lake), "See");
+		let elsewhere = true;
+		const { edit } = observerOver({
+			cache,
+			linkedElsewhere: (path) => elsewhere && path === notePath(lake),
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			vault: harness.vault,
+		});
+		await edit(() => {
+			harness.scroll.content = harness.scroll.content.replace(link, "See");
+		});
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		elsewhere = false;
+		await edit(() => {
+			harness.scroll.content += "\n";
 		});
 		expect(await refsOf(harness.store, see)).toEqual([]);
 	});

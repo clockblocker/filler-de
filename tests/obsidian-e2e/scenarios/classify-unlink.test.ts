@@ -52,7 +52,12 @@ describe("Obsidian E2E - Classify unlink", () => {
 					return unit.readingPath;
 				});
 				if (!hund || !heute) throw new Error("Classify resolved fewer units than it reported");
+				// Classify attests nothing: a click on a link does (#281).
+				expect((await dictionary()).markdown[hund]).not.toMatch(KONTEXT_0);
+				await act({ kind: "clickScrollLink", linkpath: linkpath(hund), path: "Story.md" });
+				await act({ kind: "clickScrollLink", linkpath: linkpath(heute), path: "Story.md" });
 				await act({ kind: "runClassify", path: "Story.md", selection: SECOND_SELECTION });
+				await act({ kind: "clickScrollLink", linkpath: linkpath(hund), nth: 1, path: "Story.md" });
 				let notes = (await dictionary()).markdown;
 				expect(notes[hund]).toMatch(KONTEXT_0);
 				expect(notes[hund]).toMatch(KONTEXT_1);
@@ -106,6 +111,9 @@ describe("Obsidian E2E - Classify unlink", () => {
 					return unit.readingPath;
 				});
 				if (!hund || !heute) throw new Error("Classify resolved fewer units than it reported");
+				// A click on each link attests its occurrence (#281).
+				await act({ kind: "clickScrollLink", linkpath: linkpath(hund), path: "Story.md" });
+				await act({ kind: "clickScrollLink", linkpath: linkpath(heute), path: "Story.md" });
 				const before = (await dictionary()).markdown;
 				expect(before[hund]).toMatch(KONTEXT_0);
 				expect(before[heute]).toMatch(KONTEXT_0);

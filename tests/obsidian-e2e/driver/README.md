@@ -76,7 +76,9 @@ so Textfresser's click detector sees it, which `openLinkText` skips. Its
 `view` is `livePreview`, where it scrolls the link into view with the
 cursor off it, or `reading`, where it waits for every link to `linkpath`
 to render; its `press` is `plain`, `mod` (Cmd, Ctrl off macOS) or
-`middle` (`auxclick` in place of `click`). It then waits up to three
+`middle` (`auxclick` in place of `click`). With `activeElsewhere`, a
+Library-relative note, that note is opened in a split pane and made active
+before the click, so the link clicked is not the active note's. It then waits up to three
 seconds for the note to change or a tab to open. After `classify`,
 `followLink` and `clickScrollLink` settle, the
 driver saves the active editor if it differs from the note on disk, since

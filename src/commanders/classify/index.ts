@@ -4,6 +4,11 @@
  * `dumgenUnitResolver` (`resolution/`, #64) implements.
  */
 export { ClassifyCommander } from "./classify-commander";
+export { filesJudgementCache } from "./judgement-cache";
+export {
+	makeOccurrenceAttester,
+	type OccurrenceAttester,
+} from "./resolution/attest-occurrence";
 export { dumgenUnitResolver } from "./resolution/dumgen-unit-resolver";
 export {
 	type KnowledgeQueue,

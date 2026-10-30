@@ -13,6 +13,7 @@ import { Cause, Effect, Layer } from "effect";
 import type { DumgenProvide } from "../../managers/dumgen";
 import {
 	ClassifyError,
+	type ClassifyInput,
 	type ClassifyOutcome,
 	ClassifySegmenter,
 	type ClassifyStats,
@@ -168,6 +169,46 @@ export class ClassifyCommander {
 	/** What the last successful Classify handed to the resolver; desktop E2E reads it. */
 	latestHandoff(): ClassifyHandoff | null {
 		return this.latest;
+	}
+
+	/**
+	 * Classify on its own, on one dumgen build, telling nothing: what a
+	 * click on a link runs to attest its occurrence (#281). Refused, as the
+	 * command is, on a dictionary note or a blocked Scroll.
+	 */
+	classify(
+		input: ClassifyInput,
+	): Effect.Effect<ClassifyOutcome, ClassifyError> {
+		const { cache, dumgen, resolver } = this.deps;
+		return Effect.gen({ self: this }, function* () {
+			const blocked =
+				dictionaryNoteRefusal(input.scrollPath) ??
+				this.deps.blockedBy?.(input.scrollPath);
+			if (blocked !== undefined)
+				return yield* new ClassifyError({
+					message: blocked,
+					reason: "Blocked",
+				});
+			const segmenterVersion = yield* this.deps.segmenterVersion;
+			return yield* classifySelection(input).pipe(
+				Effect.provide(
+					Layer.mergeAll(
+						Layer.succeed(SegmentationCache, cache),
+						Layer.succeed(UnitResolver, resolver),
+						Layer.succeed(ClassifySegmenter, { segmenterVersion }),
+					),
+				),
+				dumgen,
+				Effect.catchTag("DumgenUnavailable", (error) =>
+					Effect.fail(
+						new ClassifyError({
+							message: error.message,
+							reason: "DumgenUnavailable",
+						}),
+					),
+				),
+			);
+		});
 	}
 
 	execute(

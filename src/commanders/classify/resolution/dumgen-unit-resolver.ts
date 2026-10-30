@@ -10,14 +10,21 @@
  *    or writes a New one; a Foreign Lemma has its one Reading. The
  *    instances of a repeated Sentence share one judgement.
  * 3. Each occurrence commits through the dictionary store
- *    (`commitOccurrence`) with the Attestation Ref of its source block. A
- *    New the store refuses as stale is judged again, at most
- *    `MAX_STALE_REJUDGES` times.
+ *    (`commitOccurrence`). A New the store refuses as stale is judged
+ *    again, at most `MAX_STALE_REJUDGES` times.
  * 4. One compare-and-swap write links every piece of every resolved unit
- *    to its Reading note. The block IDs the refs name were added before
- *    anything committed; a paragraph of several Sentences was first cut
- *    into sentence blocks, so each ref names its occurrence's Sentence.
+ *    to its Reading note.
  * 5. Each resolved Reading's Knowledge runs in the background.
+ *
+ * When an occurrence becomes an Attestation is the plan's `attest` (#281).
+ * The command's Classify (`OnClick`) gives none an Attestation Ref, nor a
+ * block ID: one its click already attested keeps its ref, and each
+ * judgement goes into the judgement cache. The click (`Clicked`) resolves
+ * its one occurrence from that cache, judging again only on a miss, and
+ * asks no Knowledge again; the dictionary reset (`Now`) attests as it
+ * links. Attesting, the block IDs the refs name are added before anything
+ * commits; a paragraph of several Sentences is first cut into sentence
+ * blocks, so each ref names its occurrence's Sentence.
  *
  * Resolution is idempotent per occurrence: a second run over the same
  * occurrence reuses the Reading and adds nothing, so lazy click resolution
@@ -27,11 +34,12 @@
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import type { Jev, Luna } from "dumgen";
-import { parseUnit } from "dumling";
+import { lemmaIdentityKey, parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import { Cause, Data, Effect, Option } from "effect";
 import type { DumgenOperations } from "../../../managers/dumgen";
 import { getErrorMessage } from "../../../utils/get-error-message";
+import type { JudgementCache } from "../judgement-cache";
 import type { ClassifyPlan, PlannedSentence, PlannedUnit } from "../types";
 import {
 	type UnitResolution,
@@ -73,6 +81,8 @@ export type DumgenUnitResolverDeps = {
 	readonly notify?: (message: string) => void;
 	/** Marks each Scroll busy while a run resolves and links in it. */
 	readonly activity?: ScrollActivity;
+	/** Where each occurrence's judgement is kept for its click (#281). */
+	readonly judgements?: JudgementCache["Service"];
 };
 
 /** A unit resolution left unresolved, with the reason the user hears. */
@@ -176,6 +186,8 @@ const judgeUnit = Effect.fnUntraced(function* (
 	store: ResolutionStore,
 	plan: ClassifyPlan,
 	planned: PlannedUnit,
+	/** The Reading a clicked link opens: its occurrence goes to it, judged by grammar alone. */
+	linked?: Dumling.Reading<"de">,
 ): Effect.fn.Return<JudgedUnit, UnitPending, Jev | Luna> {
 	const sentence = plan.sentences.get(planned.ref.sentenceKey);
 	if (!sentence)
@@ -208,6 +220,12 @@ const judgeUnit = Effect.fnUntraced(function* (
 		return yield* new UnitPending({ reason: grammar.message });
 	const { attestation } = grammar;
 	const lemma = attestation.surface.lemma;
+	if (linked)
+		return lemmaIdentityKey(linked.lemma) === lemmaIdentityKey(lemma)
+			? clickedAs(attestation, linked, sentence)
+			: yield* new UnitPending({
+					reason: "its link opens a Reading of another Lemma than dumgen judged it; Classify it again",
+				});
 
 	const judge = (
 		candidates: readonly string[],
@@ -269,6 +287,71 @@ const judgeUnit = Effect.fnUntraced(function* (
 	return { attestation, decided, judge, sentence };
 });
 
+/** Where the judgement cache keeps a planned unit's judgement. */
+const judgedAt = (planned: PlannedUnit) => ({
+	occurrence: occurrenceKeyOf(planned.ref, planned.instance),
+	sentenceKey: planned.ref.sentenceKey,
+});
+
+/** A clicked occurrence of `reading`, which is reused, created again if it went. */
+const clickedAs = (
+	attestation: Dumling.Attestation<"de">,
+	reading: Dumling.Reading<"de">,
+	sentence: PlannedSentence,
+): JudgedUnit => ({
+	attestation,
+	decided: { decision: "Reuse", reading },
+	// A reused Reading is never refused as stale.
+	judge: () =>
+		Effect.fail(
+			new UnitPending({ reason: "its clicked Reading was refused" }),
+		),
+	sentence,
+});
+
+/**
+ * A clicked unit's judgement as the cache kept it when Classify linked it,
+ * given to `linked`, the Reading its link opens, when that is stored and
+ * of the same Lemma. None on a miss, or for a Reading of another Lemma.
+ */
+const cachedJudgement = Effect.fnUntraced(function* (
+	judgements: JudgementCache["Service"] | undefined,
+	plan: ClassifyPlan,
+	planned: PlannedUnit,
+	linked: Dumling.Reading<"de"> | undefined,
+) {
+	const sentence = plan.sentences.get(planned.ref.sentenceKey);
+	if (!judgements || !sentence) return Option.none<JudgedUnit>();
+	const cached = yield* judgements.get(judgedAt(planned));
+	return Option.flatMap(cached, ({ attestation, reading }) =>
+		linked === undefined
+			? Option.some(clickedAs(attestation, reading, sentence))
+			: lemmaIdentityKey(linked.lemma) ===
+					lemmaIdentityKey(attestation.surface.lemma)
+				? Option.some(clickedAs(attestation, linked, sentence))
+				: Option.none(),
+	);
+});
+
+/**
+ * The stored Reading whose note is at `path`: Reading notes sit in their
+ * Lemma note's folder. None when no stored Reading has it.
+ */
+const readingAtPath = Effect.fnUntraced(function* (
+	store: ResolutionStore,
+	path: string,
+) {
+	const folderOf = (of: string) => of.slice(0, of.lastIndexOf("/"));
+	for (const note of yield* store.lemmaNotes) {
+		if (folderOf(note.path) !== folderOf(path)) continue;
+		for (const { reading } of (yield* store.lemmaNote(note.lemma))
+			?.readings ?? [])
+			if ((yield* store.readingLocation(reading))?.path === path)
+				return reading;
+	}
+	return undefined;
+});
+
 /**
  * The Segment's source block as an embed, given the link path that names
  * the Scroll; none when the block cannot carry an ID.
@@ -282,6 +365,7 @@ const commitUnit = Effect.fnUntraced(function* (
 	planned: PlannedUnit,
 	scrollPath: string,
 	refOf: RefOf,
+	onlyIfAttested: boolean,
 ): Effect.fn.Return<ResolvedUnit, UnitPending, Jev | Luna> {
 	const { attestation, judge, sentence } = judged;
 	let decided = judged.decided;
@@ -303,6 +387,7 @@ const commitUnit = Effect.fnUntraced(function* (
 				: {
 						attestationRef: refOf(names.linkpath),
 						scrollAliases: names.aliases,
+						...(onlyIfAttested ? { onlyIfAttested } : {}),
 					}),
 			decision: decided.decision,
 			reading: decided.reading,
@@ -364,6 +449,12 @@ const processScroll = Effect.fnUntraced(function* <
 	}
 });
 
+/** The Sentence and target a unit's Knowledge is asked for with. */
+const knowledgeSentenceOf = (unit: ResolvedUnit): KnowledgeJob["sentence"] => ({
+	segments: unit.sentence.segmented.segments.map(({ text }) => ({ text })),
+	target: [...unit.planned.unit.segments],
+});
+
 export function dumgenUnitResolver(
 	deps: DumgenUnitResolverDeps,
 ): UnitResolver["Service"] {
@@ -382,13 +473,19 @@ export function dumgenUnitResolver(
 				// Attestation Ref names a block the Scroll holds. A paragraph
 				// of several Sentences is cut into sentence blocks first, so
 				// each occurrence's ID names its own Sentence.
-				const unidentified = plan.units.flatMap((planned) => {
-					const block = blocks.get(firstOf(planned));
-					return planned.unit.route !== "Unresolved" &&
-						block?._tag === "Unidentified"
-						? [firstOf(planned)]
-						: [];
-				});
+				const attest = plan.attest ?? "OnClick";
+				// Attesting on click, Classify cuts and mints nothing: the
+				// click does, for its own Sentence.
+				const unidentified =
+					attest === "OnClick"
+						? []
+						: plan.units.flatMap((planned) => {
+								const block = blocks.get(firstOf(planned));
+								return planned.unit.route !== "Unresolved" &&
+									block?._tag === "Unidentified"
+									? [firstOf(planned)]
+									: [];
+							});
 				const minted: MintedBlockIds = Option.getOrElse(
 					unidentified.length === 0
 						? Option.none<MintedBlockIds>()
@@ -443,7 +540,49 @@ export function dumgenUnitResolver(
 					string,
 					Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>
 				>();
-				for (const planned of plan.units)
+				/** The clicked units judged by grammar alone, for the Reading their link opens. */
+				const fromLinked = new Map<
+					PlannedUnit,
+					Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>
+				>();
+				/** The units judged from the cache, which is not written again. */
+				const fromCache = new Map<PlannedUnit, JudgedUnit>();
+				// A click attests to the Reading its link opens while that is
+				// stored: a judgement made again, on another device or after an
+				// edit, would move the link off the Reading the user is reading.
+				const clickedReading =
+					attest === "Clicked" && plan.clickedReading !== undefined
+						? yield* readingAtPath(store, plan.clickedReading)
+						: undefined;
+				for (const planned of plan.units) {
+					const cached =
+						attest === "Clicked"
+							? yield* cachedJudgement(
+									deps.judgements,
+									plan,
+									planned,
+									clickedReading,
+								)
+							: Option.none<JudgedUnit>();
+					if (Option.isSome(cached)) {
+						fromCache.set(planned, cached.value);
+						continue;
+					}
+					if (clickedReading) {
+						fromLinked.set(
+							planned,
+							yield* Effect.cached(
+								judgeUnit(
+									dumgen,
+									store,
+									plan,
+									planned,
+									clickedReading,
+								),
+							),
+						);
+						continue;
+					}
 					if (!judgements.has(judgementKeyOf(planned)))
 						judgements.set(
 							judgementKeyOf(planned),
@@ -451,13 +590,19 @@ export function dumgenUnitResolver(
 								judgeUnit(dumgen, store, plan, planned),
 							),
 						);
+				}
+				const judgedOf = (planned: PlannedUnit) => {
+					const cached = fromCache.get(planned);
+					return cached
+						? Effect.succeed(cached)
+						: (fromLinked.get(planned) ??
+								judgements.get(judgementKeyOf(planned)) ??
+								judgeUnit(dumgen, store, plan, planned));
+				};
 				const outcomes = yield* Effect.forEach(
 					plan.units,
 					(planned): Effect.Effect<UnitOutcome, never, Jev | Luna> =>
-						(
-							judgements.get(judgementKeyOf(planned)) ??
-							judgeUnit(dumgen, store, plan, planned)
-						).pipe(
+						judgedOf(planned).pipe(
 							Effect.flatMap((judged) =>
 								commitUnit(
 									store,
@@ -465,7 +610,17 @@ export function dumgenUnitResolver(
 									planned,
 									plan.scrollPath,
 									refOf(planned),
+									attest === "OnClick",
 								),
+							),
+							Effect.tap((unit) =>
+								fromCache.has(planned) || !deps.judgements
+									? Effect.void
+									: deps.judgements.put(judgedAt(planned), {
+											attestation: unit.attestation,
+											reading: unit.reading,
+											sentence: knowledgeSentenceOf(unit),
+										}),
 							),
 							Effect.map(
 								(unit) => ({ _tag: "Resolved", unit }) as const,
@@ -538,16 +693,16 @@ export function dumgenUnitResolver(
 						origin: unit.created ? "New" : "TopUp",
 						reading: unit.reading,
 						readingPath: unit.readingPath,
-						sentence: {
-							segments: unit.sentence.segmented.segments.map(
-								({ text }) => ({
-									text,
-								}),
-							),
-							target: [...unit.planned.unit.segments],
-						},
+						sentence: knowledgeSentenceOf(unit),
 					}));
-				yield* deps.knowledge.enqueueAll(jobs);
+				// A clicked occurrence's Knowledge was asked for when Classify
+				// linked it, unless its Reading went since and the click made it
+				// again.
+				yield* deps.knowledge.enqueueAll(
+					attest === "Clicked"
+						? jobs.filter(({ origin }) => origin === "New")
+						: jobs,
+				);
 
 				let index = 0;
 				return outcomes.map((outcome, position): UnitResolution => {

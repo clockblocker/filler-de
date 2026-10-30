@@ -10,9 +10,11 @@ import { makeDumdictVaultStore } from "@textfresser/dictionary";
 import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
+import { memoryJudgementCache } from "../../../src/commanders/classify/judgement-cache";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
+import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
@@ -27,7 +29,11 @@ import {
 } from "../../obsidian-e2e/scenarios/classify-licence-groups-script";
 import { linkTo } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { inScope } from "../../support/scoped";
-import { MemoryScroll } from "../../unit/classify/resolution/support";
+import {
+	clicksOn,
+	MemoryScroll,
+	resolveAmong,
+} from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
@@ -80,18 +86,32 @@ describe("Classify gives each Licence Group its own table", () => {
 					).pipe(dumgen.provideBackground),
 			}),
 		);
+		const cache = memorySegmentationCache();
+		const activity = createScrollActivity();
 		const commander = new ClassifyCommander({
-			cache: memorySegmentationCache(),
+			cache,
 			dumgen: dumgen.provide,
 			missingProviderKeys: dumgen.missingKeys,
 			resolver: dumgenUnitResolver({
+				activity,
 				dumgen: operations,
+				judgements: memoryJudgementCache(),
 				knowledge: queue,
 				notify: (message) => notices.push(message),
 				scroll,
 				store: Effect.succeed(store),
 			}),
 			segmenterVersion: Effect.succeed("test-segmenter"),
+		});
+		// The user clicks each unit Classify linked, which attests it (#281).
+		const { clickAll } = await clicksOn({
+			activity,
+			cache,
+			classify: (input) => commander.classify(input),
+			resolve: (linkpath) =>
+				resolveAmong(() => [...vault.markdownPaths(), SCROLL])(linkpath),
+			scroll,
+			store,
 		});
 		const classify = async (selection: string) => {
 			const from = scroll.content.indexOf(selection);
@@ -105,8 +125,10 @@ describe("Classify gives each Licence Group its own table", () => {
 					(message) => notices.push(message),
 				),
 			);
+			const resolved = commander.latestHandoff()?.resolved;
+			await clickAll();
 			await Effect.runPromise(queue.whenIdle);
-			return commander.latestHandoff()?.resolved;
+			return resolved;
 		};
 
 		expect(await classify(PARENT_SELECTION)).toEqual([

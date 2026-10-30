@@ -2,7 +2,6 @@
  * WikilinkClickCodec - encodes wikilink click data into payload.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { UserEventPayloadMap } from "../../../contracts";
 import type { WikilinkClickKind, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";
@@ -11,7 +10,8 @@ type WikilinkClickData<K extends WikilinkClickKind> = {
 	kind: K;
 	wikiTarget: WikiTarget;
 	blockContent: string;
-	splitPath: SplitPathToMdFile;
+	/** The note the link stands in. */
+	sourcePath: string;
 	/** Where the link stands in the note's text, when it can be told. */
 	offset: number | undefined;
 };
@@ -26,7 +26,7 @@ export const WikilinkClickCodec = {
 			data.kind,
 			data.wikiTarget,
 			data.blockContent,
-			data.splitPath,
+			data.sourcePath,
 			data.offset,
 		),
 };

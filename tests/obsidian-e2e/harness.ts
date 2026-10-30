@@ -64,6 +64,12 @@ type ScenarioAction =
 			readonly view?: "livePreview" | "reading";
 			/** A plain left click, one with Cmd (Ctrl off macOS), or a middle click. */
 			readonly press?: "plain" | "mod" | "middle";
+			/**
+			 * A Library-relative note opened in a split pane beside the Scroll
+			 * and made active before the click, so the link is not the active
+			 * note's.
+			 */
+			readonly activeElsewhere?: string;
 	  }
 	| {
 			readonly direction: "next" | "prev";
@@ -615,6 +621,9 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 			};
 		case "clickScrollLink":
 			return {
+				...(action.activeElsewhere === undefined
+					? {}
+					: { activeElsewhere: action.activeElsewhere }),
 				kind: "clickScrollLink",
 				linkpath: action.linkpath,
 				...(action.nth === undefined ? {} : { nth: action.nth }),

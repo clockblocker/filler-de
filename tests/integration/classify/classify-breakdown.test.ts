@@ -10,6 +10,7 @@ import { makeDumdictVaultStore } from "@textfresser/dictionary";
 import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
+import { memoryJudgementCache } from "../../../src/commanders/classify/judgement-cache";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
@@ -45,7 +46,11 @@ import {
 	linkTo,
 } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { inScope } from "../../support/scoped";
-import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
+import {
+	clicksOn,
+	MemoryScroll,
+	resolveAmong,
+} from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
@@ -113,6 +118,7 @@ async function storyOf(
 		resolver: dumgenUnitResolver({
 			activity,
 			dumgen: operations,
+			judgements: memoryJudgementCache(),
 			knowledge: queue,
 			notify: (message) => notices.push(message),
 			scroll,
@@ -135,8 +141,21 @@ async function storyOf(
 			store: Effect.succeed(store),
 		}),
 	);
+	// The user clicks each unit Classify linked, which attests it (#281).
+	const { clickAll } = await clicksOn({
+		activity,
+		cache,
+		classify: (input) => commander.classify(input),
+		resolve: (linkpath) =>
+			resolveAmong(() => [...vault.markdownPaths(), SCROLL])(linkpath),
+		scroll,
+		store,
+	});
 	return {
-		/** Classifies the selection, which occurs once, and waits for its Knowledge. */
+		/**
+		 * Classifies the selection, which occurs once, clicks the Scroll's
+		 * links and waits for its Knowledge.
+		 */
 		classify: async (selection: string) => {
 			const from = scroll.content.indexOf(selection);
 			expect(scroll.content.indexOf(selection, from + 1)).toBe(-1);
@@ -150,8 +169,10 @@ async function storyOf(
 					(message) => notices.push(message),
 				),
 			);
+			const resolved = commander.latestHandoff()?.resolved;
+			await clickAll();
 			await Effect.runPromise(queue.whenIdle);
-			return commander.latestHandoff()?.resolved;
+			return resolved;
 		},
 		/** The user edits the Scroll, and the unlink observer answers. */
 		edit: async (content: string) => {

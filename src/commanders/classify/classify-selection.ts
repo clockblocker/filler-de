@@ -40,6 +40,7 @@ import {
 	sentenceStitchedText,
 } from "./sentence-key";
 import type {
+	AttestMode,
 	ClassifyPlan,
 	NeighbourSentences,
 	PlannedSentence,
@@ -54,6 +55,7 @@ const DETECTION_CONTEXT = 3;
 export class ClassifyError extends Data.TaggedError("ClassifyError")<{
 	readonly message: string;
 	readonly reason:
+		| "Blocked"
 		| "EmptySelection"
 		| "NoSentence"
 		| "NoGermanSentence"
@@ -75,6 +77,15 @@ export type ClassifyInput = {
 	readonly selection: SourceRange;
 	/** What happens to the user's links at the covered occurrences; `Keep` when absent. */
 	readonly userLinks?: UserLinks;
+	/** When the covered occurrences become Attestations; `OnClick` when absent. */
+	readonly attest?: AttestMode;
+	/** For `Clicked`: the Reading note the clicked link opens (`ClassifyPlan.clickedReading`). */
+	readonly clickedReading?: string;
+	/**
+	 * The touched Sentences are known to be German, as one a Classify link
+	 * stands in is: no language is detected.
+	 */
+	readonly german?: "Known";
 };
 
 export type ClassifyStats = {
@@ -221,7 +232,10 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 		});
 
 	const segmenter = yield* ClassifySegmenter;
-	const german = yield* detectGerman(scroll.sentences, touched);
+	const german =
+		input.german === "Known"
+			? touched
+			: yield* detectGerman(scroll.sentences, touched);
 	if (german.length === 0)
 		return yield* new ClassifyError({
 			message: "The selection holds no German Sentence.",
@@ -310,6 +324,10 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 		...(input.userLinks === undefined
 			? {}
 			: { userLinks: input.userLinks }),
+		...(input.attest === undefined ? {} : { attest: input.attest }),
+		...(input.clickedReading === undefined
+			? {}
+			: { clickedReading: input.clickedReading }),
 	};
 	const resolver = yield* UnitResolver;
 	const resolutions = yield* resolver.resolve(plan).pipe(

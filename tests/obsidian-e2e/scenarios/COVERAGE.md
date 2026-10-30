@@ -36,11 +36,21 @@ The Librarian's user commands also have desktop owners:
 
 Classify on a selection (#63) is owned by `classify-selection.test.ts`: the
 `UnitRef`s handed to the resolver port, a discontinuous unit's pieces, the
-Segmentation Cache hit, an edit invalidating only its own Sentence, and the
-block IDs Classify gives the unit's paragraph, cut into sentence blocks,
-before it resolves anything. Its
+Segmentation Cache hit, an edit invalidating only its own Sentence, and
+that Classify, attesting nothing, cuts no block and mints no ID. Its
 dumgen answers from a scripted jev, so no provider is reached; the same
 story runs in process in `tests/unit/classify/classify-commander.test.ts`.
+
+Attesting on click (#281) is owned by `classify-attest-on-click.test.ts`:
+Classify links both "Der Hund"s and attests neither; a click on one,
+through the driver's `clickScrollLink`, which dispatches real mouse events
+so the click detector sees them, attests it alone, and a second click
+changes nothing; after the user types above the links a click still finds
+its occurrence; a Cmd-click, a middle click and a click in Reading view
+attest too. `classify-resolution`, `classify-unlink` and
+`scroll-rename-refs` click each link they expect an Attestation of.
+`tests/unit/classify/resolution/attest-occurrence.test.ts` and the
+in-process twins cover the same steps.
 
 Resolution (#64) is owned by `classify-resolution.test.ts`: a noun, a
 separable verb and a Locution each linked to its Reading note beside its
@@ -56,7 +66,7 @@ layout assertions, live in `classify-resolution-script.ts`, and
 `tests/integration/classify/classify-resolution.test.ts` runs the same story
 in process. Its `classify-sentence-blocks` scenario, run in process by the
 same twin, owns the cut a paragraph of several Sentences without IDs gets
-before Classify mints: one sentence block per Sentence, so the Attestation
+when a click attests it: one sentence block per Sentence, so the Attestation
 embeds its own Sentence, and an unlink and a second Classify after the cut. The resolver's other cases are unit tests under
 `tests/unit/classify/resolution/`. `dictionary-layout.ts` holds the layout
 helpers every classifying scenario shares.

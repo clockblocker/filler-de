@@ -1,8 +1,6 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import type { UserEventPayloadMap } from "../../../contracts";
 import { PayloadKind } from "../../../types/payload-base";
-import { toSourcePath } from "../../source-path";
 
 const WikiTargetSchema = z.object({
 	alias: z.string().optional(),
@@ -28,14 +26,14 @@ export function createWikilinkClickPayload<K extends WikilinkClickKind>(
 	kind: K,
 	target: WikiTarget,
 	blockContent: string,
-	splitPath: SplitPathToMdFile,
+	sourcePath: string,
 	offset: number | undefined,
 ): UserEventPayloadMap[K] {
 	const payload: WikilinkClickPayload = {
 		blockContent,
 		kind,
 		...(offset === undefined ? {} : { offset }),
-		sourcePath: toSourcePath(splitPath) ?? "",
+		sourcePath,
 		target,
 	};
 	// Its kind is `K`, so it is that kind's payload.

@@ -79,6 +79,12 @@ export type OccurrenceCommit = {
 	 * never gets a second ref (#198, #210).
 	 */
 	readonly scrollAliases?: readonly ScrollAlias[];
+	/**
+	 * The ref is recorded only where the dictionary already holds it, by
+	 * itself or an alias: a Classify that attests on click keeps the
+	 * Attestations a click made and adds none (#281).
+	 */
+	readonly onlyIfAttested?: boolean;
 };
 
 export type OccurrenceCommitted =
@@ -167,23 +173,25 @@ export const optionallyReflexiveOf = (
 /**
  * The occurrence's Attestation Link, when its block can carry an ID: its
  * ref as the dictionary already holds it, if it holds it naming the
- * Scroll another way.
+ * Scroll another way. With `onlyIfAttested`, none unless it holds it.
  */
 function linkOf(
 	view: DictionaryView,
 	input: OccurrenceCommit,
 ): AttestationLink<"de"> | undefined {
-	return input.attestationRef === undefined
-		? undefined
-		: {
-				reading: input.reading,
-				ref: storedRefFor(
-					view,
-					input.attestationRef,
-					input.scrollAliases ?? [],
-				),
-				surfaceId: makeSurfaceId("de", input.surface),
-			};
+	if (input.attestationRef === undefined) return undefined;
+	const ref = storedRefFor(
+		view,
+		input.attestationRef,
+		input.scrollAliases ?? [],
+	);
+	if (input.onlyIfAttested && view.attestationLinksWithRef(ref).length === 0)
+		return undefined;
+	return {
+		reading: input.reading,
+		ref,
+		surfaceId: makeSurfaceId("de", input.surface),
+	};
 }
 
 /**

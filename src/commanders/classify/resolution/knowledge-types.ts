@@ -27,6 +27,7 @@ export type ResolutionStore = Pick<
 	DumdictVaultStore,
 	| "lemmaCandidates"
 	| "lemmaNote"
+	| "lemmaNotes"
 	| "readingLocation"
 	| "scrollRefNames"
 	| "settleBreakdown"

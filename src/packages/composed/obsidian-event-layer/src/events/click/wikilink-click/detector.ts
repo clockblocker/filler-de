@@ -25,7 +25,7 @@ import { toSourcePath } from "../../source-path";
 import { editorLineOf } from "../editor-line";
 import type { ClickSubscriber } from "../generic-click-detector";
 import { WikilinkClickCodec } from "./codec";
-import { editorLinkOffset, type RenderedSections } from "./link-offset";
+import { editorLinkPlace, type RenderedSections } from "./link-offset";
 import type { WikilinkClickKind, WikiTarget } from "./payload";
 
 /** The mouse's middle button, as `MouseEvent.button` names it. */
@@ -50,18 +50,20 @@ function linkClickOf<K extends WikilinkClickKind>(
 	const blockContent = extractBlockContent(app, linkElement);
 	if (blockContent === null) return null;
 
-	const offset = linkElement.classList.contains(
+	// The note the link stands in, which may be a split pane's, not the
+	// active one's.
+	const place = linkElement.classList.contains(
 		DomSelectors.INTERNAL_LINK_CLASS,
 	)
-		? sections.linkOffset(linkElement, toSourcePath(splitPath) ?? "")
-		: editorLinkOffset(linkElement);
+		? sections.linkPlace(linkElement)
+		: editorLinkPlace(app, linkElement);
 
 	return WikilinkClickCodec.encode({
 		blockContent,
 		kind,
-		offset,
-		splitPath,
-		wikiTarget,
+		offset: place?.offset,
+		sourcePath: place?.sourcePath ?? toSourcePath(splitPath) ?? "",
+		wikiTarget: place?.target ?? wikiTarget,
 	});
 }
 

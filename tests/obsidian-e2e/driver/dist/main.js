@@ -1541,6 +1541,25 @@ class TextfresserE2EDriver extends Plugin {
 						"clickScrollLink press must be plain, mod or middle",
 					);
 				}
+				// A note active in a split pane beside the Scroll, if asked.
+				const elsewhere =
+					operation.activeElsewhere === undefined
+						? null
+						: resolveScopedPath(
+								paths,
+								operation.activeElsewhere,
+								undefined,
+								"params.operation.activeElsewhere",
+							);
+				const elsewhereFile = elsewhere
+					? this.app.vault.getAbstractFileByPath(elsewhere.resolved)
+					: null;
+				if (elsewhere && (!elsewhereFile || !isFile(elsewhereFile))) {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot open '${elsewhere.resolved}' beside the Scroll: file not found`,
+					);
+				}
 				const editor = await openSourceEditor(this.app, file);
 				const content = editor.getValue();
 				const links = wikilinksTo(content, linkpath);
@@ -1616,13 +1635,27 @@ class TextfresserE2EDriver extends Plugin {
 						`link ${index} to '${linkpath}' did not render in ${view} in '${source.resolved}'`,
 					);
 				}
+				if (elsewhereFile) {
+					// The other note goes into a split pane and takes the focus,
+					// so the clicked link is not the active note's.
+					const split = this.app.workspace.getLeaf("split");
+					await split.openFile(elsewhereFile);
+					this.app.workspace.setActiveLeaf(split, { focus: true });
+					if (this.app.workspace.getActiveFile()?.path !== elsewhereFile.path) {
+						throw new DriverError(
+							"EditorUnavailable",
+							`'${elsewhereFile.path}' did not become active beside the Scroll`,
+						);
+					}
+				}
+				const active = this.app.workspace.getActiveFile()?.path;
 				const leaves = this.app.workspace.getLeavesOfType("markdown").length;
 				dispatchClick(element, press);
 				// Textfresser, or Obsidian, opens the note after the click, here
 				// or in a new tab.
 				await waitFor(
 					() =>
-						this.app.workspace.getActiveFile()?.path !== file.path ||
+						this.app.workspace.getActiveFile()?.path !== active ||
 						this.app.workspace.getLeavesOfType("markdown").length > leaves,
 					3_000,
 				);

@@ -6,7 +6,7 @@ import {
 	SECOND_SELECTION,
 	STORY,
 } from "./classify-resolution-script";
-import { expectHiddenMetadata, linkTo } from "./dictionary-layout";
+import { expectHiddenMetadata, linkpath, linkTo } from "./dictionary-layout";
 
 const kontext = (name: string, block: number) =>
 	new RegExp(`!\\[\\[${name}#\\^${block}\\|\\^[0-9a-f]{8}\\]\\]`, "gu");
@@ -32,6 +32,9 @@ describe("Obsidian E2E - a renamed Scroll's refs (#99)", () => {
 					return unit.readingPath;
 				});
 				if (!hund) throw new Error("Classify resolved no unit");
+				// A click on each "Der Hund" attests it (#281).
+				for (const nth of [0, 1])
+					await act({ kind: "clickScrollLink", linkpath: linkpath(hund), nth, path: "Story.md" });
 				expect(countOf((await dictionary()).markdown[hund], kontext("Story", 1))).toBe(1);
 
 				await act({ from: "Story.md", kind: "renamePath", to: "Tale.md" });
@@ -81,6 +84,7 @@ describe("Obsidian E2E - a renamed Scroll's refs (#99)", () => {
 					return unit.readingPath;
 				});
 				if (!hund) throw new Error("Classify resolved no unit");
+				await act({ kind: "clickScrollLink", linkpath: linkpath(hund), path: "Story.md" });
 
 				await act({ from: "Story.md", kind: "renamePath", to: "Tiere/Story.md" });
 

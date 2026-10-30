@@ -4,23 +4,27 @@ import {
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
+import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import {
 	SplitPathKind,
 	splitPathCodec,
 	VaultActionManager,
+	VaultPath,
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
 import { Effect, Layer, Stream } from "effect";
-import type { Plugin } from "obsidian";
+import type { App, Plugin } from "obsidian";
 import {
 	ClassifyCommander,
 	createReadingReopener,
 	createScrollActivity,
 	DUMGEN_SEGMENTER_VERSION,
 	dumgenUnitResolver,
+	filesJudgementCache,
 	filesSegmentationCache,
 	HIDDEN_FOLDER,
 	makeKnowledgeQueue,
+	makeOccurrenceAttester,
 	makeUnlinkObserver,
 	observeScrollModifications,
 	produceKnowledge,
@@ -145,7 +149,25 @@ const resolverStore = (store: DictionaryStore["Service"]) =>
 		),
 	);
 
-const ClassifyLive = (_deps: PluginServicesDeps) =>
+/**
+ * Whether a Markdown file outside `Worter/` other than `scrollPath` links
+ * the note at `notePath`, by Obsidian's resolved links.
+ */
+const linkedElsewhere =
+	(app: Pick<App, "metadataCache">) =>
+	(notePath: string, scrollPath: string) =>
+		Effect.sync(() =>
+			Object.entries(app.metadataCache.resolvedLinks).some(
+				([source, targets]) =>
+					source !== scrollPath &&
+					!VaultPath.caseInsensitive.isUnder(source, WORTER_FOLDER, {
+						inclusive: false,
+					}) &&
+					(targets[notePath] ?? 0) > 0,
+			),
+		);
+
+const ClassifyLive = (deps: PluginServicesDeps) =>
 	Layer.effect(
 		ClassifyServices,
 		Effect.gen(function* () {
@@ -216,6 +238,10 @@ const ClassifyLive = (_deps: PluginServicesDeps) =>
 						: DUMGEN_SEGMENTER_VERSION,
 			);
 			const scrollActivity = createScrollActivity();
+			// Each occurrence's judgement, for the click that attests it (#281).
+			const judgements = filesJudgementCache(
+				vam.hiddenFolder(HIDDEN_FOLDER),
+			);
 			const classify = new ClassifyCommander({
 				blockedBy: (scrollPath) =>
 					lifecycle.classifyRefusal() ??
@@ -226,12 +252,25 @@ const ClassifyLive = (_deps: PluginServicesDeps) =>
 				resolver: dumgenUnitResolver({
 					activity: scrollActivity,
 					dumgen: operations,
+					judgements,
 					knowledge: knowledgeQueue,
 					notify,
 					scroll: vamScrollFiles(vam),
 					store: dictionary,
 				}),
 				segmenterVersion,
+			});
+			// A click on a unit's link attests its occurrence; its runs are
+			// interrupted as this Layer's scope closes.
+			const attester = yield* makeOccurrenceAttester({
+				activity: scrollActivity,
+				blockedBy: lifecycle.classifyRefusal,
+				cache,
+				classify: (input) => classify.classify(input),
+				notify,
+				scrolls: vamUnlinkScrolls(vam),
+				segmenterVersion,
+				store: dictionary,
 			});
 			// Its checks are interrupted as this Layer's scope closes,
 			// before the Knowledge queue's runs.
@@ -240,11 +279,15 @@ const ClassifyLive = (_deps: PluginServicesDeps) =>
 				blockedBy: lifecycle.classifyRefusal,
 				cache,
 				notify,
-				scrolls: vamUnlinkScrolls(vam),
+				scrolls: {
+					...vamUnlinkScrolls(vam),
+					linkedElsewhere: linkedElsewhere(deps.plugin.app),
+				},
 				segmenterVersion,
 				store: dictionary,
 			});
 			return {
+				attester,
 				cache,
 				classify,
 				knowledgeQueue,

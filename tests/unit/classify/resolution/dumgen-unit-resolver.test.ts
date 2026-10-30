@@ -15,6 +15,7 @@ import {
 	ClassifySegmenter,
 	classifySelection,
 } from "../../../../src/commanders/classify/classify-selection";
+import { memoryJudgementCache } from "../../../../src/commanders/classify/judgement-cache";
 import { optionallyReflexiveOf } from "../../../../src/commanders/classify/resolution/commit-occurrence";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
@@ -95,6 +96,130 @@ const seeGrammar = (input: { readonly unit: Unit }) =>
 const seeUnits: Unit[] = [{ route: route("Lexeme", "NOUN"), segments: [2] }];
 
 describe("dumgenUnitResolver", () => {
+	describe("attesting on click (#281)", () => {
+		const content = "Der See ist tief. Er ist kalt.\n";
+		const plan = (attest: "OnClick" | "Clicked" | "Now", of = content) =>
+			planFor({
+				attest,
+				content: of,
+				scrollPath: SCROLL,
+				sentenceText: "Der See ist tief.",
+				units: seeUnits,
+			});
+		const stub = () =>
+			stubDumgen({
+				grammar: seeGrammar,
+				knowledge: baseTextKnowledge,
+				reading: (input) =>
+					input.candidates.includes("🌊")
+						? { _tag: "Reuse", emojiDescription: "🌊" }
+						: { _tag: "New", emojiDescription: "🌊" },
+			});
+		const refsOf = async (store: DumdictVaultStore) =>
+			((await run(store.lemmaNote(see)))?.readings[0]?.attestationLinks ?? []).map(
+				({ ref }) => ref,
+			);
+
+		it("links and commits as Classify, but attests nothing, cuts nothing, and keeps the judgement", async () => {
+			const { calls, dumgen } = stub();
+			const judgements = memoryJudgementCache();
+			const harness = await resolutionHarness({ content, dumgen, judgements, scrollPath: SCROLL });
+			const [resolution] = await harness.resolve(plan("OnClick"));
+			expect(resolution?._tag).toBe("Resolved");
+			expect(await refsOf(harness.store)).toEqual([]);
+			expect(harness.scroll.content).toBe(
+				`Der ${readingLink(SEE_READING_PATH, "See")} ist tief. Er ist kalt.\n`,
+			);
+			// Its Knowledge is asked for as before.
+			const note = await run(harness.store.lemmaNote(see));
+			expect(note?.readings[0]?.knowledge?.definition).toBe("See, defined");
+			const [cached] = [...judgements.entries.values()];
+			expect(cached?.reading).toEqual(LAKE);
+			expect(cached?.attestation.surface.normalizedSurface).toBe("See");
+			expect(cached?.sentence.target).toEqual([2]);
+
+		});
+
+		it("keeps the Attestations a click made when Classify runs again, and adds none", async () => {
+			const identified = "Der See ist tief. ^0\n";
+			const { calls, dumgen } = stub();
+			const harness = await resolutionHarness({
+				content: identified,
+				dumgen,
+				judgements: memoryJudgementCache(),
+				scrollPath: SCROLL,
+			});
+			// A block with an ID, but no Attestation yet: none is added.
+			await harness.resolve(plan("OnClick", identified));
+			expect(await refsOf(harness.store)).toEqual([]);
+			// The click attests it from the cached judgement, asking dumgen nothing.
+			const asked = [calls.grammar.length, calls.reading.length];
+			await harness.resolve(plan("Clicked", identified));
+			expect([calls.grammar.length, calls.reading.length]).toEqual(asked);
+			const refs = await refsOf(harness.store);
+			expect(refs).toHaveLength(1);
+			expect(refs[0]).toMatch(/^!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]$/u);
+			await harness.resolve(plan("OnClick", identified));
+			expect(await refsOf(harness.store)).toEqual(refs);
+		});
+
+		it("attests a click whose judgement is not cached to the Reading its link opens, judging grammar alone, while that is stored", async () => {
+			const identified = "Der See ist tief. ^0\n";
+			let judged = "🌊";
+			const { calls, dumgen } = stubDumgen({
+				grammar: seeGrammar,
+				knowledge: baseTextKnowledge,
+				reading: () => ({ _tag: "New", emojiDescription: judged }),
+			});
+			const judgements = memoryJudgementCache();
+			const harness = await resolutionHarness({
+				content: identified,
+				dumgen,
+				judgements,
+				scrollPath: SCROLL,
+			});
+			await harness.resolve(plan("OnClick", identified));
+			// On another device, or after an edit, the cache misses, and dumgen
+			// would now judge another sense.
+			judgements.entries.clear();
+			judged = "🏞";
+			const readings = calls.reading.length;
+			await harness.resolve({
+				...plan("Clicked", identified),
+				clickedReading: SEE_READING_PATH,
+			});
+			expect(calls.reading.length).toBe(readings);
+			const note = await run(harness.store.lemmaNote(see));
+			expect(note?.readings.map(({ reading }) => reading)).toEqual([LAKE]);
+			expect(note?.readings[0]?.attestationLinks).toHaveLength(1);
+			expect(harness.scroll.content).toBe(
+				`Der ${readingLink(SEE_READING_PATH, "See")} ist tief. ^0\n`,
+			);
+		});
+
+		it("judges a clicked occurrence again when its judgement is not cached, and asks Knowledge only for a Reading it made", async () => {
+			const { calls, dumgen } = stub();
+			const harness = await resolutionHarness({
+				content,
+				dumgen,
+				judgements: memoryJudgementCache(),
+				scrollPath: SCROLL,
+			});
+			// Its link's Reading is not stored, so it is judged as Classify does.
+			await harness.resolve({ ...plan("Clicked"), clickedReading: SEE_READING_PATH });
+			expect(calls.grammar).toHaveLength(1);
+			expect(await refsOf(harness.store)).toHaveLength(1);
+			// No Classify made its Reading, so the click asks its Knowledge.
+			expect((await run(harness.store.lemmaNote(see)))?.readings[0]?.knowledge?.definition).toBe(
+				"See, defined",
+			);
+			// A click on a Reading that is stored asks none again.
+			const asked = calls.knowledge.length;
+			await harness.resolve(plan("Clicked"));
+			expect(calls.knowledge.length).toBe(asked);
+		});
+	});
+
 	it("commits a German noun's New Reading, links its Segment and publishes its Knowledge", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const { calls, dumgen } = stubDumgen({
@@ -468,6 +593,7 @@ describe("dumgenUnitResolver", () => {
 		});
 		const outcome = await run(
 			classifySelection({
+				attest: "Now",
 				content,
 				scrollPath: SCROLL,
 				selection: selectionOf(content, "an."),

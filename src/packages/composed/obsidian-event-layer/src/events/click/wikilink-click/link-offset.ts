@@ -20,7 +20,7 @@
  */
 import { EditorView } from "@codemirror/view";
 import { Effect, Option } from "effect";
-import type { MarkdownPostProcessorContext } from "obsidian";
+import type { App, MarkdownPostProcessorContext } from "obsidian";
 import type { UserEventsHost } from "../../../contracts";
 import { DomSelectors } from "../../../internal/dom-selectors";
 
@@ -43,19 +43,60 @@ const positionOf = Option.liftThrowable(
 	(view: LinkEditorView, node: Node): number => view.posAtDOM(node),
 );
 
-/** The editor's offset of `link`, an editor's link element, when a link spans it. */
-export function editorLinkOffset(
+/**
+ * Where a clicked link stands: the note of the pane that shows it, the
+ * offset inside its `[[…]]` in that note's text, and, from that text, the
+ * link's target, which a virtualized editor's rendered lines cannot give.
+ */
+export type LinkPlace = {
+	readonly sourcePath: string;
+	readonly offset: number;
+	readonly target?: { readonly basename: string; readonly alias?: string };
+};
+
+/**
+ * The note of the workspace pane whose view holds `element`, if one does:
+ * a link in a split pane is that pane's note's, wherever the cursor is.
+ */
+export function paneNoteOf(
+	app: Pick<App, "workspace">,
+	element: HTMLElement,
+): string | undefined {
+	let found: string | undefined;
+	app.workspace.iterateAllLeaves((leaf) => {
+		const view = leaf.view as {
+			readonly containerEl?: { contains?: (node: Node) => boolean };
+			readonly file?: { readonly path?: unknown } | null;
+		};
+		const path = view.file?.path;
+		if (
+			found === undefined &&
+			typeof path === "string" &&
+			view.containerEl?.contains?.(element) === true
+		)
+			found = path;
+	});
+	return found;
+}
+
+/**
+ * Where the editor's `link`, an editor's link element, stands, when a link
+ * of its pane's note spans its position.
+ */
+export function editorLinkPlace(
+	app: Pick<App, "workspace">,
 	link: HTMLElement,
 	viewOf: EditorViewOf = findView,
-): number | undefined {
+): LinkPlace | undefined {
+	const sourcePath = paneNoteOf(app, link);
 	const editor = link.closest<HTMLElement>(CM_EDITOR);
 	const view = editor ? viewOf(editor) : null;
-	if (!editor || !view) return;
+	if (sourcePath === undefined || !editor || !view) return;
 	const at = Option.getOrUndefined(positionOf(view, link));
 	const text = view.state.doc.toString();
-	if (at === undefined || !linkSpans(text, at)) return;
+	if (at === undefined || !linkAt(text, at)) return;
 	const outerEditor = editor.parentElement?.closest<HTMLElement>(CM_EDITOR);
-	if (!outerEditor) return at;
+	if (!outerEditor) return placeIn(sourcePath, text, at);
 	// A table cell's editor, inside the note's.
 	const outer = viewOf(outerEditor);
 	const widget = outer
@@ -67,8 +108,26 @@ export function editorLinkOffset(
 	const source = note.slice(table.from, table.to);
 	const cell = source.indexOf(text);
 	if (text === "" || cell < 0 || source.indexOf(text, cell + 1) >= 0) return;
-	const offset = table.from + cell + at;
-	return linkSpans(note, offset) ? offset : undefined;
+	return placeIn(sourcePath, note, table.from + cell + at);
+}
+
+/** The place of the wikilink of `text` that spans `offset`; none for another link. */
+function placeIn(
+	sourcePath: string,
+	text: string,
+	offset: number,
+): LinkPlace | undefined {
+	const link = linkAt(text, offset);
+	if (!link) return;
+	if (!link.wikilink) return { offset, sourcePath };
+	return {
+		offset,
+		sourcePath,
+		target: {
+			...(link.alias === undefined ? {} : { alias: link.alias }),
+			basename: link.target,
+		},
+	};
 }
 
 /** The lines around `offset` up to the blank lines on either side, as a table's. */
@@ -81,12 +140,12 @@ function paragraphAround(text: string, offset: number) {
 	};
 }
 
-/** Whether a link of `offset`'s line spans it, inside its brackets. */
-function linkSpans(text: string, offset: number): boolean {
+/** The link of `offset`'s line that spans it, inside its brackets. */
+function linkAt(text: string, offset: number): SourceLink | undefined {
 	const from = text.lastIndexOf("\n", offset - 1) + 1;
 	const end = text.indexOf("\n", offset);
 	const line = text.slice(from, end < 0 ? text.length : end);
-	return linksIn(line).some(
+	return linksIn(line).find(
 		(link) => link.from + from < offset && offset < link.to + from,
 	);
 }
@@ -94,13 +153,10 @@ function linkSpans(text: string, offset: number): boolean {
 /** The sections Reading view rendered, each with its post-processor's context. */
 export type RenderedSections = {
 	/**
-	 * The offset of Reading view's `link` in the note at `sourcePath`, when
-	 * its section is one of that note's and its source holds the link.
+	 * Where Reading view's `link` stands in the note its section renders,
+	 * when its source holds the link.
 	 */
-	readonly linkOffset: (
-		link: HTMLElement,
-		sourcePath: string,
-	) => number | undefined;
+	readonly linkPlace: (link: HTMLElement) => LinkPlace | undefined;
 };
 
 /** Keeps the context of each section Reading view renders, while the scope is open. */
@@ -112,13 +168,12 @@ export const renderedSections = Effect.fnUntraced(function* (
 		contexts.set(element, context);
 	});
 	const sections: RenderedSections = {
-		linkOffset: (link, sourcePath) => {
+		linkPlace: (link) => {
 			let section: HTMLElement | null = link.parentElement;
 			while (section && !contexts.has(section))
 				section = section.parentElement;
 			const context = section ? contexts.get(section) : undefined;
-			if (!section || !context || context.sourcePath !== sourcePath)
-				return;
+			if (!section || !context) return;
 			const embed = link.closest(EMBED);
 			if (embed && section.contains(embed)) return;
 			const info = context.getSectionInfo(section);
@@ -133,7 +188,7 @@ export const renderedSections = Effect.fnUntraced(function* (
 			});
 			const index = links.indexOf(link);
 			if (index < 0) return;
-			return sectionLinkOffset(
+			const offset = sectionLinkOffset(
 				info.text,
 				info.lineStart,
 				info.lineEnd,
@@ -142,6 +197,9 @@ export const renderedSections = Effect.fnUntraced(function* (
 					(each) => each.getAttribute(DomSelectors.DATA_HREF) ?? "",
 				),
 			);
+			return offset === undefined
+				? undefined
+				: { offset, sourcePath: context.sourcePath };
 		},
 	};
 	return sections;
@@ -157,6 +215,8 @@ type SourceLink = {
 	readonly inside: number;
 	/** Its target, as Reading view's `data-href` gives it. */
 	readonly target: string;
+	/** A wikilink's alias, after its `|`. */
+	readonly alias?: string;
 	readonly embed: boolean;
 	readonly wikilink: boolean;
 };
@@ -164,6 +224,12 @@ type SourceLink = {
 /** A wikilink's target as `data-href` gives it: before any alias, with a table's escape dropped. */
 const wikiTargetOf = (inside: string) =>
 	(inside.split("|")[0] ?? "").replace(/\\$/u, "").trim();
+
+/** A wikilink's alias, after its first `|`, if it has one. */
+const aliasOf = (inside: string) => {
+	const pipe = inside.indexOf("|");
+	return pipe < 0 ? {} : { alias: inside.slice(pipe + 1) };
+};
 
 const decoded = Option.liftThrowable((target: string) =>
 	decodeURIComponent(target),
@@ -228,6 +294,7 @@ function linksIn(text: string): SourceLink[] {
 					from: at,
 					inside: at + 2,
 					target: wikiTargetOf(text.slice(at + 2, close)),
+					...aliasOf(text.slice(at + 2, close)),
 					to: close + 2,
 					wikilink: true,
 				});

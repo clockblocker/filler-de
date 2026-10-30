@@ -463,6 +463,8 @@ Every rewrite is a compare-and-swap with the facility's transforms inside it. A 
 - a ref moves only where no ref stays and no other ref moves; a Reading's links keep their order, and refs may trade names, as in a swap; a chain of renames in one bulk is one rename;
 - a rename heard twice, or after Obsidian already rewrote the embeds, writes once, and the store waits for its pending modifications before it plans.
 
+**Attested on click (#281).** A Reading's Deine Kontexte lists the occurrences the user clicked, not every one Classify linked. Classify commits a Reading with no Attestation Link, as `planNew` writes `attestationLinks: []`, so a Reading note may show an empty Deine Kontexte; the click adds the occurrence's ref, after its block got its ID. The dictionary reset attests every occurrence it rebuilds, as the old notes did.
+
 **One ref per occurrence (#198).** A stored ref with the occurrence's block and key that names its Scroll by another spelling Obsidian opens the Scroll for from the Reading note holding it, such as its path after the basename became the Scroll's again, stands for the occurrence: Classify records the occurrence under that ref (`storedRefFor`) and adds no second one. A stored ref whose spelling opens another note from its Reading note, such as a basename beside a Lemma note of that name, is not the occurrence's: it stays as it is (#210).
 
 After every full read, refs Obsidian retargeted while the store was not listening are adopted: a retargeted ref whose stored name opens no note and whose shown name opens a note outside `Worter/`, each resolved from its Reading note, takes that note's name as that Reading note names it, as one commit. A Scroll moved outside Obsidian leaves nothing to adopt.

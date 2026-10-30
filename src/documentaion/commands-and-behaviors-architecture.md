@@ -37,7 +37,7 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 
 ## Behaviors
 
-`createHandlers(librarian, onWikilinkClicked?)` creates the handlers that `main.ts` sets on the event layer (`UserEvents`, `src/plugin/user-events.ts`) once a Librarian runs. The layer runs each handled event on the plugin runtime as one fiber, at its own `user-event.<kind>` edge, counted as pending work until it ends: the handler's program, then the result applied, then the handler's `afterwards`. Selection changes and toolbar button clicks run untraced: the first are frequent, and a button's command opens its own `command.<kind>`.
+`createHandlers(librarian, onWikilinkClicked?, onWikilinkObserved?)` creates the handlers that `main.ts` sets on the event layer (`UserEvents`, `src/plugin/user-events.ts`) once a Librarian runs. The layer runs each handled event on the plugin runtime as one fiber, at its own `user-event.<kind>` edge, counted as pending work until it ends: the handler's program, then the result applied, then the handler's `afterwards`. Selection changes and toolbar button clicks run untraced: the first are frequent, and a button's command opens its own `command.<kind>`.
 
 | Event | Handler behavior |
 | --- | --- |
@@ -45,8 +45,8 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 | `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
 | `WikilinkCompleted` | Land a bare word typed outside `Worter/` on its Crossroad note's path (ADR-0015); otherwise ask the Librarian to resolve a Library target. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
-| `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify open a Reading note again once its Knowledge lands. The click carries where the link stands in its note (`LinkClick.offset`). |
-| `WikilinkObserved` | No handler yet. A Cmd/Ctrl-click or middle click on a link, which Obsidian opens on its own; its handler can only observe it. |
+| `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify attest the clicked occurrence in the background (#281), from where the link stands in its note (`LinkClick.offset`), and open a Reading note again once its Knowledge lands. |
+| `WikilinkObserved` | A Cmd/Ctrl-click or middle click on a link, which Obsidian opens on its own: Classify attests the clicked occurrence in the background, as for a plain click. Nothing is prevented or applied. |
 
 A handler has two stages, and an optional third:
 

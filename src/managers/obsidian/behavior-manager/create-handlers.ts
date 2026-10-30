@@ -44,7 +44,9 @@ export type LinkClick = {
 	readonly offset?: number;
 };
 
-const linkClickOf = (payload: PayloadFor<"WikilinkClicked">): LinkClick => ({
+const linkClickOf = (
+	payload: PayloadFor<"WikilinkClicked"> | PayloadFor<"WikilinkObserved">,
+): LinkClick => ({
 	...(payload.offset === undefined ? {} : { offset: payload.offset }),
 	sourcePath: payload.sourcePath,
 	target: payload.target.basename,
@@ -56,12 +58,18 @@ const linkClickOf = (payload: PayloadFor<"WikilinkClicked">): LinkClick => ({
  *
  * @param librarian - Librarian instance for tree operations
  * @param onWikilinkClicked - Run with every clicked link, once Obsidian
- *   was told to open it, in the click's fiber: Classify waits there for a
- *   Reading's Knowledge to open its note again
+ *   was told to open it, in the click's fiber: Classify attests its
+ *   occurrence in the background (#281), then waits there for a Reading's
+ *   Knowledge to open its note again
+ * @param onWikilinkObserved - Run with every Cmd/Ctrl-clicked or
+ *   middle-clicked link, which Obsidian opens on its own
  */
 export function createHandlers(
 	librarian: Librarian,
 	onWikilinkClicked?: (
+		click: LinkClick,
+	) => Effect.Effect<void, UserEventFailure>,
+	onWikilinkObserved?: (
 		click: LinkClick,
 	) => Effect.Effect<void, UserEventFailure>,
 ): HandlerDef[] {
@@ -99,6 +107,21 @@ export function createHandlers(
 					Effect.succeed({ outcome: "passthrough" } as const),
 			},
 			kind: UserEventKinds.WikilinkClicked,
+		});
+	}
+
+	// A Cmd/Ctrl-click or middle click, which Obsidian opens on its own.
+	if (onWikilinkObserved) {
+		handlers.push({
+			handler: {
+				afterwards: (payload) =>
+					onWikilinkObserved(linkClickOf(payload)),
+				doesApply: () => true,
+				// The layer applies nothing to an observed click.
+				handle: () =>
+					Effect.succeed({ outcome: "passthrough" } as const),
+			},
+			kind: UserEventKinds.WikilinkObserved,
 		});
 	}
 

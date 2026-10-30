@@ -5,7 +5,7 @@ import {
 } from "@textfresser/obsidian-event-layer";
 import { Effect } from "effect";
 import {
-	editorLinkOffset,
+	editorLinkPlace,
 	sectionLinkOffset,
 } from "../../../src/packages/composed/obsidian-event-layer/src/events/click/wikilink-click/link-offset";
 import { onMacOS } from "../../../src/packages/composed/obsidian-event-layer/src/internal/platform";
@@ -412,21 +412,35 @@ describe("wikilink click offsets", () => {
 		expect(offset).toBe(TEXT.indexOf("[[Worter/f/fah") + 2);
 	});
 
-	it("tells nothing for a link in an embed, a section of another note, an unrendered section, or one whose source disagrees", () => {
-		const embedded = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
-		const first = readingSection();
-		embedded.renderSection(first.section, { lineEnd: 3, lineStart: 2, sourcePath: STORY, text: TEXT });
-		expect(clickedOffsets(embedded, first.embedded)).toEqual([undefined]);
-
-		const foreign = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
-		const second = readingSection();
-		foreign.renderSection(second.section, {
+	it("tells a link in a section of another note, such as a split pane's, as that note's", () => {
+		const events = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const { fahrer, section } = readingSection();
+		events.renderSection(section, {
 			lineEnd: 3,
 			lineStart: 2,
 			sourcePath: "Library/Other.md",
 			text: TEXT,
 		});
-		expect(clickedOffsets(foreign, second.fahrer)).toEqual([undefined]);
+		const told: { offset?: number; sourcePath: string }[] = [];
+		events.layer.setHandler(UserEventKind.WikilinkClicked, {
+			doesApply: () => true,
+			handle: ({ offset, sourcePath }) =>
+				Effect.sync(() => {
+					told.push({ ...(offset === undefined ? {} : { offset }), sourcePath });
+					return { outcome: "handled" } as const;
+				}),
+		});
+		click(events, fahrer);
+		expect(told).toEqual([
+			{ offset: TEXT.indexOf("[[Worter/f/fah") + 2, sourcePath: "Library/Other.md" },
+		]);
+	});
+
+	it("tells nothing for a link in an embed, an unrendered section, or one whose source disagrees", () => {
+		const embedded = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
+		const first = readingSection();
+		embedded.renderSection(first.section, { lineEnd: 3, lineStart: 2, sourcePath: STORY, text: TEXT });
+		expect(clickedOffsets(embedded, first.embedded)).toEqual([undefined]);
 
 		const unrendered = eventLayerOn(fakeApp(STORY, { mode: "preview" }));
 		expect(clickedOffsets(unrendered, readingSection().fahrer)).toEqual([undefined]);
@@ -443,7 +457,7 @@ describe("wikilink click offsets", () => {
 	});
 });
 
-describe("editorLinkOffset", () => {
+describe("editorLinkPlace", () => {
 	const NOTE = "# Story\n\nDer [[Worter/f/fah/fahre/fahrer|Fahrer]] fährt. ^0\n";
 	const AT = NOTE.indexOf("Fahrer]]");
 
@@ -467,11 +481,56 @@ describe("editorLinkOffset", () => {
 		return link;
 	};
 
-	const offsetOf = (link: FakeElement, views: Map<FakeElement, unknown>) =>
-		editorLinkOffset(
+	/** The workspace's panes: `Library/Story.md`'s holds `pane`, another note's holds `other`. */
+	const workspaceOf = (pane: FakeElement, other?: FakeElement) =>
+		({
+			workspace: {
+				iterateAllLeaves: (each: (leaf: unknown) => void) => {
+					if (other) each({ view: { containerEl: other, file: { path: "Library/Other.md" } } });
+					each({ view: { containerEl: pane, file: { path: "Library/Story.md" } } });
+				},
+			},
+		}) as never;
+
+	const placeOf = (
+		link: FakeElement,
+		views: Map<FakeElement, unknown>,
+		pane: FakeElement | undefined = [...views.keys()].at(-1),
+	) =>
+		editorLinkPlace(
+			workspaceOf(pane ?? new FakeElement("DIV")),
 			link as unknown as HTMLElement,
 			(dom) => (views.get(dom as unknown as FakeElement) ?? null) as never,
 		);
+	const offsetOf = (link: FakeElement, views: Map<FakeElement, unknown>) =>
+		placeOf(link, views)?.offset;
+
+	it("tells a link of a split pane as that pane's note's, with its target from that note's text", () => {
+		const link = linkElement();
+		const { dom, view } = editorOf(NOTE, link, AT);
+		dom.append(link);
+		const active = new FakeElement("DIV");
+		const pane = new FakeElement("DIV").append(dom);
+		expect(
+			editorLinkPlace(
+				workspaceOf(active, pane),
+				link as unknown as HTMLElement,
+				(editor) => (editor === (dom as unknown) ? view : null) as never,
+			),
+		).toEqual({
+			offset: AT,
+			sourcePath: "Library/Other.md",
+			target: { alias: "Fahrer", basename: "Worter/f/fah/fahre/fahrer" },
+		});
+		// A link in no pane, such as a hover preview's, has no place.
+		expect(
+			editorLinkPlace(
+				workspaceOf(active),
+				link as unknown as HTMLElement,
+				(editor) => (editor === (dom as unknown) ? view : null) as never,
+			),
+		).toBeUndefined();
+	});
 
 	it("reads the offset from the view the link belongs to, in any pane, not from its rendered line", () => {
 		const link = linkElement();

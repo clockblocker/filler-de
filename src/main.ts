@@ -275,6 +275,7 @@ export default class TextEaterPlugin extends Plugin {
 					const teardowns = createHandlers(
 						librarian,
 						this.onWikilinkClicked,
+						this.onWikilinkObserved,
 					).map((handler) =>
 						userEvents.setHandler(
 							handler.kind as never,
@@ -323,16 +324,20 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
-	 * A clicked Reading link reopens its note once its Knowledge lands; it
-	 * runs in the click's fiber, under `user-event.wikilinkClicked`.
+	 * A clicked link attests its occurrence in a Scroll, in the background
+	 * (#281), and a clicked Reading link reopens its note once its Knowledge
+	 * lands; it runs in the click's fiber, under `user-event.wikilinkClicked`.
 	 */
-	private readonly onWikilinkClicked = ({
-		target,
-	}: LinkClick): Effect.Effect<void> =>
+	private readonly onWikilinkClicked = (
+		click: LinkClick,
+	): Effect.Effect<void> =>
 		Effect.suspend(() => {
-			const reopen = this.services?.classify.reopenReading;
-			if (!reopen) return Effect.void;
-			return reopen(target).pipe(
+			const classify = this.services?.classify;
+			if (!classify) return Effect.void;
+			// Its occurrence is attested in the background, before the
+			// reopen waits for the Reading's Knowledge.
+			return classify.attester.clicked(click).pipe(
+				Effect.andThen(classify.reopenReading(click.target)),
 				Effect.asVoid,
 				Effect.catch((error) =>
 					Effect.logWarning(
@@ -342,6 +347,18 @@ export default class TextEaterPlugin extends Plugin {
 				),
 			);
 		});
+
+	/**
+	 * A Cmd/Ctrl-clicked or middle-clicked link, which Obsidian opens in a
+	 * new tab, attests its occurrence too, in the background.
+	 */
+	private readonly onWikilinkObserved = (
+		click: LinkClick,
+	): Effect.Effect<void> =>
+		Effect.suspend(
+			() =>
+				this.services?.classify.attester.clicked(click) ?? Effect.void,
+		);
 
 	/**
 	 * Applies `patch` to the settings under `settings.update`, once the

@@ -12,7 +12,13 @@ import {
 	STORY,
 	sentenceBlocksStory,
 } from "./classify-resolution-script";
-import { expectInOrder, linkTo, TITLES, visible } from "./dictionary-layout";
+import {
+	expectInOrder,
+	linkpath,
+	linkTo,
+	TITLES,
+	visible,
+} from "./dictionary-layout";
 
 /** Luna stages a Reading's base-text Knowledge goes through. */
 const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
@@ -84,6 +90,19 @@ describe("Obsidian E2E - Classify resolution", () => {
 					),
 				);
 
+				// Classify attests nothing; a click on each unit does (#281). The
+				// separable verb's two pieces are one occurrence.
+				expect((await dictionary()).markdown[hund.readingPath]).not.toMatch(
+					KONTEXT_0,
+				);
+				for (const { readingPath } of targets)
+					await act({
+						kind: "clickScrollLink",
+						linkpath: linkpath(readingPath),
+						nth: 0,
+						path: "Story.md",
+					});
+
 				let notes = (await dictionary()).markdown;
 				expectFirstClassifyNotes(
 					notes,
@@ -110,6 +129,15 @@ describe("Obsidian E2E - Classify resolution", () => {
 				expect(again).toMatchObject({
 					linked: 1,
 					readingPath: hund.readingPath,
+				});
+				expect((await dictionary()).markdown[hund.readingPath]).not.toMatch(
+					KONTEXT_1,
+				);
+				await act({
+					kind: "clickScrollLink",
+					linkpath: linkpath(hund.readingPath),
+					nth: 1,
+					path: "Story.md",
 				});
 				const previous = notes;
 				notes = (await dictionary()).markdown;
@@ -153,6 +181,18 @@ describe("Obsidian E2E - Classify resolution", () => {
 				if (!hund || !("readingPath" in hund))
 					throw new Error("Der Hund did not resolve");
 				expect(hund.linked).toBe(1);
+				// Classify cuts nothing; the click cuts the paragraph and attests.
+				expect((await snapshot()).markdown["Story.md"]).not.toBe(
+					healed.replace(
+						SENTENCE_BLOCKS_STORY,
+						sentenceBlocksStory(linkTo(hund.readingPath, "Der Hund")),
+					),
+				);
+				await act({
+					kind: "clickScrollLink",
+					linkpath: linkpath(hund.readingPath),
+					path: "Story.md",
+				});
 
 				// One block per Sentence, the short ones too; nothing else changed.
 				expect((await snapshot()).markdown["Story.md"]).toBe(
@@ -186,6 +226,11 @@ describe("Obsidian E2E - Classify resolution", () => {
 				const again = (await status()).classify?.resolved?.[0];
 				if (!again || !("readingPath" in again))
 					throw new Error("Der Hund did not resolve again");
+				await act({
+					kind: "clickScrollLink",
+					linkpath: linkpath(again.readingPath),
+					path: "Story.md",
+				});
 				expect((await snapshot()).markdown["Story.md"]).toBe(
 					healed.replace(
 						SENTENCE_BLOCKS_STORY,

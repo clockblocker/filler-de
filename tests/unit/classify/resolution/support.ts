@@ -19,17 +19,27 @@ import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
 import { Effect } from "effect";
+import type { JudgementCache } from "../../../../src/commanders/classify/judgement-cache";
+import {
+	makeOccurrenceAttester,
+	type OccurrenceAttesterDeps,
+} from "../../../../src/commanders/classify/resolution/attest-occurrence";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import type { ResolutionStore } from "../../../../src/commanders/classify/resolution/knowledge-types";
 import { produceKnowledge } from "../../../../src/commanders/classify/resolution/produce-knowledge";
+import type { ScrollActivity } from "../../../../src/commanders/classify/resolution/scroll-activity";
 import {
 	type ScrollFiles,
 	ScrollWriteFailed,
 } from "../../../../src/commanders/classify/resolution/scroll-files";
+import { scrollLinksOf } from "../../../../src/commanders/classify/resolution/scroll-unlinks";
+import type { SegmentationCache } from "../../../../src/commanders/classify/segmentation-cache";
 import type {
+	AttestMode,
 	ClassifyPlan,
 	PlannedUnit,
+	SourceRange,
 } from "../../../../src/commanders/classify/types";
 import type { DumgenOperations } from "../../../../src/managers/dumgen";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -109,6 +119,11 @@ export function planFor(input: {
 	readonly sentenceText: string;
 	readonly units: readonly Unit[];
 	readonly sentenceKey?: string;
+	/**
+	 * When its occurrences become Attestations. `Now` unless given, so a
+	 * test of what an Attestation does gets one as it resolves (#281).
+	 */
+	readonly attest?: AttestMode;
 }): ClassifyPlan {
 	const sentenceKey = input.sentenceKey ?? `key:${input.sentenceText}`;
 	const offset = input.content.indexOf(input.sentenceText);
@@ -119,6 +134,7 @@ export function planFor(input: {
 		units: input.units,
 	};
 	return {
+		attest: input.attest ?? "Now",
 		content: input.content,
 		scrollPath: input.scrollPath,
 		sentences: new Map([[sentenceKey, { neighbours: {}, segmented: sentence }]]),
@@ -324,6 +340,8 @@ export async function resolutionHarness(options: {
 	readonly wrapStore?: (store: DumdictVaultStore) => ResolutionStore;
 	/** Whether Knowledge production asks for the Lemma Paradigm. */
 	readonly produceParadigm?: boolean;
+	/** Where the resolver keeps each occurrence's judgement. */
+	readonly judgements?: JudgementCache["Service"];
 }) {
 	const vault = options.vault ?? new FakeVault();
 	// Obsidian knows the Scroll, so refs name it as the store resolves it.
@@ -352,6 +370,9 @@ export async function resolutionHarness(options: {
 	);
 	const resolver = dumgenUnitResolver({
 		dumgen: options.dumgen,
+		...(options.judgements === undefined
+			? {}
+			: { judgements: options.judgements }),
 		knowledge: queue,
 		notify: (message) => notices.push(message),
 		scroll,
@@ -420,3 +441,67 @@ export const resolveAmong =
 				(path) => path.toLowerCase().split("/").at(-1) === `${wanted}.md`,
 			);
 		});
+
+/**
+ * Clicks on the links of a Scroll held in memory, through the plugin's
+ * attester (#281): `click(shown, nth)` clicks the `nth` link showing
+ * `shown`, and ends once its occurrence is attested.
+ */
+export async function clicksOn(input: {
+	readonly scroll: MemoryScroll;
+	readonly store: Pick<DumdictVaultStore, "attestationLinksWithRefPrefix">;
+	readonly cache: Pick<SegmentationCache["Service"], "get">;
+	readonly activity: ScrollActivity;
+	readonly classify: OccurrenceAttesterDeps["classify"];
+	/** Where Obsidian resolves a link's path, from the Scroll. */
+	readonly resolve: (linkpath: string) => Effect.Effect<string | undefined>;
+	readonly segmenterVersion?: string;
+	readonly notify?: (message: string) => void;
+}) {
+	const { scroll } = input;
+	const { value: attester } = await inScope(
+		makeOccurrenceAttester({
+			activity: input.activity,
+			cache: input.cache,
+			classify: input.classify,
+			...(input.notify === undefined ? {} : { notify: input.notify }),
+			scrolls: {
+				read: (path) =>
+					Effect.sync(() => (path === scroll.path ? scroll.content : undefined)),
+				resolve: (linkpath) => input.resolve(linkpath),
+			},
+			segmenterVersion: Effect.succeed(input.segmenterVersion ?? "test-segmenter"),
+			store: Effect.succeed(input.store),
+		}),
+	);
+	const click = async (shown: string, nth = 0, at?: (link: SourceRange) => number) => {
+		const link = scrollLinksOf(scroll.content).filter(
+			(each) => scroll.content.slice(each.shown.from, each.shown.to) === shown,
+		)[nth];
+		if (!link) throw new Error(`No link ${nth} shows ${shown}`);
+		await run(
+			attester.clicked({
+				offset: at ? at(link.shown) : link.shown.from,
+				sourcePath: scroll.path,
+				target: link.linkpath,
+			}),
+		);
+		await run(attester.whenIdle);
+	};
+	/** Clicks every link of the Scroll, in order: those already attested add nothing. */
+	const clickAll = async () => {
+		for (let index = 0; ; index++) {
+			const link = scrollLinksOf(scroll.content)[index];
+			if (!link) return;
+			await run(
+				attester.clicked({
+					offset: link.shown.from,
+					sourcePath: scroll.path,
+					target: link.linkpath,
+				}),
+			);
+			await run(attester.whenIdle);
+		}
+	};
+	return { attester, click, clickAll };
+}

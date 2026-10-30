@@ -63,6 +63,8 @@ export type WrittenLink = {
 	readonly linkpath: string;
 	/** Its shown text in the Scroll. */
 	readonly shown: SourceRange;
+	/** All of it, from its `!` or `[[` to its `]]`. */
+	readonly whole: SourceRange;
 	/** The ID of its block, if it has one. */
 	readonly block: string | undefined;
 };
@@ -87,7 +89,8 @@ export type RecordedOccurrence = {
 	readonly readingPath: string;
 };
 
-const linkpathOf = (target: string) => {
+/** The path Obsidian resolves of a link's target, as `WrittenLink.linkpath` holds it. */
+export const linkpathOf = (target: string) => {
 	const hash = target.indexOf("#");
 	return (hash < 0 ? target : target.slice(0, hash))
 		.replace(/\\$/u, "")
@@ -101,7 +104,11 @@ const linkpathOf = (target: string) => {
 export function scrollLinksOf(content: string): WrittenLink[] {
 	const body = scrollBodyRange(content);
 	const text = content.slice(body.from, body.to);
-	const links: { linkpath: string; shown: SourceRange }[] = [];
+	const links: {
+		linkpath: string;
+		shown: SourceRange;
+		whole: SourceRange;
+	}[] = [];
 	WIKILINK.lastIndex = 0;
 	for (let match = WIKILINK.exec(text); match; match = WIKILINK.exec(text)) {
 		const [whole, embed = "", target = "", alias] = match;
@@ -124,7 +131,11 @@ export function scrollLinksOf(content: string): WrittenLink[] {
 			structure === "inside a comment"
 		)
 			continue;
-		links.push({ linkpath: linkpathOf(target), shown });
+		links.push({
+			linkpath: linkpathOf(target),
+			shown,
+			whole: { from, to: from + whole.length },
+		});
 	}
 	const blocks = sourceBlocksOf(
 		content,
