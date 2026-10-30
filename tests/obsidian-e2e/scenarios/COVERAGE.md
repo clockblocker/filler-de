@@ -66,6 +66,28 @@ process. `dictionary-metadata-modes.test.ts` classifies the same word with
 "Hide metadata" off, so every note keeps its data in the frontmatter, and
 then with the default again, so a scenario's settings end with it.
 
+Breakdowns (#264) are owned by `classify-breakdown.test.ts`. Classifying
+Kohlekraftwerk in a Scroll gives its Reading note a Morpheme section, a
+morphemes line and a constituents line, whose pending part Kraftwerk
+links to its Crossroad path as one Unsplit chunk. Classifying Kraftwerk
+moves that link to Kraftwerk's Lemma note and splits the morphemes line
+through it (`Kohle|kraft|werk`), and unlinking Kraftwerk's only occurrence
+moves it back. A conversion, Lauf, shows a Source line and no constituents
+line. Its Source moves to laufen's Lemma note once laufen, a bottom word,
+is classified and split into its morphemes. A Reading that stores its
+Breakdown or Source, or whose Source came back Unresolved
+(`breakdownSettled`), asks for neither again. Its scripted jev answers the
+segmenters and the Source by stage (`<stage>:<id>`), and
+`classify-breakdown-script.ts` holds the scripts and the assertions it
+shares with `tests/integration/classify/classify-breakdown.test.ts`, which
+runs the same stories in process. The run, the re-pointing and the
+rendering have unit tests of their own
+(`tests/unit/classify/resolution/knowledge-breakdown.test.ts`,
+`dictionary/tests/breakdown-links.test.ts`,
+`lemma-note-codec/tests/breakdown.test.ts`). Formations (#269) are not on
+master yet, and hovering the morphemes line (#270) stays manual, since
+the harness has no pointer-hover action.
+
 Removing a link from a Scroll (#116) is owned by `classify-unlink.test.ts`:
 the occurrence of a deleted link goes, a Reading that still has a linked
 occurrence stays, and one that lost its last goes with its Lemma note. The

@@ -165,8 +165,18 @@ describe("scripted jev answers", () => {
 	it("expands Choice options and Nouls into dumgen Answers", () => {
 		expect(validateScriptedJevAnswers(undefined)).toEqual({});
 		expect(
-			validateScriptedJevAnswers({ f_1: 0.9, r_1: "Lexeme/PRON" }),
+			validateScriptedJevAnswers({
+				"breakdown-forms:f_1": "f0",
+				f_1: 0.9,
+				r_1: "Lexeme/PRON",
+			}),
 		).toEqual({
+			"breakdown-forms:f_1": {
+				choice: "f0",
+				confidence: 1,
+				probabilities: { f0: 1 },
+				type: "choice",
+			},
 			f_1: { noul: 0.9, type: "noul" },
 			r_1: {
 				choice: "Lexeme/PRON",
