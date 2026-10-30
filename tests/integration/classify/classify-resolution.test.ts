@@ -153,7 +153,7 @@ async function classifyHarness(story: string) {
 	const link = async (path: string, shown: string) =>
 		`[[${(await readingNoteOf(path)).slice(0, -3)}|${shown}]]`;
 	// A click on a link attests its occurrence (#281).
-	const { click } = await clicksOn({
+	const { click: clickLink } = await clicksOn({
 		activity,
 		cache,
 		classify: (input) => commander.classify(input),
@@ -162,6 +162,11 @@ async function classifyHarness(story: string) {
 		scroll,
 		store,
 	});
+	/** Clicks a link, and waits for the Knowledge the click asks for (#281). */
+	const click = async (shown: string, nth = 0) => {
+		await clickLink(shown, nth);
+		await Effect.runPromise(queue.whenIdle);
+	};
 	return {
 		activity,
 		cache,
@@ -217,19 +222,25 @@ describe("Classify resolves a selection end to end", () => {
 		for (const path of readingPaths)
 			expect(vault.content(path)).not.toMatch(/Story#\^/u);
 		expect(judgements.entries.size).toBe(4);
-		// A click on each unit attests it, asking dumgen nothing again; the
-		// separable verb's second piece is the same occurrence.
-		const asked = () => JSON.stringify(Effect.runSync(dumgen.testing.requests));
-		const beforeClicks = asked();
-		for (const shown of ["Der Hund", "fängt", "heute", "auf jeden Fall", "an"])
-			await click(shown);
-		expect(asked()).toBe(beforeClicks);
-		expectFirstClassifyNotes(notesOf(vault), readingPaths);
-		const afterFirst = notesOf(vault);
+		// Classify asks no Knowledge (#281).
 		const knowledgeCalls = () =>
 			KNOWLEDGE_STAGES.map(
 				(stage) => Effect.runSync(dumgen.testing.requests)?.luna[stage] ?? 0,
 			);
+		expect(knowledgeCalls()).toEqual(KNOWLEDGE_STAGES.map(() => 0));
+		// A click on each unit attests it, judging nothing again, and asks
+		// for its Reading's Knowledge; the separable verb's second piece is
+		// the same occurrence.
+		const judged = () => {
+			const requests = Effect.runSync(dumgen.testing.requests);
+			return [requests?.jev.grammar, requests?.luna.canonical];
+		};
+		const beforeClicks = judged();
+		for (const shown of ["Der Hund", "fängt", "heute", "auf jeden Fall", "an"])
+			await click(shown);
+		expect(judged()).toEqual(beforeClicks);
+		expectFirstClassifyNotes(notesOf(vault), readingPaths);
+		const afterFirst = notesOf(vault);
 		const before = knowledgeCalls();
 		expect(before.every((count) => count > 0)).toBe(true);
 

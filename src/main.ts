@@ -334,9 +334,11 @@ export default class TextEaterPlugin extends Plugin {
 		Effect.suspend(() => {
 			const classify = this.services?.classify;
 			if (!classify) return Effect.void;
-			// Its occurrence is attested in the background, before the
-			// reopen waits for the Reading's Knowledge.
+			// Its occurrence is attested in the background, which asks for
+			// the Reading's Knowledge (#281); then the reopen waits for it.
+			// Obsidian has opened the note already.
 			return classify.attester.clicked(click).pipe(
+				Effect.flatten,
 				Effect.andThen(classify.reopenReading(click.target)),
 				Effect.asVoid,
 				Effect.catch((error) =>
@@ -357,7 +359,9 @@ export default class TextEaterPlugin extends Plugin {
 	): Effect.Effect<void> =>
 		Effect.suspend(
 			() =>
-				this.services?.classify.attester.clicked(click) ?? Effect.void,
+				this.services?.classify.attester
+					.clicked(click)
+					.pipe(Effect.asVoid) ?? Effect.void,
 		);
 
 	/**

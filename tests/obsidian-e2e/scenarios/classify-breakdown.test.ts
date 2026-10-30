@@ -21,6 +21,7 @@ import {
 	SETTLED_DUMGEN,
 	sourceLine,
 } from "./classify-breakdown-script";
+import { classifyAndClick } from "./click-links";
 import { expectHiddenMetadata, linkTo } from "./dictionary-layout";
 
 const P = COMPOUND_PATHS;
@@ -36,14 +37,12 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				id: "classify-breakdown",
 				resetDictionary: true,
 			},
-			async ({ act, dictionary, snapshot, status }) => {
-				// Kohlekraftwerk first: its Breakdown runs in the background
-				// Knowledge run, which act() waits for.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: SELECTIONS.kohlekraftwerk,
-				});
+			async (scenario) => {
+				const { act, dictionary, snapshot, status } = scenario;
+				// Kohlekraftwerk first, then a click on its link: the click asks
+				// for its Knowledge, whose Breakdown runs in the background
+				// Knowledge run, which act() waits for (#281).
+				await classifyAndClick(scenario, SELECTIONS.kohlekraftwerk);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: P.kohlekraftwerkReading },
 				]);
@@ -61,11 +60,7 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 
 				// Kraftwerk next: it is broken down in turn, and Kohlekraftwerk's
 				// part moves to its Lemma note in the same commit.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: SELECTIONS.kraftwerk,
-				});
+				await classifyAndClick(scenario, SELECTIONS.kraftwerk);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: P.kraftwerkReading },
 				]);
@@ -95,13 +90,10 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				const asked = breakdownRequests((await status()).dumgenRequests);
 				expect(asked["jev:breakdown-analysis"]).toBe(2);
 
-				// Kohlekraftwerk again: it stores its Breakdown, so its Knowledge
-				// run asks for neither a Source nor a split.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: SELECTIONS.kohlekraftwerkAgain,
-				});
+				// Kohlekraftwerk again, clicked: it stores its Breakdown, so the
+				// Knowledge run its click asks for asks for neither a Source nor
+				// a split.
+				await classifyAndClick(scenario, SELECTIONS.kohlekraftwerkAgain);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: P.kohlekraftwerkReading },
 				]);
@@ -139,13 +131,10 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				id: "classify-breakdown-source",
 				resetDictionary: true,
 			},
-			async ({ act, dictionary, status }) => {
+			async (scenario) => {
+				const { dictionary, status } = scenario;
 				// Lauf is a conversion of laufen: a Source line, no constituents.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: CONVERSION_SELECTIONS.lauf,
-				});
+				await classifyAndClick(scenario, CONVERSION_SELECTIONS.lauf);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: C.laufReading },
 				]);
@@ -162,11 +151,7 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				});
 
 				// Lauf again: it stores its Source, so nothing more is asked.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: CONVERSION_SELECTIONS.laufAgain,
-				});
+				await classifyAndClick(scenario, CONVERSION_SELECTIONS.laufAgain);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: C.laufReading },
 				]);
@@ -176,11 +161,7 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 
 				// laufen has no Source and no cut: a bottom word, split into
 				// its morphemes; Lauf's Source moves to its Lemma note.
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: CONVERSION_SELECTIONS.laufen,
-				});
+				await classifyAndClick(scenario, CONVERSION_SELECTIONS.laufen);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: C.laufenReading },
 				]);
@@ -208,12 +189,9 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 				id: "classify-breakdown-settled",
 				resetDictionary: true,
 			},
-			async ({ act, dictionary, status }) => {
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: SELECTIONS.kohlekraftwerk,
-				});
+			async (scenario) => {
+				const { dictionary, status } = scenario;
+				await classifyAndClick(scenario, SELECTIONS.kohlekraftwerk);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: P.kohlekraftwerkReading },
 				]);
@@ -228,11 +206,7 @@ describe("Obsidian E2E - Breakdowns (#264)", () => {
 					"jev:sourceFormation": 1,
 				});
 
-				await act({
-					kind: "runClassify",
-					path: "Story.md",
-					selection: SELECTIONS.kohlekraftwerkAgain,
-				});
+				await classifyAndClick(scenario, SELECTIONS.kohlekraftwerkAgain);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: P.kohlekraftwerkReading },
 				]);

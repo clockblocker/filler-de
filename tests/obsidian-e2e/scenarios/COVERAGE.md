@@ -47,8 +47,12 @@ through the driver's `clickScrollLink`, which dispatches real mouse events
 so the click detector sees them, attests it alone, and a second click
 changes nothing; after the user types above the links a click still finds
 its occurrence; a Cmd-click, a middle click and a click in Reading view
-attest too. `classify-resolution`, `classify-unlink` and
-`scroll-rename-refs` click each link they expect an Attestation of.
+attest too. The click, not Classify, asks for the Reading's Knowledge
+(#284), so `classify-resolution`, `classify-unlink`, `scroll-rename-refs`,
+`classify-breakdown`, `classify-licence-groups` and
+`dictionary-metadata-modes` click each link they expect an Attestation or
+Knowledge of (`click-links.ts`'s `classifyAndClick`), and act() waits for
+the Knowledge run the click starts.
 `tests/unit/classify/resolution/attest-occurrence.test.ts` and the
 in-process twins cover the same steps.
 

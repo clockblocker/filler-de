@@ -3,7 +3,7 @@ import type { DumdictVaultStore } from "@textfresser/dictionary";
 import { Transaction } from "@textfresser/dictionary";
 import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import type { Unit } from "dumgen";
-import { JevTransport, LunaTransport } from "dumgen";
+import { JevTransport, LunaTransport, ProviderFailure } from "dumgen";
 import type * as Dumling from "dumling/types";
 import { variantIdOf } from "dumrel";
 import { Effect, Layer, Result } from "effect";
@@ -17,12 +17,13 @@ import {
 } from "../../../../src/commanders/classify/classify-selection";
 import { memoryJudgementCache } from "../../../../src/commanders/classify/judgement-cache";
 import { optionallyReflexiveOf } from "../../../../src/commanders/classify/resolution/commit-occurrence";
-import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
+import { dumgenUnitResolver, isRateLimited } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import {
 	memorySegmentationCache,
 	SegmentationCache,
 } from "../../../../src/commanders/classify/segmentation-cache";
+import type { ClassifyPlan } from "../../../../src/commanders/classify/types";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -130,14 +131,90 @@ describe("dumgenUnitResolver", () => {
 			expect(harness.scroll.content).toBe(
 				`Der ${readingLink(SEE_READING_PATH, "See")} ist tief. Er ist kalt.\n`,
 			);
-			// Its Knowledge is asked for as before.
+			// Its Knowledge waits for the click.
 			const note = await run(harness.store.lemmaNote(see));
-			expect(note?.readings[0]?.knowledge?.definition).toBe("See, defined");
+			expect(note?.readings[0]?.knowledge).toBeUndefined();
+			expect(calls.knowledge).toHaveLength(0);
 			const [cached] = [...judgements.entries.values()];
 			expect(cached?.reading).toEqual(LAKE);
 			expect(cached?.attestation.surface.normalizedSurface).toBe("See");
 			expect(cached?.sentence.target).toEqual([2]);
 
+		});
+
+		it("tries a rate-limited judgement once more before the unit goes Pending", async () => {
+			const content = "Der See ist tief. ^0\n";
+			const { dumgen: stubbed } = stub();
+			let refusals = 1;
+			const dumgen = {
+				...stubbed,
+				resolve: {
+					...stubbed.resolve,
+					// Each run of the Effect is one request, as dumgen's are.
+					grammar: (input: Parameters<typeof stubbed.resolve.grammar>[0]) =>
+						Effect.suspend(() =>
+							refusals-- > 0
+								? Effect.fail(
+										new ProviderFailure({
+											cause: Object.assign(new Error("TypeSafe answered 429"), { status: 429 }),
+											message: "TypeSafe answered 429",
+											stage: "grammar",
+										}),
+									)
+								: stubbed.resolve.grammar(input),
+						),
+				},
+			} as typeof stubbed;
+			const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
+			const [resolution] = await harness.resolve(plan("OnClick", content));
+			expect(resolution?._tag).toBe("Resolved");
+			expect(refusals).toBe(-1);
+		});
+
+		it("tells a rate limit or an overload from any other provider failure", () => {
+			const failure = (message: string, cause?: unknown) =>
+				new ProviderFailure({ cause, message, stage: "reading" });
+			expect(isRateLimited(failure("x", { status: 429 }))).toBe(true);
+			expect(isRateLimited(failure("x", { status: 503 }))).toBe(true);
+			expect(isRateLimited(failure("OpenAI answered 529: busy"))).toBe(true);
+			expect(isRateLimited(failure("x", { status: 400 }))).toBe(false);
+			expect(isRateLimited(failure("OpenAI answered 401: no key"))).toBe(false);
+			expect(isRateLimited(new Error("answered 429"))).toBe(false);
+		});
+
+		it("decides and commits the units of one Lemma one after another, so none ends stale", async () => {
+			// Twelve Sentences, each with a See, resolved at once: each unit
+			// judges against the Readings the ones before it committed.
+			const sentences = Array.from({ length: 12 }, (_, at) => `Der See ${at} ist tief.`);
+			const content = `${sentences.map((text, at) => `${text} ^${at}`).join("\n\n")}\n`;
+			let deciding = 0;
+			let most = 0;
+			const { calls, dumgen } = stubDumgen({
+				grammar: seeGrammar,
+				reading: async (input) => {
+					deciding++;
+					most = Math.max(most, deciding);
+					await new Promise((resolve) => setTimeout(resolve, 1));
+					deciding--;
+					return input.candidates.includes("🌊")
+						? { _tag: "Reuse", emojiDescription: "🌊" }
+						: { _tag: "New", emojiDescription: "🌊" };
+				},
+			});
+			const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
+			const plans = sentences.map((sentenceText) =>
+				planFor({ attest: "OnClick", content, scrollPath: SCROLL, sentenceText, units: seeUnits }),
+			);
+			const merged = {
+				...plans[0],
+				sentences: new Map(plans.flatMap((each) => [...each.sentences])),
+				units: plans.flatMap((each) => each.units),
+			} as ClassifyPlan;
+			const resolutions = await harness.resolve(merged);
+			expect(resolutions.map(({ _tag }) => _tag)).toEqual(sentences.map(() => "Resolved"));
+			expect(most).toBe(1);
+			expect(calls.reading).toHaveLength(12);
+			expect((await run(harness.store.lemmaNote(see)))?.readings).toHaveLength(1);
 		});
 
 		it("keeps the Attestations a click made when Classify runs again, and adds none", async () => {
@@ -159,8 +236,16 @@ describe("dumgenUnitResolver", () => {
 			const refs = await refsOf(harness.store);
 			expect(refs).toHaveLength(1);
 			expect(refs[0]).toMatch(/^!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]$/u);
+			// The click asks for the Reading's whole Knowledge, with its
+			// occurrence as the context.
+			expect(calls.knowledge.map(({ origin }) => origin)).toEqual(["New"]);
+			expect(calls.knowledge[0]?.attestation.surface.normalizedSurface).toBe("See");
+			expect(
+				(await run(harness.store.lemmaNote(see)))?.readings[0]?.knowledge?.definition,
+			).toBe("See, defined");
 			await harness.resolve(plan("OnClick", identified));
 			expect(await refsOf(harness.store)).toEqual(refs);
+			expect(calls.knowledge).toHaveLength(1);
 		});
 
 		it("attests a click whose judgement is not cached to the Reading its link opens, judging grammar alone, while that is stored", async () => {

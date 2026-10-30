@@ -8,6 +8,7 @@ import {
 	PARENT_SELECTION,
 	STORY,
 } from "./classify-licence-groups-script";
+import { classifyAndClick } from "./click-links";
 import {
 	type DictionaryNoteKind,
 	expectFrontmatterMetadata,
@@ -38,8 +39,10 @@ async function classifyMutter(
 			resetDictionary: true,
 			...(hideMetadata === undefined ? {} : { settings: { hideMetadata } }),
 		},
-		async ({ act, dictionary, status }) => {
-			await act({ kind: "runClassify", path: "Story.md", selection: PARENT_SELECTION });
+		async (scenario) => {
+			const { dictionary, status } = scenario;
+			// The click attests Die Mutter and asks for its Knowledge (#281).
+			await classifyAndClick(scenario, PARENT_SELECTION);
 			expect((await status()).classify?.resolved).toEqual([
 				{ linked: 1, readingPath: PARENT_PATH },
 			]);

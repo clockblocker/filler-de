@@ -302,15 +302,23 @@ describe("parseAttestationRef", () => {
 });
 
 describe("createReadingReopener", () => {
-	it("reopens the latest clicked Reading note once its Knowledge lands, unless it is open", async () => {
+	/**
+	 * The reopener over notes whose Knowledge runs until the test lands it,
+	 * and an active note the test moves; `leaves` ends once it moves off.
+	 */
+	function reopenerOver(initial: string | null) {
 		const running = new Map<string, () => void>();
-		const opened: string[] = [];
-		let active: string | null = "Library/Story.md";
+		const refreshed: string[] = [];
+		let active = initial;
+		const moved: (() => void)[] = [];
 		const reopenEffect = createReadingReopener({
 			activePath: Effect.sync(() => active),
-			open: (path) =>
-				Effect.sync(() => {
-					opened.push(path);
+			leaves: (path) =>
+				Effect.callback<void>((resume) => {
+					if (active !== path) return resume(Effect.void);
+					moved.push(() => {
+						if (active !== path) resume(Effect.void);
+					});
 				}),
 			queue: {
 				awaitNote: (path) =>
@@ -318,21 +326,50 @@ describe("createReadingReopener", () => {
 						running.set(path, () => resume(Effect.succeed(true)));
 					}),
 			},
+			refresh: (path) =>
+				Effect.sync(() => {
+					refreshed.push(path);
+				}),
 		});
-		const reopen = (target: string) => Effect.runPromise(reopenEffect(target));
+		return {
+			land: (path: string) => running.get(path)?.(),
+			navigate: (to: string | null) => {
+				active = to;
+				for (const tell of moved.splice(0)) tell();
+			},
+			refreshed,
+			reopen: (target: string) => Effect.runPromise(reopenEffect(target)),
+		};
+	}
+
+	it("shows the Knowledge in the clicked note, in place, while it is still the active one", async () => {
+		const { land, refreshed, reopen } = reopenerOver(`${SEE}.md`);
 		const see = reopen(`${SEE}|See`);
+		land(SEE);
+		expect(await see).toBe(true);
+		expect(refreshed).toEqual([`${SEE}.md`]);
+	});
+
+	it("does nothing once the user navigated away, and stops waiting then", async () => {
+		const { land, navigate, refreshed, reopen } = reopenerOver(`${SEE}.md`);
+		const see = reopen(`${SEE}|See`);
+		// Back to the Scroll before the Knowledge lands: the wait ends now.
+		navigate("Library/Story.md");
+		expect(await see).toBe(false);
+		land(SEE);
+		expect(refreshed).toEqual([]);
+	});
+
+	it("does nothing for a note that is not the active one, nor for an older click", async () => {
+		const { land, navigate, refreshed, reopen } = reopenerOver(`${SEE}.md`);
+		const see = reopen(`${SEE}|See`);
+		navigate(`${TEICH}.md`);
 		const teich = reopen(`${TEICH}|Teich`);
-		running.get(SEE)?.();
-		running.get(TEICH)?.();
+		land(SEE);
+		land(TEICH);
 		expect(await see).toBe(false);
 		expect(await teich).toBe(true);
-		expect(opened).toEqual([`${TEICH}.md`]);
-
-		active = `${SEE}.md`;
-		const again = reopen(`${SEE}|See`);
-		running.get(SEE)?.();
-		expect(await again).toBe(false);
+		expect(refreshed).toEqual([`${TEICH}.md`]);
 		expect(await reopen("Library/Other|Other")).toBe(false);
-		expect(opened).toEqual([`${TEICH}.md`]);
 	});
 });

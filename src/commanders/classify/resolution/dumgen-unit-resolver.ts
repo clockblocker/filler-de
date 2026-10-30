@@ -1,28 +1,31 @@
 /**
  * Classify's second stage (#64): the plugin's `UnitResolver`. It follows
  * tf-demo's resolved click (`server/linguisticOrchestration.ts`) for every
- * unit of the plan, then writes the links and hands Knowledge to the
- * background:
+ * unit of the plan, then writes the links and, when it attests, hands
+ * Knowledge to the background:
  *
  * 1. `resolve.grammar` names the unit's Attestation, with the stored
  *    Lemmas found under the Sentence's words as candidates.
  * 2. `resolve.reading` reuses one of the Lemma's stored Emoji Descriptions
  *    or writes a New one; a Foreign Lemma has its one Reading. The
- *    instances of a repeated Sentence share one judgement.
+ *    instances of a repeated Sentence share one judgement. Up to
+ *    `UNIT_CONCURRENCY` units run at once, but a unit judges its Reading
+ *    and commits under its Lemma's lock, so units of one Lemma take turns.
  * 3. Each occurrence commits through the dictionary store
  *    (`commitOccurrence`). A New the store refuses as stale is judged
  *    again, at most `MAX_STALE_REJUDGES` times.
  * 4. One compare-and-swap write links every piece of every resolved unit
  *    to its Reading note.
- * 5. Each resolved Reading's Knowledge runs in the background.
+ * 5. Each attested occurrence's Reading has its Knowledge asked for in the
+ *    background, with that Attestation as its context.
  *
  * When an occurrence becomes an Attestation is the plan's `attest` (#281).
  * The command's Classify (`OnClick`) gives none an Attestation Ref, nor a
  * block ID: one its click already attested keeps its ref, and each
  * judgement goes into the judgement cache. The click (`Clicked`) resolves
- * its one occurrence from that cache, judging again only on a miss, and
- * asks no Knowledge again; the dictionary reset (`Now`) attests as it
- * links. Attesting, the block IDs the refs name are added before anything
+ * its one occurrence from that cache, judging again only on a miss; the
+ * dictionary reset (`Now`) attests as it links. The command's Classify
+ * asks no Knowledge; the click and the reset do. Attesting, the block IDs the refs name are added before anything
  * commits; a paragraph of several Sentences is first cut into sentence
  * blocks, so each ref names its occurrence's Sentence.
  *
@@ -36,7 +39,15 @@ import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import type { Jev, Luna } from "dumgen";
 import { lemmaIdentityKey, parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
-import { Cause, Data, Effect, Option } from "effect";
+import {
+	Cause,
+	Data,
+	Effect,
+	Option,
+	Predicate,
+	Schedule,
+	Semaphore,
+} from "effect";
 import type { DumgenOperations } from "../../../managers/dumgen";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import type { JudgementCache } from "../judgement-cache";
@@ -68,8 +79,11 @@ const MAX_STALE_REJUDGES = 2;
 /** How often the link write runs again after losing a race. */
 const MAX_LINK_WRITES = 3;
 
-/** Units resolved at once; the store serializes their commits. */
-const UNIT_CONCURRENCY = 3;
+/** How long a rate-limited judgement waits before its one retry. */
+const RATE_LIMIT_PAUSE = "2 seconds";
+
+/** Units resolved at once; each Lemma's lock serializes its own. */
+const UNIT_CONCURRENCY = 12;
 
 export type DumgenUnitResolverDeps = {
 	/** dumgen's `operations`, which a test stubs; they run on the caller's build. */
@@ -91,6 +105,8 @@ class UnitPending extends Data.TaggedError("UnitPending")<{
 }> {}
 
 type ResolvedUnit = {
+	/** Whether its Reading asks for its whole Knowledge: it was created, or has none yet. */
+	readonly whole: boolean;
 	readonly planned: PlannedUnit;
 	readonly reading: Dumling.Reading<"de">;
 	readonly attestation: Dumling.Attestation<"de">;
@@ -176,11 +192,67 @@ type JudgedUnit = {
 	) => Effect.Effect<Decided, UnitPending, Jev | Luna>;
 };
 
+/**
+ * A unit whose grammar dumgen judged: its Attestation names its Lemma, and
+ * `decide` judges its Reading. Deciding and committing run under the
+ * Lemma's lock, so units of one Lemma judge against each other's Readings
+ * rather than end stale.
+ */
+type GrammarJudged = {
+	readonly attestation: Dumling.Attestation<"de">;
+	/** Decides the Reading once; every caller shares that one decision. */
+	readonly decide: Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>;
+};
+
+const decided = (judged: JudgedUnit): GrammarJudged => ({
+	attestation: judged.attestation,
+	decide: Effect.succeed(judged),
+});
+
+/** The HTTP statuses of a provider that is rate limiting or overloaded. */
+const RATE_LIMITED = /\b(?:429|503|529)\b/u;
+
+/**
+ * Whether dumgen failed for a provider that is rate limiting or
+ * overloaded: a `ProviderFailure` whose cause carries such a `status`, as
+ * jev's does, or names it, as Luna's message does ("OpenAI answered 429").
+ */
+export const isRateLimited = (error: unknown): boolean => {
+	if (!Predicate.isTagged(error, "ProviderFailure")) return false;
+	const cause = Predicate.hasProperty(error, "cause")
+		? error.cause
+		: undefined;
+	if (
+		Predicate.hasProperty(cause, "status") &&
+		Predicate.isNumber(cause.status)
+	)
+		return RATE_LIMITED.test(String(cause.status));
+	return (
+		Predicate.hasProperty(error, "message") &&
+		Predicate.isString(error.message) &&
+		/answered (?:429|503|529)\b/u.test(error.message)
+	);
+};
+
+/**
+ * One more try, after a pause, for a judgement the provider refused as
+ * rate limited or overloaded, before the unit goes Pending.
+ */
+const retryRateLimited = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+	Effect.retry(effect, {
+		schedule: Schedule.exponential(RATE_LIMIT_PAUSE),
+		times: 1,
+		while: isRateLimited,
+	});
+
 /** One judgement per `UnitRef`: the instances of a repeated Sentence share it. */
 const judgementKeyOf = ({ ref }: PlannedUnit) =>
 	JSON.stringify([ref.sentenceKey, ref.segments]);
 
-/** Asks dumgen for a unit's grammar and Reading; writes nothing. */
+/**
+ * Asks dumgen for a unit's grammar, and answers how to ask for its Reading;
+ * writes nothing.
+ */
 const judgeUnit = Effect.fnUntraced(function* (
 	dumgen: DumgenUnitResolverDeps["dumgen"],
 	store: ResolutionStore,
@@ -188,7 +260,7 @@ const judgeUnit = Effect.fnUntraced(function* (
 	planned: PlannedUnit,
 	/** The Reading a clicked link opens: its occurrence goes to it, judged by grammar alone. */
 	linked?: Dumling.Reading<"de">,
-): Effect.fn.Return<JudgedUnit, UnitPending, Jev | Luna> {
+): Effect.fn.Return<GrammarJudged, UnitPending, Jev | Luna> {
 	const sentence = plan.sentences.get(planned.ref.sentenceKey);
 	if (!sentence)
 		return yield* new UnitPending({
@@ -208,6 +280,7 @@ const judgeUnit = Effect.fnUntraced(function* (
 			unit: planned.unit,
 		})
 		.pipe(
+			retryRateLimited,
 			Effect.mapError(
 				pendingOnFailure("dumgen could not resolve its grammar"),
 			),
@@ -222,7 +295,7 @@ const judgeUnit = Effect.fnUntraced(function* (
 	const lemma = attestation.surface.lemma;
 	if (linked)
 		return lemmaIdentityKey(linked.lemma) === lemmaIdentityKey(lemma)
-			? clickedAs(attestation, linked, sentence)
+			? decided(clickedAs(attestation, linked, sentence))
 			: yield* new UnitPending({
 					reason: "its link opens a Reading of another Lemma than dumgen judged it; Classify it again",
 				});
@@ -248,6 +321,7 @@ const judgeUnit = Effect.fnUntraced(function* (
 					: { written }),
 			})
 			.pipe(
+				retryRateLimited,
 				Effect.mapError(
 					pendingOnFailure("dumgen could not resolve its Reading"),
 				),
@@ -266,25 +340,29 @@ const judgeUnit = Effect.fnUntraced(function* (
 				),
 			);
 
-	const stored = yield* store.lemmaNote(lemma);
-	let decided: Decided;
-	if (lemma.family === "Foreign") {
-		// A Foreign Lemma has exactly one Reading, without an Emoji Description.
-		decided = {
-			decision: (stored?.readings.length ?? 0) > 0 ? "Reuse" : "New",
-			reading: yield* readingOf(lemma, undefined),
-		};
-	} else {
-		const readings = stored?.readings ?? [];
-		decided = yield* judge(
-			readings.flatMap(({ reading }) => {
-				const description = emojiDescriptionOf(reading);
-				return description === undefined ? [] : [description];
-			}),
-			optionallyReflexiveOf(readings),
-		);
-	}
-	return { attestation, decided, judge, sentence };
+	// Judged from the Lemma's Readings as they stand under its lock.
+	const decide = Effect.gen(function* () {
+		const stored = yield* store.lemmaNote(lemma);
+		let reading: Decided;
+		if (lemma.family === "Foreign") {
+			// A Foreign Lemma has exactly one Reading, without an Emoji Description.
+			reading = {
+				decision: (stored?.readings.length ?? 0) > 0 ? "Reuse" : "New",
+				reading: yield* readingOf(lemma, undefined),
+			};
+		} else {
+			const readings = stored?.readings ?? [];
+			reading = yield* judge(
+				readings.flatMap(({ reading }) => {
+					const description = emojiDescriptionOf(reading);
+					return description === undefined ? [] : [description];
+				}),
+				optionallyReflexiveOf(readings),
+			);
+		}
+		return { attestation, decided: reading, judge, sentence };
+	});
+	return { attestation, decide: yield* Effect.cached(decide) };
 });
 
 /** Where the judgement cache keeps a planned unit's judgement. */
@@ -425,6 +503,7 @@ const commitUnit = Effect.fnUntraced(function* (
 		reading: decided.reading,
 		readingPath: location.path,
 		sentence,
+		whole: created || location.entry.knowledge === undefined,
 	};
 });
 
@@ -458,6 +537,41 @@ const knowledgeSentenceOf = (unit: ResolvedUnit): KnowledgeJob["sentence"] => ({
 export function dumgenUnitResolver(
 	deps: DumgenUnitResolverDeps,
 ): UnitResolver["Service"] {
+	// One lock per Lemma, across runs and clicks: a unit decides its Reading
+	// and commits while it holds it, so the next unit of the Lemma judges
+	// against the Reading it committed.
+	// A Lemma's lock goes once no unit holds it or waits for it.
+	const locks = new Map<
+		string,
+		{ readonly lock: Semaphore.Semaphore; users: number }
+	>();
+	const lockOf =
+		(lemma: Dumling.Lemma<"de">) =>
+		<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+			Effect.suspend(() => {
+				const key = lemmaIdentityKey(lemma);
+				let held = locks.get(key);
+				if (!held) {
+					held = { lock: Semaphore.makeUnsafe(1), users: 0 };
+					locks.set(key, held);
+				}
+				const entry = held;
+				entry.users++;
+				return entry.lock
+					.withPermits(1)(effect)
+					.pipe(
+						Effect.ensuring(
+							Effect.sync(() => {
+								entry.users--;
+								if (
+									entry.users === 0 &&
+									locks.get(key) === entry
+								)
+									locks.delete(key);
+							}),
+						),
+					);
+			});
 	return UnitResolver.of({
 		resolve: Effect.fn("dumgenUnitResolver.resolve")(
 			function* (plan) {
@@ -538,12 +652,12 @@ export function dumgenUnitResolver(
 				};
 				const judgements = new Map<
 					string,
-					Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>
+					Effect.Effect<GrammarJudged, UnitPending, Jev | Luna>
 				>();
 				/** The clicked units judged by grammar alone, for the Reading their link opens. */
 				const fromLinked = new Map<
 					PlannedUnit,
-					Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>
+					Effect.Effect<GrammarJudged, UnitPending, Jev | Luna>
 				>();
 				/** The units judged from the cache, which is not written again. */
 				const fromCache = new Map<PlannedUnit, JudgedUnit>();
@@ -594,7 +708,7 @@ export function dumgenUnitResolver(
 				const judgedOf = (planned: PlannedUnit) => {
 					const cached = fromCache.get(planned);
 					return cached
-						? Effect.succeed(cached)
+						? Effect.succeed(decided(cached))
 						: (fromLinked.get(planned) ??
 								judgements.get(judgementKeyOf(planned)) ??
 								judgeUnit(dumgen, store, plan, planned));
@@ -603,14 +717,20 @@ export function dumgenUnitResolver(
 					plan.units,
 					(planned): Effect.Effect<UnitOutcome, never, Jev | Luna> =>
 						judgedOf(planned).pipe(
-							Effect.flatMap((judged) =>
-								commitUnit(
-									store,
-									judged,
-									planned,
-									plan.scrollPath,
-									refOf(planned),
-									attest === "OnClick",
+							Effect.flatMap(({ attestation, decide }) =>
+								lockOf(attestation.surface.lemma)(
+									decide.pipe(
+										Effect.flatMap((judged) =>
+											commitUnit(
+												store,
+												judged,
+												planned,
+												plan.scrollPath,
+												refOf(planned),
+												attest === "OnClick",
+											),
+										),
+									),
 								),
 							),
 							Effect.tap((unit) =>
@@ -683,26 +803,25 @@ export function dumgenUnitResolver(
 						`⚠ Left ${linked.value.skipped.length} occurrence${linked.value.skipped.length === 1 ? "" : "s"} unlinked: ${[...new Set(linked.value.skipped.map(({ reason, text }) => `${text} (${reason})`))].join(", ")}`,
 					);
 
-				// The occurrence that created a Reading asks for its whole
-				// Knowledge; the queue joins later occurrences of the same Reading.
-				const jobs: KnowledgeJob[] = [...resolved]
-					.sort((a, b) => Number(b.created) - Number(a.created))
-					.map((unit) => ({
-						attestation: unit.attestation,
-						label: labelOf(unit.reading),
-						origin: unit.created ? "New" : "TopUp",
-						reading: unit.reading,
-						readingPath: unit.readingPath,
-						sentence: knowledgeSentenceOf(unit),
-					}));
-				// A clicked occurrence's Knowledge was asked for when Classify
-				// linked it, unless its Reading went since and the click made it
-				// again.
-				yield* deps.knowledge.enqueueAll(
-					attest === "Clicked"
-						? jobs.filter(({ origin }) => origin === "New")
-						: jobs,
-				);
+				// Knowledge is asked for by the click that attests an occurrence,
+				// with it as the context, and by the dictionary reset, never by
+				// the command's Classify (#281). A Reading without Knowledge yet,
+				// as Classify leaves it, asks for its whole; the queue joins a
+				// run already going, and a Reading whose Knowledge covers what
+				// it may ask asks nothing.
+				if (attest !== "OnClick")
+					yield* deps.knowledge.enqueueAll(
+						[...resolved]
+							.sort((a, b) => Number(b.whole) - Number(a.whole))
+							.map((unit) => ({
+								attestation: unit.attestation,
+								label: labelOf(unit.reading),
+								origin: unit.whole ? "New" : "TopUp",
+								reading: unit.reading,
+								readingPath: unit.readingPath,
+								sentence: knowledgeSentenceOf(unit),
+							})),
+					);
 
 				let index = 0;
 				return outcomes.map((outcome, position): UnitResolution => {

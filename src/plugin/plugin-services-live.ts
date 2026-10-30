@@ -6,14 +6,13 @@ import {
 } from "@textfresser/dictionary";
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import {
-	SplitPathKind,
 	splitPathCodec,
 	VaultActionManager,
 	VaultPath,
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
-import { Effect, Layer, Stream } from "effect";
-import type { App, Plugin } from "obsidian";
+import { Effect, Layer, Predicate, Schedule, Stream } from "effect";
+import { type App, MarkdownView, type Plugin } from "obsidian";
 import {
 	ClassifyCommander,
 	createReadingReopener,
@@ -167,6 +166,22 @@ const linkedElsewhere =
 			),
 		);
 
+/**
+ * Re-renders the active note at `path` in Reading view, keeping its scroll
+ * position: the editor of Live Preview and source mode reloads a note
+ * changed on disk by itself, and Reading view may keep its old sections.
+ */
+function rerenderActivePreview(app: Pick<App, "workspace">, path: string) {
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	if (view?.file?.path !== path || view.getMode() !== "preview") return;
+	const preview: unknown = view.previewMode;
+	if (
+		Predicate.hasProperty(preview, "rerender") &&
+		Predicate.isFunction(preview.rerender)
+	)
+		preview.rerender(true);
+}
+
 const ClassifyLive = (deps: PluginServicesDeps) =>
 	Layer.effect(
 		ClassifyServices,
@@ -210,21 +225,30 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 						),
 					),
 			});
-			const reopenReading = createReadingReopener({
-				activePath: vam.mdPwd().pipe(
-					Effect.map((path) =>
-						path ? splitPathCodec.format(path) : null,
-					),
-					Effect.orElseSucceed(() => null),
+			const activePath = vam.mdPwd().pipe(
+				Effect.map((path) =>
+					path ? splitPathCodec.format(path) : null,
 				),
-				open: (path) =>
-					Effect.suspend(() => {
-						const splitPath = splitPathCodec.parse(path);
-						return splitPath.kind === SplitPathKind.MdFile
-							? vam.cd(splitPath)
-							: Effect.void;
-					}),
+				Effect.orElseSucceed(() => null),
+			);
+			const reopenReading = createReadingReopener({
+				activePath,
+				// Checked twice a second while a clicked note's Knowledge runs.
+				leaves: (path) =>
+					activePath.pipe(
+						Effect.repeat({
+							schedule: Schedule.spaced("500 millis"),
+							until: (active) =>
+								active === null ||
+								!VaultPath.caseSensitive.same(active, path),
+						}),
+						Effect.asVoid,
+					),
 				queue: knowledgeQueue,
+				refresh: (path) =>
+					Effect.sync(() =>
+						rerenderActivePreview(deps.plugin.app, path),
+					),
 			});
 
 			const cache = filesSegmentationCache(

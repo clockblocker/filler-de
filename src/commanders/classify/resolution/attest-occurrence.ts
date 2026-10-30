@@ -27,6 +27,7 @@ import {
 	Cause,
 	Deferred,
 	Effect,
+	Fiber,
 	FiberSet,
 	Predicate,
 	type Scope,
@@ -78,9 +79,12 @@ type LinkClicked = {
 export type OccurrenceAttester = {
 	/**
 	 * Attests the clicked link's occurrence, in the background: it ends at
-	 * once, before anything is read.
+	 * once, before anything is read, and answers what ends once the
+	 * attesting does, its Knowledge asked for by then.
 	 */
-	readonly clicked: (click: LinkClicked) => Effect.Effect<void>;
+	readonly clicked: (
+		click: LinkClicked,
+	) => Effect.Effect<Effect.Effect<void>>;
 	/** Ends once no click is being attested. */
 	readonly whenIdle: Effect.Effect<void>;
 };
@@ -219,14 +223,18 @@ export const makeOccurrenceAttester = Effect.fnUntraced(function* <E>(
 	return {
 		clicked: ({ offset, sourcePath, target }) =>
 			offset === undefined
-				? Effect.void
+				? Effect.succeed(Effect.void)
 				: FiberSet.run(
 						runs,
 						idle.track(attest(sourcePath, offset, target)),
 						{
 							startImmediately: true,
 						},
-					).pipe(Effect.asVoid),
+					).pipe(
+						Effect.map((fiber) =>
+							Effect.asVoid(Fiber.await(fiber)),
+						),
+					),
 		whenIdle: FiberSet.awaitEmpty(runs),
 	};
 });

@@ -9,6 +9,7 @@ import {
 	PARENT_SELECTION,
 	STORY,
 } from "./classify-licence-groups-script";
+import { classifyAndClick } from "./click-links";
 import { linkTo } from "./dictionary-layout";
 
 describe("Obsidian E2E - Licence Group tables", () => {
@@ -20,16 +21,19 @@ describe("Obsidian E2E - Licence Group tables", () => {
 				id: "classify-licence-groups",
 				resetDictionary: true,
 			},
-			async ({ act, dictionary, snapshot, status }) => {
+			async (scenario) => {
+				const { dictionary, snapshot, status } = scenario;
 				const healed = (await snapshot()).markdown["Story.md"] ?? "";
 				expect(healed).toContain(STORY);
 
-				// 👩 Mutter first, then a second sense with another plural.
-				await act({ kind: "runClassify", path: "Story.md", selection: PARENT_SELECTION });
+				// 👩 Mutter first, then a second sense with another plural, each
+				// clicked: the click asks for its Knowledge, so the second sense's
+				// licences are judged against the first's stored plural (#281).
+				await classifyAndClick(scenario, PARENT_SELECTION);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: PARENT_PATH },
 				]);
-				await act({ kind: "runClassify", path: "Story.md", selection: NUT_SELECTION });
+				await classifyAndClick(scenario, NUT_SELECTION);
 				expect((await status()).classify?.resolved).toEqual([
 					{ linked: 1, readingPath: NUT_PATH },
 				]);

@@ -10,10 +10,7 @@ function reopener(active: string | null) {
 	const opened: string[] = [];
 	const reopenEffect = createReadingReopener({
 		activePath: Effect.succeed(active),
-		open: (path) =>
-			Effect.sync(() => {
-				opened.push(path);
-			}),
+		leaves: () => Effect.never,
 		queue: {
 			awaitNote: (path) =>
 				Effect.sync(() => {
@@ -21,16 +18,20 @@ function reopener(active: string | null) {
 					return true;
 				}),
 		},
+		refresh: (path) =>
+			Effect.sync(() => {
+				opened.push(path);
+			}),
 	});
 	const reopen = (target: string) => Effect.runPromise(reopenEffect(target));
 	return { awaited, opened, reopen };
 }
 
 describe("createReadingReopener path identity", () => {
-	it("does not reopen the active note when the link spells it in NFD", async () => {
+	it("refreshes the active note when the link spells it in NFD", async () => {
 		const { opened, reopen } = reopener(`${NFC}.md`);
-		expect(await reopen(`${NFD}|Mütter`)).toBe(false);
-		expect(opened).toEqual([]);
+		expect(await reopen(`${NFD}|Mütter`)).toBe(true);
+		expect(opened).toEqual([`${NFD}.md`]);
 	});
 
 	it("waits only for links below Worter/, case-sensitively", async () => {

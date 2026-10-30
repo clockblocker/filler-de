@@ -1,10 +1,11 @@
 /**
  * A click on a link to a Reading whose Knowledge is still being generated
- * (#64, #116). Obsidian opens the Reading note on the click, as it is so
- * far; once the Knowledge lands, the note is opened again, unless it is
- * already the active note, which then shows it as it is. Only the latest
- * clicked link reopens its note, so a user who clicked on elsewhere is
- * pulled back to nothing older.
+ * (#64, #116), as every first click on a Reading's link starts it (#284).
+ * Obsidian opens the Reading note on the click, as it is so far; once the
+ * Knowledge lands, the note shows it, in place, only while it is still the
+ * active note. A user who went back to the Scroll, or anywhere else, is
+ * never pulled into the note: leaving it ends the wait. Only the latest
+ * clicked link counts.
  */
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
@@ -40,13 +41,25 @@ export type ReadingReopenerDeps<E> = {
 	readonly queue: Pick<KnowledgeQueue, "awaitNote">;
 	/** The active note's vault path, if a Markdown note is active. */
 	readonly activePath: Effect.Effect<string | null>;
-	/** Opens the note at a vault path in the active leaf. */
-	readonly open: (path: string) => Effect.Effect<void, E>;
+	/**
+	 * Ends once the note at `path` is no longer the active one: the user
+	 * opened another note, or another pane took the focus. It ends at once
+	 * when the note is not active now.
+	 */
+	readonly leaves: (path: string) => Effect.Effect<void>;
+	/**
+	 * Makes the active note at `path` show its content as it is now, in
+	 * place, keeping where it is scrolled to.
+	 */
+	readonly refresh: (path: string) => Effect.Effect<void, E>;
 };
 
 /**
- * Answers a clicked link: once the Knowledge of the note it points at
- * lands, the note opens again. It answers whether it reopened the note.
+ * Answers a clicked link once the Knowledge of the note it points at
+ * lands: the note shows it, if it is still the active note. A user who
+ * opened another note meanwhile, or clicked another link, is left where
+ * they are, and their navigation ends the wait. It answers whether it
+ * refreshed the note.
  */
 export function createReadingReopener<E>(
 	deps: ReadingReopenerDeps<E>,
@@ -54,13 +67,16 @@ export function createReadingReopener<E>(
 	let latest = 0;
 	return Effect.fn("ReadingReopener.reopen")(function* (target: string) {
 		const click = ++latest;
-		const waited = yield* awaitReadingKnowledge(deps.queue, target);
-		if (!waited || click !== latest) return false;
 		const path = notePathOf(linkTargetPath(target));
+		const landed = yield* Effect.raceFirst(
+			awaitReadingKnowledge(deps.queue, target),
+			deps.leaves(path).pipe(Effect.as(false)),
+		);
+		if (!landed || click !== latest) return false;
 		const active = yield* deps.activePath;
-		if (active !== null && VaultPath.caseSensitive.same(active, path))
+		if (active === null || !VaultPath.caseSensitive.same(active, path))
 			return false;
-		yield* deps.open(path);
+		yield* deps.refresh(path);
 		return true;
 	});
 }
