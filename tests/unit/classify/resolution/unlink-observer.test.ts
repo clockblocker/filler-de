@@ -722,7 +722,9 @@ describe("unlink observer", () => {
 	});
 
 	it("tells a repeated Sentence's instances apart by their recomputed occurrence keys", async () => {
-		const content = "Er fängt heute an. Er fängt heute an.\n";
+		// A list item, which Classify never cuts into sentence blocks, so
+		// both instances share one block.
+		const content = "- Er fängt heute an. Er fängt heute an.\n";
 		const stub = stubDumgen({
 			grammar: (input) =>
 				input.unit.route !== "Unresolved" && input.unit.route.kind === "VERB"
@@ -771,7 +773,7 @@ describe("unlink observer", () => {
 		if (verb?._tag !== "Resolved") throw new Error("anfangen did not resolve");
 		const link = (shown: string) => linkTo(verb.readingPath, shown);
 		const linked = `Er ${link("fängt")} heute ${link("an")}.`;
-		expect(harness.scroll.content).toBe(`${linked} ${linked} ^0\n`);
+		expect(harness.scroll.content).toBe(`- ${linked} ${linked} ^0\n`);
 		// Each instance is an occurrence of its own, judged once for both.
 		const refs = await refsOf(harness.store, anfangen);
 		expect(refs).toHaveLength(2);
@@ -788,12 +790,12 @@ describe("unlink observer", () => {
 		// An edit to the first instance's Sentence: its key cannot be told,
 		// so nothing goes.
 		await edit(() => {
-			harness.scroll.content = `Er ${link("fängt")} morgen ${link("an")}. Er fängt heute an. ^0\n`;
+			harness.scroll.content = `- Er ${link("fängt")} morgen ${link("an")}. Er fängt heute an. ^0\n`;
 		});
 		expect(await refsOf(harness.store, anfangen)).toEqual(refs);
 		// The second instance's links go, the first's stay: only the second goes.
 		await edit(() => {
-			harness.scroll.content = `${linked} Er fängt heute an. ^0\n`;
+			harness.scroll.content = `- ${linked} Er fängt heute an. ^0\n`;
 		});
 		const first = outcome.plan.units.find(
 			({ instance, unit: { route } }) =>

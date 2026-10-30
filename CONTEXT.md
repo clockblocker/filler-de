@@ -153,7 +153,7 @@ A fleeting occurrence of one Surface in a text. It has no durable identity and i
 _Avoid_: Selection, source reference, context
 
 **Attestation Ref**:
-A durable reference to the place in a Scroll where an Attestation occurred, stored as an embed: the `ref` of an Attestation Link `{ ref, surfaceId, reading }` in a Reading Entry's `attestationLinks`, or in a Surface Entry's `attestations`. A ref names one occurrence and is unique in the dictionary, so Classify writes it as an embed of the occurrence's block whose alias keys the occurrence: `![[Story#^0|^1a2b3c4d]]`. It names its Scroll by basename, or by vault path where a rename left the basename to another note, and follows the Scroll when it is renamed. A Reading Note shows each one under Deine Kontexte.
+A durable reference to the place in a Scroll where an Attestation occurred, stored as an embed: the `ref` of an Attestation Link `{ ref, surfaceId, reading }` in a Reading Entry's `attestationLinks`, or in a Surface Entry's `attestations`. A ref names one occurrence and is unique in the dictionary, so Classify writes it as an embed of the occurrence's block whose alias keys the occurrence: `![[Story#^0|^1a2b3c4d]]`. Before it mints that block's ID, Classify cuts a paragraph of several Sentences into sentence blocks, one Sentence each, so the embed shows the occurrence's Sentence; a block that already has an ID is never cut. It names its Scroll by basename, or by vault path where a rename left the basename to another note, and follows the Scroll when it is renamed. A Reading Note shows each one under Deine Kontexte.
 _Avoid_: Attestation, Kontext
 
 **Reading Knowledge**:

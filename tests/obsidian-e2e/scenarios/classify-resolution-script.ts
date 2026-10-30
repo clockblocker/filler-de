@@ -11,6 +11,11 @@
  * Knowledge base text and the noun's plural. The other structural aspects
  * stay unscripted and fail as values. The twins also share what the
  * dictionary looks like after the first Classify (`expectFirstClassifyNotes`).
+ *
+ * The `classify-sentence-blocks` scenario reuses the script on a paragraph
+ * the user pasted and never split: three Sentences, no block IDs. Classify
+ * cuts it into sentence blocks before it gives them IDs, so Der Hund's
+ * Attestation embeds "Der Hund schläft." alone, not the paragraph.
  */
 import { expect } from "bun:test";
 import {
@@ -28,6 +33,17 @@ export const STORY =
 
 export const FIRST_SELECTION = "Hund fängt heute auf jeden Fall an";
 export const SECOND_SELECTION = "Hund schläft";
+
+/** One pasted paragraph of three Sentences, two of them short, without block IDs. */
+export const SENTENCE_BLOCKS_STORY = "Es regnet. Der Hund schläft. Er träumt.\n";
+export const SENTENCE_BLOCKS_SELECTION = "Hund schläft";
+
+/**
+ * The paragraph after Classify, given Der Hund's link: one sentence block
+ * per Sentence, short ones included, Der Hund's in `^1`.
+ */
+export const sentenceBlocksStory = (derHund: string) =>
+	`Es regnet. ^0\n\n${derHund} schläft. ^1\n\nEr träumt. ^2\n`;
 
 export const CLASSIFY_RESOLUTION_DUMGEN = {
 	jev: {
