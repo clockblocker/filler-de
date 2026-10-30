@@ -118,6 +118,7 @@ import {
 	type DisplacedCrossroad,
 	displacedCrossroads,
 	fanOutOf,
+	MAX_MORPHEME_READERS,
 	type NoteProjections,
 	renderOptionsFor,
 	staleCrossroads,
@@ -1813,7 +1814,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				message: `${collision.second.path} and ${collision.first.path} are one ${collision.component} on a case-insensitive file system; the store writes neither over the other`,
 				path: collision.second.path,
 			});
-		return { deferred, writes };
+		return { deferred, overflow: fan.overflow, writes };
 	});
 
 	type Executed =
@@ -1929,6 +1930,26 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * revision. It never fails: a note it cannot re-render keeps its
 	 * renderings until the next one.
 	 */
+	/**
+	 * Re-renders the notes whose morphemes lines a change moved beyond what
+	 * one commit re-renders (`MAX_MORPHEME_READERS`), after it, in chunks of
+	 * that size, as a common part's Breakdown can move hundreds.
+	 */
+	const rerenderMorphemeOverflow = Effect.fnUntraced(function* (
+		overflow: readonly string[],
+	) {
+		if (overflow.length === 0) return;
+		yield* Effect.logInfo(
+			"Dictionary re-renders the morphemes lines a change moved beyond its cap, after it",
+			{ notes: overflow.length },
+		);
+		for (let at = 0; at < overflow.length; at += MAX_MORPHEME_READERS)
+			yield* rerender(
+				new Set(overflow.slice(at, at + MAX_MORPHEME_READERS)),
+				new Set(),
+			);
+	});
+
 	const rerender = Effect.fnUntraced(function* (
 		lemmaKeys: ReadonlySet<string>,
 		formKeys: ReadonlySet<string>,
@@ -2342,6 +2363,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			fan.formKeys,
 			changedPaths,
 		);
+		yield* rerenderMorphemeOverflow(fan.overflow);
 		const removed: Dumling.Lemma<"de">[] = [];
 		const shadowKeys = new Set<string>();
 		for (const key of touched) {
@@ -2806,7 +2828,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			return conflict("revisionConflict");
 		}
 		const before = index;
-		const { deferred, writes } = planned.success;
+		const { deferred, overflow, writes } = planned.success;
 		/**
 		 * Publishes what landed and answers the commit's revision. The other
 		 * notes whose re-render was left out or did not land are read again
@@ -2835,6 +2857,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* refresh(late.paths);
 					yield* rerender(late.lemmaKeys, late.formKeys);
 				}
+				yield* rerenderMorphemeOverflow(overflow);
 				if (depth >= MAX_FOLLOW_UP_DEPTH) return committed;
 				const removed: Dumling.Lemma<"de">[] = [];
 				for (const [lemmaKey, data] of intended) {

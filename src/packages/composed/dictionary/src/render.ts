@@ -166,34 +166,45 @@ const morphemeSourcesKey = (data: NoteData | undefined): string =>
 const MORPHEME_WALK_DEPTH = 8;
 
 /**
- * The Lemmas whose morphemes lines read these Lemmas' Breakdowns, up to the
- * walk's depth: a Lemma whose Breakdown names one, and so on up, since a
- * walk reads each part's own Breakdown (`Braunkohlekraftwerk` reads
- * `Kohlekraftwerk`, which reads `Kraftwerk`).
+ * The most notes one commit re-renders for the morphemes lines it moves, as
+ * tf-demo caps its moved owners. The rest follow after the commit.
+ */
+export const MAX_MORPHEME_READERS = 200;
+
+/**
+ * The Lemmas whose morphemes lines read a Lemma or a Unit Shadow of these
+ * Shadow keys, nearest first, up to the walk's depth: a Lemma whose
+ * Breakdown or Source names one, and so on up, since a walk reads each
+ * part's own Breakdown and resolves each inherited link
+ * (`Kohlekraftwerksbetreiber` reads `Kohlekraftwerk`, which reads
+ * `Kraftwerk`, which links `Werk`). Only Breakdown and Source targets lead
+ * up; a preposition or a relation never does.
  */
 function morphemeReaders(
 	views: readonly NoteIndex[],
-	changed: Iterable<string>,
-): Set<string> {
-	const readers = new Set<string>();
-	let frontier = [...changed];
+	starts: Iterable<string>,
+): string[] {
+	const readers: string[] = [];
+	const seen = new Set<string>();
+	let frontier = [...new Set(starts)].sort(byCodeUnit);
 	for (
 		let depth = 0;
 		depth < MORPHEME_WALK_DEPTH && frontier.length > 0;
 		depth++
 	) {
-		const next: string[] = [];
-		for (const key of frontier)
-			for (const view of views) {
-				const lemma = view.lemmaData(key)?.lemmaRecord.lemma;
-				if (lemma === undefined) continue;
-				for (const reader of view.dependentsOf(shadowKeyOf(lemma)))
-					if (!readers.has(reader)) {
-						readers.add(reader);
-						next.push(reader);
-					}
-			}
-		frontier = next;
+		const next = new Set<string>();
+		for (const shadow of frontier)
+			for (const view of views)
+				for (const reader of view.breakdownReadersOf(shadow)) {
+					if (seen.has(reader)) continue;
+					seen.add(reader);
+					readers.push(reader);
+					const lemma = views
+						.map((candidate) => candidate.lemmaData(reader))
+						.find(Boolean)?.lemmaRecord.lemma;
+					if (lemma) next.add(shadowKeyOf(lemma));
+				}
+		frontier = [...next].sort(byCodeUnit);
 	}
 	return readers;
 }
@@ -207,8 +218,11 @@ function morphemeReaders(
  * - when a Lemma comes or goes, the notes that link by its Unit Shadow,
  *   whose uniqueness it changes, and the targets of every claim made by a
  *   Lemma with that Shadow, whose inverse links name it;
- * - when a Lemma's Breakdowns or Sources change, or it comes or goes with
- *   one, the notes whose morphemes lines read it, up the walk;
+ * - when a Lemma's Breakdowns or Sources change, or it comes or goes, which
+ *   moves where an inherited link of its Shadow resolves, the notes whose
+ *   morphemes lines read it, up the walk, at most
+ *   {@link MAX_MORPHEME_READERS}; `overflow` holds the rest, for the store
+ *   to re-render after the change;
  * - the Crossroads of every spelling the Lemmas or their Surfaces have.
  *
  * It answers more than may change; a re-render that changes nothing writes
@@ -218,11 +232,16 @@ export function fanOutOf(
 	before: NoteIndex,
 	after: NoteIndex,
 	touched: Iterable<string>,
-): { readonly lemmas: Set<string>; readonly formKeys: Set<string> } {
+): {
+	readonly lemmas: Set<string>;
+	readonly formKeys: Set<string>;
+	readonly overflow: readonly string[];
+} {
 	const lemmas = new Set<string>();
 	const formKeys = new Set<string>();
 	const shadows = new Set<string>();
-	const broken = new Set<string>();
+	/** Shadow keys whose morphemes-line readers the change moves. */
+	const walked = new Set<string>();
 	const own = new Set(touched);
 	for (const key of own) {
 		const was = before.lemmaData(key);
@@ -232,11 +251,13 @@ export function fanOutOf(
 			claimTargets(data, lemmas);
 		}
 		const lemma = (is ?? was)?.lemmaRecord.lemma;
-		if (lemma && Boolean(was) !== Boolean(is))
+		if (lemma && Boolean(was) !== Boolean(is)) {
 			shadows.add(shadowKeyOf(lemma));
-		if (morphemeSourcesKey(was) !== morphemeSourcesKey(is)) broken.add(key);
+			walked.add(shadowKeyOf(lemma));
+		}
+		if (lemma && morphemeSourcesKey(was) !== morphemeSourcesKey(is))
+			walked.add(shadowKeyOf(lemma));
 	}
-	for (const key of morphemeReaders([before, after], broken)) lemmas.add(key);
 	for (const shadow of shadows) {
 		for (const view of [before, after]) {
 			for (const key of view.dependentsOf(shadow)) lemmas.add(key);
@@ -248,9 +269,14 @@ export function fanOutOf(
 		}
 	}
 	for (const key of own) lemmas.delete(key);
+	const readers = morphemeReaders([before, after], walked).filter(
+		(key) => !own.has(key) && !lemmas.has(key) && after.lemmaData(key),
+	);
+	for (const key of readers.slice(0, MAX_MORPHEME_READERS)) lemmas.add(key);
 	return {
 		formKeys,
 		lemmas: new Set([...lemmas].filter((key) => after.lemmaData(key))),
+		overflow: readers.slice(MAX_MORPHEME_READERS),
 	};
 }
 
