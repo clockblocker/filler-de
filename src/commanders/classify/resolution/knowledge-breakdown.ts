@@ -9,8 +9,9 @@
  * and a single-word Lexeme it finds none for is a bottom word, which
  * `segment.inMorphemes` splits.
  *
- * Each piece is stored as the segmenter returns it, a Lemma or a Unit
- * Shadow, so nothing is generated for a part the learner hasn't met. A
+ * Each piece is stored as the segmenter returns it, linked to a Unit
+ * Shadow, so nothing is generated for a part the learner hasn't met; the
+ * store moves the link to the part's Lemma once that is stored (#267). A
  * failed segmenter is a failure of its part, never the run's error: the
  * rest of the Knowledge is still published, and the next Classify of the
  * Reading asks again (`breakdownAskFor`). A step that finished with nothing

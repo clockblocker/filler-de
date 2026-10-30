@@ -2178,43 +2178,41 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * Moves the Breakdown and Source links that no longer fit the stored
 	 * Lemmas (#267, `moveOwnerLinks`), as commits of their own of at most
 	 * {@link MAX_MOVED_OWNERS} owning Readings each, from the index as each
-	 * finds it. `shadowKeys` narrows it to the links waiting on those
-	 * Shadows. It never fails: what goes wrong is logged.
+	 * finds it. A chunk that does not commit is logged, and the owners
+	 * after it still move, as `converge` goes on past a chunk it cannot
+	 * plan. `shadowKeys` narrows it to the links waiting on those Shadows.
+	 * It never fails.
 	 */
 	const convergeLinks = (
 		shadowKeys: ReadonlySet<string> | undefined,
 		depth: number,
 	): Effect.Effect<void> =>
 		Effect.gen(function* () {
-			let rounds: number | undefined;
-			for (
-				let round = 0;
-				rounds === undefined || round < rounds;
-				round++
-			) {
+			// Each owner is tried once, so the loop ends however chunks fail.
+			const tried = new Set<string>();
+			for (;;) {
 				const view = index;
 				const owners = moveOwnerLinks({
 					resolver: resolverOver(view, heldByFiles),
 					shadowKeys: shadowKeys ?? view.linkShadowKeys(),
+					skipReadings: tried,
 					view,
 				});
 				if (owners.intended.size === 0) return;
-				rounds ??= Math.ceil(owners.moved / MAX_MOVED_OWNERS);
+				for (const key of owners.readings) tried.add(key);
 				const result = yield* Effect.result(
 					commitIntended(owners.intended, owners.bases, depth + 1),
 				);
 				if (
 					result._tag === "Failure" ||
 					result.success.status !== "committed"
-				) {
+				)
 					yield* Effect.logWarning(
-						"Dictionary could not move Breakdown links",
+						`Dictionary could not move the Breakdown links of ${owners.readings.size} Readings; it goes on with the rest`,
 						result._tag === "Failure"
 							? result.failure
 							: result.success,
 					);
-					return;
-				}
 			}
 		});
 
@@ -2926,7 +2924,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					yield* rerender(late.lemmaKeys, late.formKeys);
 				}
 				yield* rerenderMorphemeOverflow(overflow);
-				if (depth >= MAX_FOLLOW_UP_DEPTH) return committed;
+				if (depth >= MAX_FOLLOW_UP_DEPTH) {
+					if (leftOver.size > 0)
+						yield* Effect.logWarning(
+							"Dictionary left Breakdown links over the cap for the next settle: the commit is too deep to follow up",
+							[...leftOver],
+						);
+					return committed;
+				}
 				const removed: Dumling.Lemma<"de">[] = [];
 				for (const [lemmaKey, data] of intended) {
 					const was = before.lemmaData(lemmaKey)?.lemmaRecord.lemma;

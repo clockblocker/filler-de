@@ -75,6 +75,9 @@ export type StoredBase = {
 /**
  * Whether a Source to `target` points back (texteater #1279): a stored
  * Reading of a Lemma it names already names `owner` as its own Source.
+ * A stored Source names by its Shadow, whether it targets the Shadow or a
+ * Lemma it resolved to, so a link the store moved counts as it was
+ * published (#267).
  * The first stored direction wins. A base still pending has no stored
  * Readings, so it never conflicts.
  */
@@ -91,7 +94,10 @@ export function pointsBack(
 				const named = knowledge?.source?.target;
 				return (
 					Predicate.isObject(named) &&
-					namesLemma(named as Dumrel.LinkTarget, owner)
+					namesLemma(
+						shadowOfTarget(named as Dumrel.LinkTarget),
+						owner,
+					)
 				);
 			}),
 	);

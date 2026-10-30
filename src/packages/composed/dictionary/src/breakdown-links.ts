@@ -204,6 +204,8 @@ export type MovedOwners = {
 	readonly moved: number;
 	/** The Shadow keys of the owners left over the cap. */
 	readonly leftOver: Set<string>;
+	/** The keys of the owning Readings whose links `intended` moves. */
+	readonly readings: Set<string>;
 };
 
 /**
@@ -218,6 +220,8 @@ export function moveOwnerLinks(input: {
 	readonly resolver: LinkResolver;
 	readonly shadowKeys: Iterable<string>;
 	readonly exclude?: ReadonlySet<string>;
+	/** Owning Readings to leave alone, such as those a refused commit held. */
+	readonly skipReadings?: ReadonlySet<string>;
 	readonly cap?: number;
 }): MovedOwners {
 	const { view, resolver } = input;
@@ -232,10 +236,16 @@ export function moveOwnerLinks(input: {
 	const intended = new Map<string, NoteData>();
 	const bases = new Map<string, NoteData>();
 	const leftOver = new Set<string>();
+	const readings = new Set<string>();
 	let moved = 0;
 	for (const readingKey of [...owners.keys()].sort(byCodeUnit)) {
 		const lemmaKey = view.readingOwner(readingKey);
-		if (lemmaKey === undefined || input.exclude?.has(lemmaKey)) continue;
+		if (
+			lemmaKey === undefined ||
+			input.exclude?.has(lemmaKey) ||
+			input.skipReadings?.has(readingKey)
+		)
+			continue;
 		const base = view.lemmaData(lemmaKey);
 		const entry = view.reading(readingKey);
 		if (!base || !entry || !settledEntry(entry, resolver)) continue;
@@ -252,6 +262,7 @@ export function moveOwnerLinks(input: {
 		if (data === undefined) continue;
 		intended.set(lemmaKey, data);
 		bases.set(lemmaKey, base);
+		readings.add(readingKey);
 	}
-	return { bases, intended, leftOver, moved };
+	return { bases, intended, leftOver, moved, readings };
 }

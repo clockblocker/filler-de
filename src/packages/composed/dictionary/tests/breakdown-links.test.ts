@@ -190,6 +190,46 @@ describe("storing a Lemma moves the links waiting on its Shadow", () => {
 		});
 	});
 
+	test("a Source moved to der See still counts as naming See when die See publishes a Source back to its owner", async () => {
+		const { store, vault } = await openStore();
+		const seegang = noun("Seegang", "Masc");
+		const seegangReading = sense(seegang, "🌊");
+		const dieSeeReading = sense(dieSee, "🌊");
+		await seed(
+			store,
+			withKnowledge(seegangReading, {
+				source: { target: shadow("See") },
+			}),
+		);
+		await seed(store, lemmaWithReading(derSee, "🌊"));
+		expect(
+			(await entryOf(store, seegangReading))?.knowledge?.source,
+		).toEqual({ target: derSee });
+
+		// die See arrives with a Source to Seegang, whose stored Source names
+		// See by its Shadow: neither moves to the other's Lemma.
+		await seed(
+			store,
+			withKnowledge(dieSeeReading, {
+				source: { target: shadow("Seegang") },
+			}),
+		);
+		expect(
+			(await entryOf(store, seegangReading))?.knowledge?.source,
+		).toEqual({ target: unitShadowOf(derSee) });
+		expect(
+			(await entryOf(store, dieSeeReading))?.knowledge?.source,
+		).toEqual({ target: shadow("Seegang") });
+
+		// Settling again moves nothing.
+		const batches = vault.batches.length;
+		const again = await reopened(vault);
+		expect(vault.batches.length).toBe(batches);
+		expect(
+			(await entryOf(again, dieSeeReading))?.knowledge?.source,
+		).toEqual({ target: shadow("Seegang") });
+	});
+
 	test("a new Breakdown links the one stored Lemma its Shadow names as it is published", async () => {
 		const { store } = await openStore();
 		await seed(store, lemmaWithReading(kraftwerk));
