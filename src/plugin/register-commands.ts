@@ -8,6 +8,7 @@
  */
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
+import { CLEANUP_UNLINKED_COMMAND_NAME } from "../commanders/classify/cleanup-unlinked";
 import {
 	CANCEL_RESET_COMMAND_NAME,
 	RESET_COMMAND_NAME,
@@ -136,6 +137,11 @@ export function serviceCommands(
 						: "No dictionary reset is running",
 				),
 			),
+		},
+		{
+			id: "cleanup-unlinked-readings",
+			name: CLEANUP_UNLINKED_COMMAND_NAME,
+			run: deps.idle.track(deps.classify.cleanupUnlinked),
 		},
 		{
 			editor: true,

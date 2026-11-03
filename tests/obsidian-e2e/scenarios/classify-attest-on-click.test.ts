@@ -43,9 +43,14 @@ describe("Obsidian E2E - Classify attests on click (#281)", () => {
 					throw new Error("Classify resolved fewer units than it reported");
 				await act({ kind: "runClassify", path: "Story.md", selection: SECOND_SELECTION });
 
-				// Classify links both "Der Hund"s and attests neither.
+				// Classify links both "Der Hund"s and attests neither. Its
+				// Readings stand with no Attestation, as their links hold them,
+				// through the Reading lifetime's checks.
 				let notes = (await dictionary()).markdown;
-				for (const path of targets) expect(countOf(notes[path], ANY_KONTEXT)).toBe(0);
+				for (const path of targets) {
+					expect(notes[path]).toBeDefined();
+					expect(countOf(notes[path], ANY_KONTEXT)).toBe(0);
+				}
 				const linked = (await snapshot()).markdown["Story.md"] ?? "";
 				expect(countOf(linked, new RegExp(`\\[\\[${linkpath(hund)}\\|`, "gu"))).toBe(2);
 

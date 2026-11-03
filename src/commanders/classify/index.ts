@@ -4,6 +4,10 @@
  * `dumgenUnitResolver` (`resolution/`, #64) implements.
  */
 export { ClassifyCommander } from "./classify-commander";
+export {
+	CLEANUP_UNLINKED_COMMAND_NAME,
+	cleanupUnlinkedReadings,
+} from "./cleanup-unlinked";
 export { filesJudgementCache } from "./judgement-cache";
 export {
 	makeOccurrenceAttester,
@@ -14,7 +18,12 @@ export {
 	type KnowledgeQueue,
 	makeKnowledgeQueue,
 } from "./resolution/knowledge-queue";
+export { filesLinkIndex } from "./resolution/link-index";
 export { produceKnowledge } from "./resolution/produce-knowledge";
+export {
+	makeReadingLifetime,
+	type ReadingLifetime,
+} from "./resolution/reading-lifetime";
 export { createScrollActivity } from "./resolution/scroll-activity";
 export {
 	observeScrollModifications,

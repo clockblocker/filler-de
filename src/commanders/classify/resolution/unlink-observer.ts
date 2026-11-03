@@ -7,11 +7,12 @@
  * Attestation Links into, the observer waits until the Scroll has been
  * quiet for `quietMs`, then reads it as it is and asks `unlinkedOccurrences`
  * which recorded occurrences it no longer links. Each of those goes through
- * `removeOccurrence` and its cascade: a Reading left with no link is
- * removed, a Surface is forgotten unless it holds user text, a Lemma with
- * no Reading is removed unless its kept Surfaces hold user text. After a
- * plan that removed Lemmas lands, the store re-evaluates their Shadows as a
- * commit of its own, from a slice it loads then (texteater#1257).
+ * `removeOccurrence` with `emptyReading: "Keep"`: its Attestation, and the
+ * embed in its Reading note, go at once, a Surface no link names is
+ * forgotten unless it holds user text, and the Reading stays. The observer
+ * then tells the Reading lifetime (`reading-lifetime.ts`) which Readings
+ * it took Attestations from: one left with no Attestation goes once no
+ * link outside `Worter/` points at it either (#281).
  *
  * What keeps a removal from being false:
  *
@@ -123,6 +124,7 @@ import {
 	occurrencesAt,
 	rememberedReads,
 } from "./occurrence-keys";
+import type { ReadingLifetime } from "./reading-lifetime";
 import type { ScrollActivity } from "./scroll-activity";
 import {
 	attestationRefPrefixOf,
@@ -163,15 +165,6 @@ export type UnlinkScrolls = {
 	) => Effect.Effect<string | undefined>;
 	/** When the file at `path` was last modified, as its mtime; none when it is gone. */
 	readonly modifiedAt: (path: string) => Effect.Effect<number | undefined>;
-	/**
-	 * Whether a Markdown file outside `Worter/` other than the Scroll at
-	 * `scrollPath` links the note at `notePath`, as Obsidian last resolved
-	 * its links. None counts as no.
-	 */
-	readonly linkedElsewhere?: (
-		notePath: string,
-		scrollPath: string,
-	) => Effect.Effect<boolean>;
 };
 
 export type UnlinkObserverDeps<E = unknown> = {
@@ -180,6 +173,8 @@ export type UnlinkObserverDeps<E = unknown> = {
 	readonly cache: SegmentationCache["Service"];
 	readonly segmenterVersion: Effect.Effect<string>;
 	readonly activity: ScrollActivity;
+	/** The Reading lifetime, told the Reading notes whose Attestations a check removed. */
+	readonly readings?: Pick<ReadingLifetime, "suspect">;
 	/** Why no occurrence may be removed now, such as a dictionary reset. */
 	readonly blockedBy?: () => string | undefined;
 	/** Shows the user a notice; until #229, Obsidian's `Notice`. */
@@ -316,7 +311,7 @@ type Checked =
 	  };
 
 /** Why a removal's plan removed nothing and the Scroll is checked again. */
-type Withheld = "Busy" | "Blocked" | "Changed" | "Kept";
+type Withheld = "Busy" | "Blocked" | "Changed";
 
 /** The Readings a ref is recorded under, as one comparable key. */
 const recordedUnder = (links: readonly AttestationLink<"de">[], ref: string) =>
@@ -339,7 +334,6 @@ const planUnlinkedRemoval =
 		endedAt: number | undefined,
 		ref: string,
 		readings: string,
-		keepReading: boolean,
 	) =>
 	(
 		view: DictionaryView,
@@ -359,27 +353,8 @@ const planUnlinkedRemoval =
 			readings
 		)
 			return Result.succeed(stopWith("Changed"));
-		if (keepReading && lastAttestationOf(view, ref))
-			return Result.succeed(stopWith("Kept"));
 		return planRemoval(view, ref);
 	};
-
-/**
- * Whether `ref` is the last Attestation Link of a Reading that holds it,
- * so removing it would remove the Reading.
- */
-const lastAttestationOf = (view: DictionaryView, ref: string) =>
-	view.attestationLinksWithRef(ref).some((link) => {
-		const key = readingIdentityKey(link.reading);
-		const entry = view
-			.lemmaNote(link.reading.lemma)
-			?.readings.find(
-				({ reading }) => readingIdentityKey(reading) === key,
-			);
-		return (
-			entry?.attestationLinks.every((other) => other.ref === ref) === true
-		);
-	});
 
 const stopWith = (withheld: Withheld): Transaction<Withheld> => ({
 	_tag: "Stop",
@@ -555,26 +530,20 @@ const checkScroll = Effect.fnUntraced(function* (
 			),
 		);
 
-	let removed = 0;
-	// Until dumdict can keep a Reading without an Attestation Link, the last
-	// one stays while a link still names its Reading, such as one never
-	// clicked (#281): removing it would remove the Reading those links open.
-	const stillLinked = new Map<string, boolean>();
-	const linkedNow = new Set(links.map(({ notePath }) => notePath));
-	const unlinkedRefs = new Set(judged.unlinked);
-	for (const { readingPath, ref } of recorded)
-		if (unlinkedRefs.has(ref) && !stillLinked.has(readingPath))
-			stillLinked.set(
-				readingPath,
-				linkedNow.has(readingPath) ||
-					(yield* deps.scrolls.linkedElsewhere?.(
-						readingPath,
-						scrollPath,
-					) ?? Effect.succeed(false)),
-			);
 	const readingOf = new Map(
 		recorded.map(({ readingPath, ref }) => [ref, readingPath]),
 	);
+	let removed = 0;
+	/** The Reading notes whose Attestations went, for the Reading lifetime. */
+	const emptied = new Set<string>();
+	const done = (again: boolean): Effect.Effect<Checked> =>
+		Effect.suspend(() =>
+			Effect.as(deps.readings?.suspect([...emptied]) ?? Effect.void, {
+				_tag: "Done",
+				again,
+				removed,
+			}),
+		);
 	for (const ref of judged.unlinked) {
 		const outcome = yield* store
 			.transact(
@@ -584,7 +553,6 @@ const checkScroll = Effect.fnUntraced(function* (
 					endedAt,
 					ref,
 					recordedUnder(stored, ref),
-					stillLinked.get(readingOf.get(ref) ?? "") ?? false,
 				),
 				{ maxAttempts: MAX_COMMIT_ATTEMPTS },
 			)
@@ -595,15 +563,13 @@ const checkScroll = Effect.fnUntraced(function* (
 					).pipe(Effect.as("Skipped" as const)),
 				),
 			);
-		if (outcome === "Removed") removed++;
-		else if (outcome === "Kept")
-			yield* Effect.logInfo(
-				`[Classify] Kept the unlinked occurrence ${ref}: it is its Reading's last, and a link still names the Reading`,
-			);
-		else if (outcome !== "Skipped")
-			return { _tag: "Done", again: true, removed };
+		if (outcome === "Removed") {
+			removed++;
+			const readingPath = readingOf.get(ref);
+			if (readingPath !== undefined) emptied.add(readingPath);
+		} else if (outcome !== "Skipped") return yield* done(true);
 	}
-	return { _tag: "Done", again: false, removed };
+	return yield* done(false);
 });
 
 /** A Scroll the observer watches, owned by its check's fiber. */

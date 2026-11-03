@@ -112,8 +112,20 @@ rendering have unit tests of their own
 (#270) stays manual, since the harness has no pointer-hover action.
 
 Removing a link from a Scroll (#116) is owned by `classify-unlink.test.ts`:
-the occurrence of a deleted link goes, a Reading that still has a linked
-occurrence stays, and one that lost its last goes with its Lemma note. The
+the occurrence of a deleted link goes, its embed at once, a Reading that
+still has a linked occurrence stays, and one that lost its last Attestation
+and its last link goes with its Lemma note. A Reading lives while it has an
+Attestation or a file outside `Worter/` links it (#281), and goes by itself
+only when an edit drops the last link the plugin saw (#290): one whose
+Attestation went stays while the user's own note links it and goes with that
+link, and one Classify linked and nobody clicked goes with its last link,
+but not when its Scroll is deleted, nor once it is restored.
+`classify-attest-on-click` shows unclicked Readings standing with no
+Attestation while their links do. Sync bringing Scrolls late, a Reading
+note renamed with link updating off, canvas and Lemma-note links, the
+persisted index, the races and "Clean up unlinked Readings…" (dry run and
+confirm) are unit tests in
+`tests/unit/classify/resolution/reading-lifetime.test.ts`. The
 unlink observer's guards (moved text, a lost block ID, a running Classify, a
 repeated Sentence's instances, the Shadow re-evaluation after a removal,
 another file at the Scroll's path, a block that is gone, links resolved as

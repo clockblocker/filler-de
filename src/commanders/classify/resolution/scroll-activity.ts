@@ -3,7 +3,9 @@
  * occurrences before it writes their links, so until it ends a Scroll can
  * hold refs whose links are not there yet, and the editor saves the links
  * it wrote a moment after it ends. The unlink observer leaves a busy Scroll
- * alone, and looks again a quiet period after its last run ended.
+ * alone, and looks again a quiet period after its last run ended. A run
+ * also commits Readings no link names yet, in a Scroll no one can tell in
+ * advance, so the Reading lifetime waits for every Scroll to be idle.
  */
 import { Clock, Deferred, Effect, Ref } from "effect";
 
@@ -27,6 +29,10 @@ export type ScrollActivity = {
 	 * did. Read synchronously, as `busy` is.
 	 */
 	readonly endedAt: (path: string) => number | undefined;
+	/** Whether a run is going on any Scroll. Read synchronously, as `busy` is. */
+	readonly busyAnywhere: () => boolean;
+	/** When the last run on any Scroll ended, by `Clock`, if one did. */
+	readonly lastEndedAt: () => number | undefined;
 };
 
 /** The runs going on one Scroll, and what its waiters wait on. */
@@ -111,6 +117,7 @@ export function createScrollActivity(): ScrollActivity {
 	return {
 		begin,
 		busy: (path) => Ref.getUnsafe(state).running.has(path),
+		busyAnywhere: () => Ref.getUnsafe(state).running.size > 0,
 		during: (path, effect) =>
 			Effect.acquireUseRelease(
 				begin(path),
@@ -123,5 +130,11 @@ export function createScrollActivity(): ScrollActivity {
 				const running = Ref.getUnsafe(state).running.get(path);
 				return running ? Deferred.await(running.idle) : Effect.void;
 			}),
+		lastEndedAt: () => {
+			let last: number | undefined;
+			for (const at of Ref.getUnsafe(state).ended.values())
+				if (last === undefined || at > last) last = at;
+			return last;
+		},
 	};
 }

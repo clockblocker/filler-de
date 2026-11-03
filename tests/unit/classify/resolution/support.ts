@@ -27,13 +27,19 @@ import {
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import type { ResolutionStore } from "../../../../src/commanders/classify/resolution/knowledge-types";
+import { memoryLinkIndex } from "../../../../src/commanders/classify/resolution/link-index";
 import { produceKnowledge } from "../../../../src/commanders/classify/resolution/produce-knowledge";
+import {
+	makeReadingLifetime,
+	type NoteLinks,
+} from "../../../../src/commanders/classify/resolution/reading-lifetime";
 import type { ScrollActivity } from "../../../../src/commanders/classify/resolution/scroll-activity";
 import {
 	type ScrollFiles,
 	ScrollWriteFailed,
 } from "../../../../src/commanders/classify/resolution/scroll-files";
 import { scrollLinksOf } from "../../../../src/commanders/classify/resolution/scroll-unlinks";
+import { makeUnlinkObserver } from "../../../../src/commanders/classify/resolution/unlink-observer";
 import type { SegmentationCache } from "../../../../src/commanders/classify/segmentation-cache";
 import { occurrenceSentenceKey } from "../../../../src/commanders/classify/sentence-key";
 import type {
@@ -447,6 +453,59 @@ export const resolveAmong =
 			);
 		});
 
+/** The note `linkpath` opens among `paths`, as `resolveAmong` finds it. */
+const resolvedAmong = (paths: readonly string[], linkpath: string) => {
+	const wanted = linkpath.toLowerCase();
+	const exact = paths.find(
+		(path) =>
+			path.toLowerCase() === wanted || path.toLowerCase() === `${wanted}.md`,
+	);
+	if (exact !== undefined || wanted.includes("/")) return exact;
+	return paths.find(
+		(path) => path.toLowerCase().split("/").at(-1) === `${wanted}.md`,
+	);
+};
+
+/**
+ * Obsidian's link index over notes held in memory: each of `sources`'
+ * wikilinks and embeds, resolved among `paths` as `resolveAmong` resolves
+ * them, those that resolve to nothing, and each canvas of `canvases` with
+ * the notes its cards link. The metadata cache is always settled.
+ */
+export const memoryNoteLinks = (
+	sources: () => Readonly<Record<string, string>>,
+	paths: () => readonly string[],
+	canvases: () => Readonly<Record<string, readonly string[]>> = () => ({}),
+): NoteLinks => {
+	const read = (resolvedOnes: boolean) => {
+		const all = paths();
+		const found: Record<string, Record<string, number>> = {};
+		for (const [source, content] of Object.entries(sources())) {
+			const targets: Record<string, number> = {};
+			for (const { linkpath } of scrollLinksOf(content)) {
+				const target = resolvedAmong(all, linkpath);
+				const key = resolvedOnes ? target : target === undefined ? linkpath : undefined;
+				if (key !== undefined) targets[key] = (targets[key] ?? 0) + 1;
+			}
+			found[source] = targets;
+		}
+		return found;
+	};
+	return {
+		canvasLinks: Effect.sync(() =>
+			Object.fromEntries(
+				Object.entries(canvases()).map(([canvas, targets]) => [
+					canvas,
+					Object.fromEntries(targets.map((target) => [target, 1])),
+				]),
+			),
+		),
+		resolvedLinks: () => read(true),
+		settled: Effect.void,
+		unresolvedLinks: () => read(false),
+	};
+};
+
 /**
  * Clicks on the links of a Scroll held in memory, through the plugin's
  * attester (#281): `click(shown, nth)` clicks the `nth` link showing
@@ -509,4 +568,65 @@ export async function clicksOn(input: {
 		}
 	};
 	return { attester, click, clickAll };
+}
+
+/**
+ * The unlink observer and the Reading lifetime over a Scroll held in
+ * memory, as the plugin wires them, checking at once. Obsidian has
+ * resolved the Scroll's links once they are made.
+ */
+export async function unlinkingOver(input: {
+	readonly activity: ScrollActivity;
+	readonly cache: SegmentationCache["Service"];
+	readonly scroll: MemoryScroll;
+	readonly store: DumdictVaultStore;
+	readonly vault: FakeVault;
+}) {
+	const { activity, cache, scroll, store, vault } = input;
+	const paths = () => [...vault.markdownPaths(), scroll.path];
+	const { value: lifetime } = await inScope(
+		makeReadingLifetime({
+			activity,
+			index: memoryLinkIndex(),
+			links: memoryNoteLinks(() => ({ [scroll.path]: scroll.content }), paths),
+			quietMs: 0,
+			store: Effect.succeed(store),
+			sweepQuietMs: 0,
+		}),
+	);
+	const relinked = async () => {
+		await run(lifetime.changed({ _tag: "Resolved", path: scroll.path }));
+		await run(lifetime.whenIdle);
+	};
+	// The plugin starts: the index takes the Scroll's links as they are.
+	await run(lifetime.start);
+	await run(lifetime.whenIdle);
+	const { value: observer } = await inScope(
+		makeUnlinkObserver({
+			activity,
+			cache,
+			quietMs: 0,
+			readings: lifetime,
+			scrolls: {
+				modifiedAt: () => Effect.succeed(undefined),
+				read: (path) =>
+					Effect.sync(() => (path === scroll.path ? scroll.content : undefined)),
+				resolve: resolveAmong(paths),
+			},
+			segmenterVersion: Effect.succeed("test-segmenter"),
+			store: Effect.succeed(store),
+		}),
+	);
+	return {
+		/** The user edited the Scroll: the observer checks it, and the lifetime its links. */
+		edited: async () => {
+			await run(observer.modified([scroll.path]));
+			await run(observer.whenIdle);
+			await relinked();
+		},
+		lifetime,
+		observer,
+		/** Obsidian resolved the Scroll's links again, as after Classify wrote them. */
+		relinked,
+	};
 }

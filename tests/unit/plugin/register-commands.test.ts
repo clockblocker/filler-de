@@ -38,6 +38,7 @@ function fakeDeps(notices: Notices["Service"]) {
 	const deps = {
 		classify: {
 			classify: { execute: () => reach("classify") },
+			cleanupUnlinked: reach("cleanupUnlinked"),
 			knowledgeQueue: { cancelAll: Effect.succeed(2) },
 		},
 		dictionaryReset: {
@@ -73,6 +74,7 @@ const REACHES: Record<string, string> = {
 	"cancel-knowledge-generation":
 		"notice Cancelled Knowledge generation for 2 Readings",
 	"classify-selection": "classify",
+	"cleanup-unlinked-readings": "cleanupUnlinked",
 	"reset-dictionary-from-old-notes": "reset.open",
 	"restart-librarian": "restart",
 	"split-selection-in-blocks": "librarian SplitInBlocks",
