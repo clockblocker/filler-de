@@ -28,6 +28,7 @@ import {
 	diffSettings,
 	patchSettings,
 	type SettingsPatch,
+	type SettingsPatchMissing,
 } from "./settings-changes";
 
 /** Settings the plugin cannot run under, such as a Library root that is a file. */
@@ -109,12 +110,15 @@ export type SettingsService = {
 	 * metadata for a "Hide metadata" toggle, puts the settings into effect
 	 * and stores them. Then it restarts the Librarian when a setting it
 	 * reads changed, and ends once that restart did. Settings that cannot
-	 * be parsed change nothing.
+	 * be parsed, and a patch that is not an object, change nothing.
 	 */
 	readonly update: (
 		patch: SettingsPatch,
 		options?: SettingsUpdateOptions,
-	) => Effect.Effect<void, SettingsInvalid | PluginDataError>;
+	) => Effect.Effect<
+		void,
+		SettingsInvalid | SettingsPatchMissing | PluginDataError
+	>;
 };
 
 export class Settings extends Context.Service<Settings, SettingsService>()(
@@ -171,7 +175,7 @@ export const makeSettings = Effect.fnUntraced(function* (deps: {
 	) {
 		const migrate = options.migrate ?? true;
 		const before = (yield* SubscriptionRef.get(state)).raw;
-		const proposed = patchSettings(before, patch);
+		const proposed = yield* patchSettings(before, patch);
 		const { parsed } = yield* parse(proposed);
 		let next = proposed;
 		let changes = diffSettings(before, next);

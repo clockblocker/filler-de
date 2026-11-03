@@ -16,6 +16,19 @@ import {
 import { LOCALES } from "./locales";
 import type { SettingsPatch } from "./settings-changes";
 
+declare module "obsidian" {
+	interface SettingTab {
+		/**
+		 * Obsidian 1.15: reads the tab's setting definitions and refreshes
+		 * the settings search. `addSettingTab` calls it with no argument, and
+		 * so does a change to `data.json` from outside. The 1.10 typings we
+		 * build against lack it; declaring it keeps a subclass from taking
+		 * the name.
+		 */
+		update(): void;
+	}
+}
+
 const FORBIDDEN_DELIMITER_CHARS = [
 	"/",
 	"\\",
@@ -46,12 +59,14 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Applies `patch`. `redraw` draws the tab again once it is applied, or
+	 * Applies `patch`. Not `update`: since Obsidian 1.15 every setting tab
+	 * has an `update()`, which `addSettingTab` calls with no argument.
+	 * `redraw` draws the tab again once it is applied, or
 	 * only when it answers true for the settings then in effect, to show
 	 * what took effect, such as the old delimiter the files kept. A redraw
 	 * moves the focus, so it is kept to those cases.
 	 */
-	private update(
+	private applyPatch(
 		patch: SettingsPatch,
 		{
 			redraw = false,
@@ -97,7 +112,7 @@ export class SettingsTab extends PluginSettingTab {
 					.setPlaceholder(t.apiKeyPlaceholder)
 					.setValue(settings.typesafeApiKey)
 					.onChange((value) =>
-						this.update({ typesafeApiKey: value }),
+						this.applyPatch({ typesafeApiKey: value }),
 					),
 			);
 
@@ -108,7 +123,9 @@ export class SettingsTab extends PluginSettingTab {
 				text
 					.setPlaceholder(t.apiKeyPlaceholder)
 					.setValue(settings.openaiApiKey)
-					.onChange((value) => this.update({ openaiApiKey: value })),
+					.onChange((value) =>
+						this.applyPatch({ openaiApiKey: value }),
+					),
 			);
 
 		// Languages settings
@@ -129,7 +146,7 @@ export class SettingsTab extends PluginSettingTab {
 							return;
 						}
 						// The tab speaks the known language: draw it again.
-						return this.update(
+						return this.applyPatch(
 							{ languages: { known: parsed.data } },
 							{ redraw: true },
 						);
@@ -150,7 +167,7 @@ export class SettingsTab extends PluginSettingTab {
 						if (!parsed.success) {
 							return;
 						}
-						return this.update({
+						return this.applyPatch({
 							languages: { target: parsed.data },
 						});
 					});
@@ -185,7 +202,9 @@ export class SettingsTab extends PluginSettingTab {
 							if (!parsed.success) {
 								return;
 							}
-							return this.update({ [settingKey]: parsed.data });
+							return this.applyPatch({
+								[settingKey]: parsed.data,
+							});
 						});
 				});
 		}
@@ -202,7 +221,7 @@ export class SettingsTab extends PluginSettingTab {
 						if (value !== "left" && value !== "right") {
 							return;
 						}
-						return this.update({ navButtonsPosition: value });
+						return this.applyPatch({ navButtonsPosition: value });
 					});
 			});
 
@@ -216,7 +235,9 @@ export class SettingsTab extends PluginSettingTab {
 				text
 					.setPlaceholder(t.libraryRootPlaceholder)
 					.setValue(settings.libraryRoot)
-					.onChange((value) => this.update({ libraryRoot: value })),
+					.onChange((value) =>
+						this.applyPatch({ libraryRoot: value }),
+					),
 			);
 
 		new Setting(containerEl)
@@ -228,7 +249,7 @@ export class SettingsTab extends PluginSettingTab {
 					.setValue(settings.maxSectionDepth)
 					.setDynamicTooltip()
 					.onChange((value) =>
-						this.update({ maxSectionDepth: value }),
+						this.applyPatch({ maxSectionDepth: value }),
 					),
 			);
 
@@ -241,7 +262,9 @@ export class SettingsTab extends PluginSettingTab {
 					.setValue(settings.showScrollsInCodexesForDepth)
 					.setDynamicTooltip()
 					.onChange((value) =>
-						this.update({ showScrollsInCodexesForDepth: value }),
+						this.applyPatch({
+							showScrollsInCodexesForDepth: value,
+						}),
 					),
 			);
 
@@ -284,7 +307,7 @@ export class SettingsTab extends PluginSettingTab {
 					// delimiter: then draw what took effect.
 					if (value !== delimiterNow()) {
 						pending = value;
-						void this.update(
+						void this.applyPatch(
 							{ suffixDelimiter: { symbol: value } },
 							{
 								redraw: (now) =>
@@ -304,7 +327,7 @@ export class SettingsTab extends PluginSettingTab {
 				toggle
 					.setValue(settings.suffixDelimiter.padded)
 					.onChange((value) =>
-						this.update(
+						this.applyPatch(
 							{ suffixDelimiter: { padded: value } },
 							{
 								redraw: (now) =>
@@ -321,7 +344,7 @@ export class SettingsTab extends PluginSettingTab {
 				toggle
 					.setValue(settings.showScrollBacklinks)
 					.onChange((value) =>
-						this.update({ showScrollBacklinks: value }),
+						this.applyPatch({ showScrollBacklinks: value }),
 					),
 			);
 
@@ -331,7 +354,9 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle
 					.setValue(settings.hideMetadata)
-					.onChange((value) => this.update({ hideMetadata: value })),
+					.onChange((value) =>
+						this.applyPatch({ hideMetadata: value }),
+					),
 			);
 	}
 }

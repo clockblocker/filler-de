@@ -1,6 +1,11 @@
 import { mock } from "bun:test";
 import { parse, stringify } from "yaml";
-import { Modal, Notice, Setting } from "../support/obsidian-dom";
+import {
+	Modal,
+	Notice,
+	PluginSettingTab,
+	Setting,
+} from "../support/obsidian-dom";
 
 /**
  * Obsidian's `parseYaml` and `stringifyYaml` are the `yaml` package's
@@ -22,6 +27,7 @@ mock.module("obsidian", () => ({
 	},
 	Modal,
 	Notice,
+	PluginSettingTab,
 	parseYaml,
 	Setting,
 	stringifyYaml,
@@ -48,6 +54,7 @@ if (typeof require !== "undefined") {
 			},
 			Modal,
 			Notice,
+			PluginSettingTab,
 			parseYaml,
 			Setting,
 			stringifyYaml,

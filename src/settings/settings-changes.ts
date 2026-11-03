@@ -1,3 +1,4 @@
+import { Data, Effect, Predicate } from "effect";
 import type {
 	LanguagesConfig,
 	SuffixDelimiterConfig,
@@ -57,13 +58,30 @@ export function diffSettings(
 }
 
 /**
- * `settings` with `patch` over them, sharing no nested object with either.
- * A key the patch holds as undefined keeps its value.
+ * A settings change that is not an object, such as `update()` with no
+ * argument: Obsidian 1.15 calls a setting tab's `update()` bare.
  */
-export function patchSettings(
+export class SettingsPatchMissing extends Data.TaggedError(
+	"SettingsPatchMissing",
+)<{
+	readonly patch: unknown;
+}> {
+	override get message(): string {
+		return `Textfresser's settings change is not an object: ${String(this.patch)}`;
+	}
+}
+
+/**
+ * `settings` with `patch` over them, sharing no nested object with either.
+ * A key the patch holds as undefined keeps its value; a patch that is not
+ * an object fails with `SettingsPatchMissing`.
+ */
+export const patchSettings = Effect.fnUntraced(function* (
 	settings: TextEaterSettings,
-	patch: SettingsPatch,
-): TextEaterSettings {
+	patch: SettingsPatch | null | undefined,
+): Effect.fn.Return<TextEaterSettings, SettingsPatchMissing> {
+	if (!Predicate.isObject(patch))
+		return yield* new SettingsPatchMissing({ patch });
 	const given = Object.fromEntries(
 		Object.entries(patch).filter(([, value]) => value !== undefined),
 	);
@@ -76,4 +94,4 @@ export function patchSettings(
 			...patch.suffixDelimiter,
 		},
 	};
-}
+});

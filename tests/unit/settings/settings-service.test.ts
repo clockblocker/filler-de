@@ -17,6 +17,7 @@ import { changeDelimiter } from "../../../src/plugin/delimiter-migration";
 import { TextfresserCommands } from "../../../src/plugin/plugin-services";
 import { TextfresserLive } from "../../../src/plugin/textfresser-live";
 import { makePluginData } from "../../../src/settings/plugin-data";
+import type { SettingsPatch } from "../../../src/settings/settings-changes";
 import {
 	makeSettings,
 	Settings,
@@ -181,6 +182,21 @@ describe("Settings", () => {
 
 		expect(error._tag).toBe("SettingsInvalid");
 		expect(settings.rawNow().libraryRoot).toBe("Library");
+		expect(events).toEqual([]);
+		expect(data.saved).toEqual([]);
+	});
+
+	it("fails a missing patch with SettingsPatchMissing, changing nothing", async () => {
+		const { data, events, settings } = await makeHarness();
+
+		const error = await Effect.runPromise(
+			Effect.flip(
+				settings.update(undefined as unknown as SettingsPatch),
+			),
+		);
+
+		expect(error._tag).toBe("SettingsPatchMissing");
+		expect(settings.rawNow()).toEqual(DEFAULT_SETTINGS);
 		expect(events).toEqual([]);
 		expect(data.saved).toEqual([]);
 	});

@@ -1,6 +1,6 @@
 /**
- * Just enough of Obsidian's DOM helpers, `Notice`, `Modal` and `Setting`
- * for plugin code that builds a modal: elements hold their children, text,
+ * Just enough of Obsidian's DOM helpers, `Notice`, `Modal`, `Setting` and
+ * `PluginSettingTab` for plugin code that builds a modal or a tab: elements hold their children, text,
  * `disabled` and click listeners, and every notice shown is recorded.
  */
 
@@ -103,4 +103,26 @@ export class Setting {
 		build(dropdown);
 		return this;
 	}
+}
+
+/**
+ * Obsidian 1.15's `PluginSettingTab`, as far as `addSettingTab` uses it:
+ * it calls the tab's `update()` with no argument, which reads the tab's
+ * setting definitions.
+ */
+export class PluginSettingTab {
+	readonly containerEl = new FakeElement("div");
+	settingItems: unknown[] = [];
+	constructor(
+		readonly app: unknown,
+		readonly plugin: unknown,
+	) {}
+	getSettingDefinitions(): unknown[] {
+		return [];
+	}
+	update(): void {
+		this.settingItems = this.getSettingDefinitions();
+	}
+	display(): void {}
+	hide(): void {}
 }
