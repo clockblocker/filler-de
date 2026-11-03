@@ -14,7 +14,10 @@ import {
 	makeReadingLifetime,
 	type ReadingLifetimeDeps,
 } from "../../../../src/commanders/classify/resolution/reading-lifetime";
-import { createScrollActivity } from "../../../../src/commanders/classify/resolution/scroll-activity";
+import {
+	createScrollActivity,
+	type ScrollActivity,
+} from "../../../../src/commanders/classify/resolution/scroll-activity";
 import {
 	createLemma,
 	createReading,
@@ -66,6 +69,22 @@ async function storeWithReadings() {
 	};
 	return { files, store, vault };
 }
+
+/** A Foreign Reading: its note is `∅ weekend.md`, with no Emoji Description. */
+const weekend = {
+	canonicalForm: "weekend",
+	coreFeatures: { sourceLang: "en" },
+	family: "Foreign",
+	kind: "Foreign",
+	language: "de",
+	unitKind: "Lemma",
+} as unknown as Dumling.Lemma<"de">;
+const weekendReading = { lemma: weekend, unitKind: "Reading" } as Dumling.Reading<"de">;
+
+/** Ends once a notice has been shown: a run in the background has reached its wait. */
+const noticed = async (notices: readonly string[]) => {
+	while (notices.length === 0) await Bun.sleep(1);
+};
 
 const TALE_WITHOUT_SPRINGEN = `Sie ${linkToReading(laufenReading, "läuft")} und springt.\n`;
 
@@ -201,6 +220,41 @@ describe("Reading lifetime", () => {
 			expect(await stored(setup.store, springenReading)).toBe(true);
 			// It still counts as linking 🦘.
 			expect(lifetime.index.current()?.links[TALE]).toContain(notePath(springenReading));
+		});
+
+		it("lets a dangling link keep only the Readings it could name: one named like a Reading keeps no other", async () => {
+			const setup = await storeWithReadings();
+			const lifetime = await started(setup);
+			// The edit drops 🦘 and adds a link to a Reading note that never was.
+			setup.files[TALE] = `Sie ${linkToReading(laufenReading, "läuft")} und springt am [[🌊 See|See]].\n`;
+			await lifetime.relinked([TALE]);
+			await lifetime.whenIdle();
+			expect(await stored(setup.store, springenReading)).toBe(false);
+			expect(await stored(setup.store, laufenReading)).toBe(true);
+		});
+
+		it("keeps a renamed Foreign Reading its dangling link still names, and releases what the Scroll stopped linking", async () => {
+			const setup = await storeWithReadings();
+			await seed(setup.store, [createLemma(weekend), createReading(readingEntry(weekendReading))]);
+			expect(notePath(weekendReading)).toEndWith("/∅ weekend.md");
+			setup.files[TALE] += `Am ${linkToReading(weekendReading, "weekend")}.\n`;
+			let renamed = false;
+			const lifetime = await started(setup, {
+				vaultPaths: () =>
+					setup.vault
+						.markdownPaths()
+						.filter((path) => !(renamed && path === notePath(weekendReading))),
+			});
+			// ∅ weekend was renamed with link updating off, in the edit that drops 🦘.
+			renamed = true;
+			setup.files[TALE] = `${TALE_WITHOUT_SPRINGEN}Am ${linkToReading(weekendReading, "weekend")}.\n`;
+			await lifetime.relinked([TALE]);
+			await lifetime.whenIdle();
+			expect(await stored(setup.store, weekendReading)).toBe(true);
+			expect(await stored(setup.store, springenReading)).toBe(false);
+			expect(lifetime.index.current()?.links[TALE]).toEqual(
+				[notePath(laufenReading), notePath(weekendReading)].sort(),
+			);
 		});
 
 		it("waits for the unlink observer when the Reading still has an Attestation, then removes it", async () => {
@@ -391,12 +445,25 @@ describe("Reading lifetime", () => {
 
 	describe("Clean up unlinked Readings…", () => {
 		/** Tale went while the plugin was not running: 🦘 is unlinked, but nothing saw it go. */
-		const unlinkedSetup = async () => {
+		const unlinkedSetup = async (options: Partial<Parameters<typeof lifetimeOver>[0]> = {}) => {
 			const setup = await storeWithReadings();
 			delete setup.files[TALE];
 			setup.files[STORY] = `Er ${linkToReading(gehenReading, "geht")}. ^0\n`;
-			const lifetime = await started(setup);
+			const lifetime = await started(setup, options);
 			return { ...setup, lifetime };
+		};
+
+		/** The command, run in the background: confirms at once, and records its notices. */
+		const cleanupInBackground = (lifetime: Awaited<ReturnType<typeof started>>) => {
+			const notices: string[] = [];
+			const done = lifetime.run(
+				cleanupUnlinkedReadings({
+					confirm: () => Effect.succeed(true),
+					lifetime: lifetime.lifetime,
+					notify: (message) => notices.push(message),
+				}),
+			);
+			return { done, notices };
 		};
 
 		it("lists the Readings no Attestation or link holds, and removes nothing until confirmed", async () => {
@@ -451,6 +518,60 @@ describe("Reading lifetime", () => {
 			expect(await stored(store, springenReading)).toBe(true);
 			expect(await stored(store, laufenReading)).toBe(false);
 			expect(notices[0]).toStartWith("✓ Removed 1 unlinked Reading; kept 1");
+		});
+
+		it("waits out the quiet period after a Classify run before removing, so a link its editor saves late keeps its Reading", async () => {
+			const activity: ScrollActivity = createScrollActivity();
+			const { files, lifetime, store } = await unlinkedSetup({ activity, quietMs: 5_000 });
+			// A run on Other just ended; its editor has not saved its link to 🦘 yet.
+			await lifetime.run(Effect.flatten(activity.begin("Library/Other.md")));
+			const { done, notices } = cleanupInBackground(lifetime);
+			await noticed(notices);
+			expect(notices[0]).toStartWith("Removing 2 unlinked Readings once");
+			await lifetime.adjust(2_000);
+			expect(await stored(store, laufenReading)).toBe(true);
+			// The editor saves the link.
+			files["Library/Other.md"] = `${linkToReading(springenReading, "springt")}\n`;
+			await lifetime.relinked(["Library/Other.md"]);
+			await lifetime.adjust(3_000);
+			// The run's quiet period is out, the link's is not.
+			expect(await stored(store, laufenReading)).toBe(true);
+			await lifetime.adjust(2_000);
+			expect(await done).toBe(1);
+			expect(await stored(store, laufenReading)).toBe(false);
+			expect(await stored(store, springenReading)).toBe(true);
+			expect(notices.at(-1)).toBe("✓ Removed 1 unlinked Reading; kept 1 that gained an Attestation or a link");
+		});
+
+		it("waits out a Classify run, a dictionary reset, a Knowledge run and Sync before removing", async () => {
+			const activity: ScrollActivity = createScrollActivity();
+			let running = 1;
+			let blocked: string | undefined = "a reset is running";
+			const { lifetime, store } = await unlinkedSetup({
+				activity,
+				blockedBy: () => blocked,
+				knowledge: { running: Effect.sync(() => running) },
+				quietMs: 1_000,
+				sweepQuietMs: 3_000,
+			});
+			const end = await lifetime.run(activity.begin("Library/Other.md"));
+			const { done, notices } = cleanupInBackground(lifetime);
+			await noticed(notices);
+			await lifetime.adjust(3_000);
+			blocked = undefined;
+			await lifetime.adjust(3_000);
+			await lifetime.run(end);
+			await lifetime.adjust(1_000);
+			running = 0;
+			// Sync modifies a dictionary note.
+			await lifetime.modified([notePath(gehenReading)]);
+			await lifetime.adjust(2_000);
+			expect(await stored(store, laufenReading)).toBe(true);
+			expect(await stored(store, springenReading)).toBe(true);
+			await lifetime.adjust(1_000);
+			expect(await done).toBe(2);
+			expect(await stored(store, laufenReading)).toBe(false);
+			expect(await stored(store, springenReading)).toBe(false);
 		});
 
 		it("says so when nothing is unlinked", async () => {

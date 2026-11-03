@@ -31,10 +31,11 @@
  * - **Every present file.** Links count from any Markdown file outside
  *   `Worter/`, and from canvases: their text cards' wikilinks and their
  *   file cards. A link to a Reading's Lemma note keeps all its Readings.
- * - **Links in flux.** A file holding a link that resolves to nothing but
- *   names `Worter/`, or a note named like a Reading (`🌊 See`), as after a
- *   Reading note was renamed with link updating off, still links what it
- *   linked before.
+ * - **Links in flux.** A file holding a link that resolves to nothing, as
+ *   after a Reading note was renamed with link updating off, still links
+ *   each note it linked before that the link could name: one of the same
+ *   name with a Reading note's prefix (`🌊 `, a Foreign Reading's `∅ `)
+ *   ignored. Every other note it stopped linking is released.
  * - **Resolved links.** Nothing is judged until Obsidian has resolved the
  *   links of every file it is indexing (`NoteLinks.settled`).
  * - **Quiet period.** A check runs only once no link has changed for
@@ -47,7 +48,9 @@
  *   Each removal is a store transaction whose plan, under the lock
  *   Classify's commits take, removes nothing when a run is going on, one
  *   ended since the check began, or a dictionary reset holds Classify, and
- *   reads the Reading and the links again.
+ *   reads the Reading and the links again. "Clean up unlinked Readings…"
+ *   waits for the same before it removes anything, and again whenever a
+ *   removal's plan finds a run going or ended, or a reset.
  * - **Dictionary Sync.** No check runs until no dictionary note has been
  *   modified from outside for `sweepQuietMs`.
  */
@@ -133,7 +136,7 @@ export type ReadingLifetimeDeps<E = unknown> = {
 /** What "Clean up unlinked Readings…" removed, and what it found held after all. */
 type CleanedUp = {
 	readonly removed: readonly string[];
-	/** Readings it left: gained an Attestation or a link, or a run was going. */
+	/** Readings it left: they gained an Attestation or a link. */
 	readonly kept: readonly string[];
 };
 
@@ -152,9 +155,14 @@ export type ReadingLifetime = {
 	readonly start: Effect.Effect<void>;
 	/** Every Reading with no Attestation and no link from any file there now. */
 	readonly unlinked: Effect.Effect<readonly StoredReadingNote[]>;
-	/** Removes these Reading notes' Readings, each only if still unattested and unlinked. */
+	/**
+	 * Removes these Reading notes' Readings, each only if still unattested
+	 * and unlinked, once nothing could still be linking them: it waits for
+	 * what the check waits for, running `waiting` once if it must.
+	 */
 	readonly removeUnlinked: (
 		paths: readonly string[],
+		waiting?: Effect.Effect<void>,
 	) => Effect.Effect<CleanedUp>;
 	/** Ends once no check is pending. */
 	readonly whenIdle: Effect.Effect<void>;
@@ -179,19 +187,41 @@ const worterTargets = (
 	return found;
 };
 
-/** A Reading note's name: its Emoji Description first, as `🌊 See`. */
-const READING_NAME = /^[\p{Extended_Pictographic}\p{Regional_Indicator}]/u;
+/**
+ * A Reading note's name prefix: its Emoji Description, or a Foreign
+ * Reading's `∅`, then a space. A run of no letters and no digits, so a
+ * Lemma's own first word never reads as one.
+ */
+const READING_PREFIX = /^[^\s\p{L}\p{N}]+\s+/u;
 
 /**
- * Whether a link that resolves to nothing looks like one into `Worter/`:
- * by its path, or by a name like a Reading note's.
+ * The name a note's path or a link's path names, as a link may name it:
+ * without folders, `.md` or a Reading note's prefix, NFC, in any case. So
+ * `🌊 See`, `🏖️ See`, `∅ See`, `See` and `Worter/de/…/🌊 See.md` share one.
  */
-const looksLikeWorter = (linkpath: string) => {
-	const name = linkpath.split("/").at(-1) ?? linkpath;
-	return (
-		linkpath.toLowerCase().startsWith(`${WORTER_FOLDER.toLowerCase()}/`) ||
-		READING_NAME.test(name)
-	);
+const nameKey = (path: string) =>
+	(path.split("/").at(-1) ?? path)
+		.replace(/\.md$/iu, "")
+		.replace(READING_PREFIX, "")
+		.normalize("NFC")
+		.toLowerCase();
+
+/**
+ * The notes in `before` that links resolving to nothing could still name:
+ * those of the same name, a Reading note's prefix ignored, as after a
+ * Reading note was renamed, or its Emoji Description changed, with link
+ * updating off. The same path under `Worter/` has the same name. A link
+ * that names none of them keeps nothing.
+ */
+const inFlux = (
+	unresolved: readonly string[],
+	before: ReadonlySet<string>,
+): Set<string> => {
+	const names = new Set(unresolved.map(nameKey));
+	const kept = new Set<string>();
+	for (const target of before)
+		if (names.has(nameKey(target))) kept.add(target);
+	return kept;
 };
 
 /** Every note under `Worter/` a file there now links: Markdown outside it, and canvases. */
@@ -368,6 +398,38 @@ export const makeReadingLifetime = Effect.fnUntraced(function* <E>(
 		return deps.index.save({ links, released: [...released].sort() });
 	});
 
+	/**
+	 * Whether a removal may run now, and if not, how long to wait before
+	 * asking again: no reset holding Classify, no run on any Scroll and
+	 * none ended within `quietMs`, no link changed within it, no
+	 * dictionary note modified from outside within `sweepQuietMs`, and no
+	 * Knowledge run going. Settled, it answers when the last run ended, for
+	 * the removal's plan to compare. The check and the cleanup both wait
+	 * it out; then each waits for the metadata cache (`NoteLinks.settled`).
+	 */
+	const settledness: Effect.Effect<
+		| { readonly _tag: "Wait"; readonly ms: number }
+		| { readonly _tag: "Settled"; readonly endedAt: number | undefined }
+	> = Effect.gen(function* () {
+		const wait = (ms: number) => ({ _tag: "Wait", ms }) as const;
+		if (deps.blockedBy?.() !== undefined) return wait(quietMs);
+		if (deps.activity.busyAnywhere()) return wait(quietMs);
+		const now = yield* Clock.currentTimeMillis;
+		const endedAt = deps.activity.lastEndedAt();
+		// A run that just ended may have links its editor has not saved yet.
+		if (endedAt !== undefined && now - endedAt < quietMs)
+			return wait(quietMs - (now - endedAt));
+		if (now - state.changedAt < quietMs)
+			return wait(quietMs - (now - state.changedAt));
+		// Sync may still be bringing the files that link these Readings.
+		if (now - state.dictionaryAt < sweepQuietMs)
+			return wait(sweepQuietMs - (now - state.dictionaryAt));
+		// A Knowledge run writes into its Reading: the removal waits it out.
+		if ((yield* deps.knowledge?.running ?? Effect.succeed(0)) > 0)
+			return wait(quietMs);
+		return { _tag: "Settled", endedAt } as const;
+	});
+
 	/** Removes the suspected Readings no Attestation or link holds. */
 	const reap = Effect.fnUntraced(function* (
 		store: LifetimeStore,
@@ -417,21 +479,9 @@ export const makeReadingLifetime = Effect.fnUntraced(function* <E>(
 	const check = Effect.gen(function* () {
 		yield* save;
 		if (suspects.size === 0) return undefined;
-		if (deps.blockedBy?.() !== undefined) return quietMs;
-		if (deps.activity.busyAnywhere()) return quietMs;
-		const now = yield* Clock.currentTimeMillis;
-		const endedAt = deps.activity.lastEndedAt();
-		// A run that just ended may have links its editor has not saved yet.
-		if (endedAt !== undefined && now - endedAt < quietMs)
-			return quietMs - (now - endedAt);
-		if (now - state.changedAt < quietMs)
-			return quietMs - (now - state.changedAt);
-		// Sync may still be bringing the files that link these Readings.
-		if (now - state.dictionaryAt < sweepQuietMs)
-			return sweepQuietMs - (now - state.dictionaryAt);
-		// A Knowledge run writes into its Reading: the check waits it out.
-		if ((yield* deps.knowledge?.running ?? Effect.succeed(0)) > 0)
-			return quietMs;
+		const now = yield* settledness;
+		if (now._tag === "Wait") return now.ms;
+		const { endedAt } = now;
 		yield* deps.links.settled;
 		state.again = false;
 		const asked = [...suspects];
@@ -522,9 +572,9 @@ export const makeReadingLifetime = Effect.fnUntraced(function* <E>(
 	);
 
 	/**
-	 * The notes under `Worter/` the file at `path` links now. One holding a
-	 * link that resolves to nothing but looks like one into `Worter/` still
-	 * links what it linked before.
+	 * The notes under `Worter/` the file at `path` links now. Of those it
+	 * linked before, it still links each a link of it that resolves to
+	 * nothing could name (`inFlux`), and only those.
 	 */
 	const linksNow = (
 		path: string,
@@ -534,8 +584,8 @@ export const makeReadingLifetime = Effect.fnUntraced(function* <E>(
 		const unresolved = Object.keys(
 			deps.links.unresolvedLinks()[path] ?? {},
 		);
-		if (before && unresolved.some(looksLikeWorter))
-			for (const target of before) now.add(target);
+		if (before && unresolved.length > 0)
+			for (const target of inFlux(unresolved, before)) now.add(target);
 		return now;
 	};
 
@@ -662,26 +712,61 @@ export const makeReadingLifetime = Effect.fnUntraced(function* <E>(
 		),
 	);
 
-	/** Removes each still unlinked, each in its own transaction under the same guards. */
-	const removeUnlinked = (paths: readonly string[]) =>
+	/**
+	 * Removes each still unlinked, each in its own transaction under the
+	 * same guards. It first waits until the check would run
+	 * (`settledness`, then the metadata cache), running `waiting` once if
+	 * it must, so a run's links its editor has not saved yet count. A run
+	 * or a reset that comes meanwhile is waited out again, and the
+	 * canvases read anew.
+	 */
+	const removeUnlinked = (
+		paths: readonly string[],
+		waiting: Effect.Effect<void> = Effect.void,
+	) =>
 		Effect.gen(function* () {
-			yield* deps.links.settled;
+			let told = false;
+			const settle = Effect.gen(function* () {
+				for (;;) {
+					const now = yield* settledness;
+					if (now._tag === "Settled") {
+						yield* deps.links.settled;
+						return now.endedAt;
+					}
+					if (!told) {
+						told = true;
+						yield* waiting;
+					}
+					yield* Effect.sleep(now.ms);
+				}
+			});
+			let endedAt = yield* settle;
 			const store = yield* deps.store;
-			const canvases = yield* deps.links.canvasLinks;
+			let canvases = yield* deps.links.canvasLinks;
 			const wanted = new Set(paths);
-			const endedAt = deps.activity.lastEndedAt();
 			const removed: string[] = [];
 			const kept: string[] = [];
 			for (const note of (yield* store.readingNotes).filter(({ path }) =>
 				wanted.has(path),
 			)) {
-				const outcome = yield* removeOne(
+				let outcome = yield* removeOne(
 					deps,
 					store,
 					note,
 					endedAt,
 					canvases,
 				);
+				while (outcome === "Busy" || outcome === "Blocked") {
+					endedAt = yield* settle;
+					canvases = yield* deps.links.canvasLinks;
+					outcome = yield* removeOne(
+						deps,
+						store,
+						note,
+						endedAt,
+						canvases,
+					);
+				}
 				(outcome === "Removed" ? removed : kept).push(note.path);
 				if (outcome === "Removed" && released.delete(note.path))
 					state.dirty = true;
